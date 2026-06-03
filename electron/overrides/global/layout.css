@@ -1,0 +1,5 @@
+/*
+ * OpenHub — Layout overrides
+ * Hides native sidebars/navs from embedded apps so the Electron sidebar is the
+ * only navigation. Each app may need app-specific selectors in its own folder.
+ */

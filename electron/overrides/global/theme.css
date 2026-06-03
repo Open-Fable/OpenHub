@@ -1,0 +1,22 @@
+/*
+ * OpenHub — Unified dark theme
+ * Injected into ALL app webviews via insertCSS().
+ */
+
+:root {
+  --openhub-bg-primary: #1a1a1a;
+  --openhub-bg-secondary: #242424;
+  --openhub-bg-tertiary: #2e2e2e;
+  --openhub-text-primary: #e8e8e8;
+  --openhub-text-secondary: #a0a0a0;
+  --openhub-accent: #7c6af2;
+  --openhub-border: #333333;
+  --openhub-radius: 8px;
+  --openhub-radius-lg: 12px;
+  --openhub-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+
+body {
+  font-family: var(--openhub-font) !important;
+  -webkit-font-smoothing: antialiased;
+}
