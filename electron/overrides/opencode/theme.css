@@ -23,4 +23,22 @@
 
   --button-primary-base: #ededf4 !important;
   --button-secondary-base: #141418 !important;
+
+  /* Remap blue/neutral accents → OpenHub violet */
+  --border-selected: #7c6af2 !important;
+  --border-interactive-base: #9d8af7 !important;
+  --border-interactive-hover: #8b7bf5 !important;
+  --border-interactive-active: #7c6af2 !important;
+  --border-interactive-selected: #7c6af2 !important;
+  --border-weak-selected: rgba(124, 106, 242, 0.3) !important;
+  --border-strong-selected: rgba(124, 106, 242, 0.5) !important;
+  --text-interactive-base: #9d8af7 !important;
+  --icon-interactive-base: #7c6af2 !important;
+  --icon-agent-build-base: #9d8af7 !important;
+  --icon-agent-ask-base: #7c6af2 !important;
+  --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
+  --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
+  --surface-interactive-weak: rgba(124, 106, 242, 0.06) !important;
+  --surface-brand-base: #7c6af2 !important;
+  --surface-brand-hover: #8b7bf5 !important;
 }
