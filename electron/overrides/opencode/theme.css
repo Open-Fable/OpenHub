@@ -1,9 +1,28 @@
 /*
- * OpenHub → OpenCode — unified neutral palette + violet accents
- * OpenCode defines dark vars inside @media (prefers-color-scheme: dark),
- * so our overrides must live there too to win specificity.
+ * OpenHub → OpenCode — unified palette + violet accents
+ * OpenCode has TWO token systems:
+ *   OC-1: --background-*, --surface-*, --text-*, --border-* (in @media dark)
+ *   v2:   --v2-blue-*, --v2-background-bg-accent, etc. (in @layer theme)
+ * We override both, plus the v2-blue primitives so every blue → violet.
  */
 
+/* ── Override v2-blue primitives → violet scale ── */
+:root {
+  --v2-blue-100: #f0ecfe !important;
+  --v2-blue-200: #ddd6fc !important;
+  --v2-blue-300: #c9bcfa !important;
+  --v2-blue-400: #a99bf7 !important;
+  --v2-blue-500: #8b7bf5 !important;
+  --v2-blue-600: #7c6af2 !important;
+  --v2-blue-700: #6d5bdb !important;
+  --v2-blue-800: #5e4dc4 !important;
+  --v2-blue-900: #4f40a6 !important;
+  --v2-blue-1000: #433688 !important;
+  --v2-blue-1100: #362c6a !important;
+  --v2-blue-1200: #2a2250 !important;
+}
+
+/* ── OC-1 backgrounds + accents (bare :root) ── */
 :root {
   --background-base: #0e0e12 !important;
   --background-weak: #141418 !important;
@@ -26,27 +45,31 @@
   --button-primary-base: #ededf4 !important;
   --button-secondary-base: #141418 !important;
 
-  /* Violet accents */
   --border-selected: #7c6af2 !important;
-  --border-interactive-base: #9d8af7 !important;
-  --border-interactive-hover: #8b7bf5 !important;
-  --border-interactive-active: #7c6af2 !important;
-  --border-interactive-selected: #7c6af2 !important;
-  --border-weak-selected: rgba(124, 106, 242, 0.3) !important;
-  --border-strong-selected: rgba(124, 106, 242, 0.5) !important;
-  --text-interactive-base: #9d8af7 !important;
+  --text-interactive-base: #a99bf7 !important;
   --icon-interactive-base: #7c6af2 !important;
-  --icon-agent-build-base: #9d8af7 !important;
-  --icon-agent-ask-base: #7c6af2 !important;
-  --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
-  --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
-  --surface-interactive-weak: rgba(124, 106, 242, 0.06) !important;
   --surface-brand-base: #7c6af2 !important;
   --surface-brand-hover: #8b7bf5 !important;
+  --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
+  --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
 }
 
+/* ── Duplicate inside @media dark (OC-1 dark overrides live here) ── */
 @media (prefers-color-scheme: dark) {
   :root {
+    --v2-blue-100: #f0ecfe !important;
+    --v2-blue-200: #ddd6fc !important;
+    --v2-blue-300: #c9bcfa !important;
+    --v2-blue-400: #a99bf7 !important;
+    --v2-blue-500: #8b7bf5 !important;
+    --v2-blue-600: #7c6af2 !important;
+    --v2-blue-700: #6d5bdb !important;
+    --v2-blue-800: #5e4dc4 !important;
+    --v2-blue-900: #4f40a6 !important;
+    --v2-blue-1000: #433688 !important;
+    --v2-blue-1100: #362c6a !important;
+    --v2-blue-1200: #2a2250 !important;
+
     --background-base: #0e0e12 !important;
     --background-weak: #141418 !important;
     --background-strong: #101014 !important;
@@ -68,22 +91,12 @@
     --button-primary-base: #ededf4 !important;
     --button-secondary-base: #141418 !important;
 
-    /* Violet accents — must repeat inside media query to override */
     --border-selected: #7c6af2 !important;
-    --border-interactive-base: #9d8af7 !important;
-    --border-interactive-hover: #8b7bf5 !important;
-    --border-interactive-active: #7c6af2 !important;
-    --border-interactive-selected: #7c6af2 !important;
-    --border-weak-selected: rgba(124, 106, 242, 0.3) !important;
-    --border-strong-selected: rgba(124, 106, 242, 0.5) !important;
-    --text-interactive-base: #9d8af7 !important;
+    --text-interactive-base: #a99bf7 !important;
     --icon-interactive-base: #7c6af2 !important;
-    --icon-agent-build-base: #9d8af7 !important;
-    --icon-agent-ask-base: #7c6af2 !important;
-    --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
-    --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
-    --surface-interactive-weak: rgba(124, 106, 242, 0.06) !important;
     --surface-brand-base: #7c6af2 !important;
     --surface-brand-hover: #8b7bf5 !important;
+    --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
+    --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
   }
 }
