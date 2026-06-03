@@ -1,0 +1,5 @@
+dist/
+apps/
+node_modules/
+release/
+*.dmg

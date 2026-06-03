@@ -1,0 +1,75 @@
+{
+  "name": "openhub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "macOS desktop hub unifying OpenWork, OpenCode, and Open Design",
+  "main": "dist/electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "build": "tsc && bash scripts/copy-assets.sh && npm run build:package",
+    "build:package": "electron-builder --config electron-builder.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint electron/ scripts/",
+    "lint:fix": "eslint electron/ scripts/ --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "setup": "bash scripts/setup.sh",
+    "update:apps": "bash scripts/update.sh",
+    "check:selectors": "bash scripts/check-selectors.sh",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "express": "^5.0.0",
+    "keytar": "^7.9.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "build": {
+    "appId": "com.openhub.app",
+    "productName": "OpenHub",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg"
+      ]
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/overrides/**/*",
+      "electron/settings/**/*"
+    ]
+  }
+}

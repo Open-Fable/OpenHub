@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Upstream app repos — cloned at runtime by scripts/setup.sh
+# Never commit these; they are independent upstream projects
+apps/openwork/
+apps/opencode/
+apps/open-design/
+
+# Build output
+dist/
+out/
+*.dmg
+*.zip
+*.app
+
+# Electron
+release/
+
+# Environment (secrets NEVER on disk — use Keychain)
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# TypeScript build cache
+*.tsbuildinfo

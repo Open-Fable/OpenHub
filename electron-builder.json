@@ -1,0 +1,20 @@
+{
+  "appId": "com.openhub.app",
+  "productName": "OpenHub",
+  "files": [
+    "dist/**/*",
+    "electron/overrides/**/*",
+    "electron/settings/**/*",
+    "electron/sidebar.html"
+  ],
+  "extraMetadata": {
+    "main": "dist/electron/main.js"
+  },
+  "mac": {
+    "category": "public.app-category.developer-tools",
+    "target": ["dmg"]
+  },
+  "directories": {
+    "output": "release"
+  }
+}
