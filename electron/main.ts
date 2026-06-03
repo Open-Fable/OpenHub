@@ -193,6 +193,11 @@ ipcMain.handle("export-pdf", async () => {
 
 ipcMain.handle("get-slot-status", () => processManager?.getStatus() ?? {});
 
+ipcMain.handle("get-api-keys", async () => {
+  const { readAllApiKeys } = await import("./keychain.js");
+  return readAllApiKeys();
+});
+
 ipcMain.handle("save-api-keys", async (_e, keys: Record<string, string>) => {
   const { writeSecret } = await import("./keychain.js");
   const map: Record<string, string> = {
