@@ -20,14 +20,27 @@
 
       // Only mutate if needed — avoids unnecessary observer triggers
       if (!html.classList.contains("dark")) html.classList.add("dark");
-      if (html.getAttribute("data-theme") !== "dark") html.setAttribute("data-theme", "dark");
+      if (html.getAttribute("data-theme") !== "dark")
+        html.setAttribute("data-theme", "dark");
 
       // OpenWork Electron variant classes
-      if (!html.classList.contains("openwork-electron")) html.classList.add("openwork-electron");
-      if (!html.classList.contains("openwork-platform-mac")) html.classList.add("openwork-platform-mac");
+      if (!html.classList.contains("openwork-electron"))
+        html.classList.add("openwork-electron");
+      if (!html.classList.contains("openwork-platform-mac"))
+        html.classList.add("openwork-platform-mac");
 
       // Body fallback
       if (body && !body.classList.contains("dark")) body.classList.add("dark");
+
+      // OpenWork: localStorage theme preference
+      // Key: "openwork.react.settings.theme-mode" — read by bootstrapTheme()
+      // before React mounts. Setting it here ensures dark mode is picked up
+      // on first load, before our MutationObserver is even set up.
+      try {
+        if (localStorage.getItem("openwork.react.settings.theme-mode") !== "dark") {
+          localStorage.setItem("openwork.react.settings.theme-mode", "dark");
+        }
+      } catch (e) { /* ignore */ }
 
       // Open Design: localStorage config
       try {
@@ -37,8 +50,9 @@
           config.theme = "dark";
           localStorage.setItem("open-design:config", JSON.stringify(config));
         }
-      } catch (e) { /* ignore */ }
-
+      } catch (e) {
+        /* ignore */
+      }
     } finally {
       applying = false;
     }
