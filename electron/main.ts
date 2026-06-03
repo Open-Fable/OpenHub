@@ -225,6 +225,38 @@ ipcMain.handle(
         });
         return result.canceled ? null : (result.filePaths[0] ?? null);
       }
+      // OpenWork workspace bootstrap — return empty list so boot flows to
+      // startServerWithoutDesktopWorkspace() which calls openworkServerRestart
+      case "workspaceBootstrap":
+        return { workspaces: [], selectedId: null, activeId: null };
+
+      // OpenWork server restart — point to our running opencode serve instance
+      // isOpenworkServerReady() requires running=true + baseUrl + ownerToken
+      case "openworkServerRestart":
+      case "openworkServerInfo":
+        return {
+          running: true,
+          baseUrl: "http://127.0.0.1:4096",
+          ownerToken: "openhub-local",
+          port: 4096,
+          remoteAccessEnabled: false,
+        };
+
+      // Electron runtimeBootstrap — skipped=true bypasses isOpenworkServerReady check
+      case "runtimeBootstrap":
+        return {
+          ok: true,
+          skipped: true,
+          openworkServer: {
+            running: true,
+            baseUrl: "http://127.0.0.1:4096",
+            ownerToken: "openhub-local",
+            port: 4096,
+            remoteAccessEnabled: false,
+          },
+          engine: { baseUrl: "http://127.0.0.1:4096" },
+        };
+
       case "__homeDir":
         return homedir();
       case "__joinPath":
