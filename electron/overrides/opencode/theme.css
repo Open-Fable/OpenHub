@@ -1,30 +1,26 @@
 /*
- * OpenHub → OpenCode — unified palette
- * OpenCode uses OC-2 tokens in prefers-color-scheme:dark media query.
- * We override the key visible variables directly on :root.
+ * OpenHub → OpenCode — unified neutral palette
  */
 
 :root {
-  /* Base backgrounds — match OpenHub neutral */
-  --background-base: #111114 !important;
-  --background-weak: #18181c !important;
-  --background-strong: #131316 !important;
-  --background-stronger: #151518 !important;
+  --background-base: #0e0e12 !important;
+  --background-weak: #141418 !important;
+  --background-strong: #101014 !important;
+  --background-stronger: #121216 !important;
 
-  /* Surfaces */
-  --surface-float-base: #18181c !important;
-  --surface-float-base-hover: #1e1e22 !important;
-  --surface-raised-stronger-non-alpha: #1e1e22 !important;
+  --surface-float-base: #141418 !important;
+  --surface-float-base-hover: #1c1c24 !important;
+  --surface-raised-stronger-non-alpha: #1c1c24 !important;
 
-  /* Inputs */
-  --input-base: #18181c !important;
-  --input-hover: #1e1e22 !important;
+  --input-base: #141418 !important;
+  --input-hover: #1c1c24 !important;
 
-  /* Borders — neutral tone */
-  --border-weak-base: #262630 !important;
-  --border-weaker-base: #202028 !important;
+  --text-strong: rgba(237, 237, 244, 0.94) !important;
+  --text-base: rgba(174, 174, 190, 0.62) !important;
 
-  /* Text */
-  --text-strong: rgba(237, 237, 240, 0.94) !important;
-  --text-base: rgba(176, 176, 190, 0.62) !important;
+  --border-weak-base: #1e1e28 !important;
+  --border-weaker-base: #1a1a22 !important;
+
+  --button-primary-base: #ededf4 !important;
+  --button-secondary-base: #141418 !important;
 }

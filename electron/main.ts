@@ -35,7 +35,7 @@ async function createWindow(): Promise<void> {
     minHeight: MIN_HEIGHT,
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 18 },
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#0e0e12",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -102,7 +102,7 @@ async function loadViewUrl(view: WebContentsView, url: string): Promise<void> {
   }
 }
 
-const CONFIG_PANEL_HEIGHT = 160;
+const CONFIG_PANEL_HEIGHT = 180;
 let configOpen = false;
 
 function repositionViews(): void {
@@ -185,6 +185,14 @@ async function switchSlot(slot: SlotName): Promise<void> {
   activeSlot = slot;
   repositionViews();
   mainWindow.webContents.send("slot-changed", slot);
+
+  const slotTitles: Record<string, string> = {
+    work: "OpenHub — Work",
+    code: "OpenHub — Code",
+    design: "OpenHub — Design",
+  };
+  mainWindow.setTitle(slotTitles[slot] ?? "OpenHub");
+
   console.warn(`[main] ── switchSlot("${slot}") done ──\n`);
 }
 

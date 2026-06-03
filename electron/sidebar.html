@@ -3,36 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
+    content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
   <title>OpenHub</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #1a1a1a;
-      --sidebar-bg: #161616;
-      --border: #2a2a2a;
-      --text-muted: #6e6e6e;
-      --text: #d4d4d4;
+      --bg: #0e0e12;
+      --sidebar-bg: #111116;
+      --border: #1e1e28;
+      --border-strong: #2a2a36;
+      --text-muted: #5c5c72;
+      --text: #cdcde0;
+      --text-bright: #ededf4;
       --accent: #7c6af2;
-      --active-bg: #252525;
-      --hover-bg: #202020;
-      --radius: 10px;
+      --accent-soft: rgba(124, 106, 242, 0.12);
+      --accent-glow: rgba(124, 106, 242, 0.25);
+      --active-bg: rgba(124, 106, 242, 0.08);
+      --hover-bg: rgba(255, 255, 255, 0.04);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-lg: 16px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+      --transition: 160ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     html, body {
       width: 100%; height: 100%;
       background: var(--sidebar-bg);
       overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      font-family: var(--font);
       -webkit-font-smoothing: antialiased;
       user-select: none;
+      color: var(--text);
     }
 
-    /* Traffic light drag region */
+    /* ── Sidebar ── */
     .drag-region {
       -webkit-app-region: drag;
-      height: 52px;
+      height: 38px;
       width: 100%;
       flex-shrink: 0;
     }
@@ -44,15 +53,15 @@
       height: 100vh;
       background: var(--sidebar-bg);
       border-right: 1px solid var(--border);
-      padding-bottom: 16px;
+      padding-bottom: 12px;
     }
 
     .slots {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 8px 8px 0;
+      gap: 2px;
+      padding: 4px 8px 0;
       flex: 1;
     }
 
@@ -61,21 +70,26 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      width: 52px;
-      height: 56px;
+      gap: 5px;
+      width: 54px;
+      height: 52px;
       border: none;
       border-radius: var(--radius);
       background: transparent;
       cursor: pointer;
       color: var(--text-muted);
-      transition: background 120ms ease, color 120ms ease;
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition);
       position: relative;
+      outline: none;
     }
 
     .slot-btn:hover {
       background: var(--hover-bg);
       color: var(--text);
+    }
+
+    .slot-btn:focus-visible {
+      box-shadow: 0 0 0 2px var(--accent-soft);
     }
 
     .slot-btn.active {
@@ -90,65 +104,107 @@
       top: 50%;
       transform: translateY(-50%);
       width: 3px;
-      height: 20px;
+      height: 18px;
       background: var(--accent);
-      border-radius: 0 2px 2px 0;
+      border-radius: 0 3px 3px 0;
+      box-shadow: 0 0 8px var(--accent-glow);
     }
 
     .slot-icon {
-      font-size: 20px;
-      line-height: 1;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slot-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .slot-label {
       font-size: 9px;
       font-weight: 500;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
+      opacity: 0.85;
     }
 
     .divider {
-      width: 36px;
+      width: 32px;
       height: 1px;
-      background: var(--border);
-      margin: 8px auto;
+      background: var(--border-strong);
+      margin: 6px auto;
     }
 
     .bottom-slots {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
       padding: 0 8px;
     }
 
-    /* Loading indicator dot */
-    .slot-btn .dot {
+    /* Status glow ring */
+    .slot-btn .status-ring {
       position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 6px;
-      height: 6px;
+      top: 4px;
+      right: 4px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: var(--text-muted);
       opacity: 0;
-      transition: opacity 200ms;
+      transition: opacity 200ms, box-shadow 300ms;
     }
 
-    .slot-btn.loading .dot {
+    .slot-btn.loading .status-ring {
       opacity: 1;
       background: #f0b429;
-      animation: pulse 1s ease-in-out infinite;
+      box-shadow: 0 0 6px rgba(240, 180, 41, 0.5);
+      animation: glow-pulse 1.5s ease-in-out infinite;
     }
 
-    .slot-btn.ready .dot {
+    .slot-btn.ready .status-ring {
       opacity: 1;
       background: #4caf50;
+      box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(240, 180, 41, 0.5); }
+      50% { opacity: 0.5; box-shadow: 0 0 3px rgba(240, 180, 41, 0.2); }
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      left: calc(100% + 10px);
+      top: 50%;
+      transform: translateY(-50%) translateX(-4px);
+      background: #1e1e28;
+      color: var(--text-bright);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 120ms ease, transform 120ms ease;
+      border: 1px solid var(--border-strong);
+      z-index: 200;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .slot-btn:hover .tooltip {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
     }
 
     /* ── Config top-sheet ── */
@@ -162,12 +218,13 @@
 
     #config-panel.open { pointer-events: all; }
 
-    /* semi-transparent backdrop, only below the sheet */
     #config-backdrop {
       position: fixed;
       left: 72px;
       top: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       z-index: 99;
       opacity: 0;
       pointer-events: none;
@@ -180,179 +237,308 @@
     }
 
     .config-card {
-      background: #1e1e1e;
-      border-bottom: 1px solid var(--border);
-      border-radius: 0 0 14px 14px;
-      padding: 16px 28px 20px;
-      height: 160px;
-      transform: translateY(-160px);
-      transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(20, 20, 28, 0.92);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border-bottom: 1px solid var(--border-strong);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      padding: 20px 32px 24px;
+      transform: translateY(-100%);
+      transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
       display: flex;
-      gap: 28px;
-      align-items: center;
+      gap: 32px;
+      align-items: flex-start;
     }
 
     #config-panel.open .config-card {
       transform: translateY(0);
     }
 
-    .config-card h2 {
-      font-size: 13px;
+    .config-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 100px;
+      padding-top: 2px;
+    }
+
+    .config-header h2 {
+      font-size: 14px;
       font-weight: 600;
-      color: var(--text);
-      margin-bottom: 14px;
-      white-space: nowrap;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .config-header h2 svg { width: 16px; height: 16px; stroke: var(--accent); fill: none; stroke-width: 1.75; }
+
+    .config-header p {
+      font-size: 11px;
+      color: var(--text-muted);
     }
 
     .config-sections {
       display: flex;
-      gap: 32px;
+      gap: 36px;
       flex: 1;
     }
 
-    .config-section { flex: 1; min-width: 160px; }
+    .config-section { flex: 1; min-width: 170px; }
 
     .config-section h3 {
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      font-weight: 600;
     }
 
-    .config-row {
+    .config-field { margin-bottom: 10px; }
+
+    .config-field label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .config-input-wrap {
+      position: relative;
+      display: flex;
+    }
+
+    .config-field input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font);
+      padding: 7px 32px 7px 10px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      width: 100%;
+    }
+
+    .config-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .config-field input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+    .btn-reveal {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 5px 0;
-      gap: 12px;
+      border-radius: 4px;
+      transition: color var(--transition);
     }
 
-    .config-row label {
-      font-size: 12px;
-      color: var(--text);
-      white-space: nowrap;
-    }
-
-    .config-row input[type="password"],
-    .config-row input[type="text"] {
-      background: #2a2a2a;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      font-size: 12px;
-      padding: 4px 8px;
-      width: 160px;
-      outline: none;
-    }
-
-    .config-row input:focus { border-color: var(--accent); }
+    .btn-reveal:hover { color: var(--text); }
+    .btn-reveal svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.75; }
 
     .config-actions {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      justify-content: flex-end;
-      gap: 8px;
-      padding-top: 24px;
+      gap: 10px;
+      padding-top: 4px;
     }
 
     .btn-save {
-      padding: 8px 20px;
+      padding: 8px 18px;
       background: var(--accent);
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       color: #fff;
       font-size: 12px;
       font-weight: 600;
+      font-family: var(--font);
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background var(--transition), box-shadow var(--transition);
       white-space: nowrap;
     }
 
-    .btn-close {
+    .btn-save:hover {
+      background: #8b7bf5;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .btn-save svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    .btn-save.saved { background: #2d8a4e; pointer-events: none; }
+
+    .btn-close-cfg {
       background: none;
       border: none;
       color: var(--text-muted);
-      font-size: 16px;
       cursor: pointer;
-      line-height: 1;
       padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      transition: color var(--transition), background var(--transition);
     }
 
-    .btn-close:hover { color: var(--text); }
+    .btn-close-cfg:hover { color: var(--text); background: var(--hover-bg); }
+
+    .btn-close-cfg svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
 
     /* ── Welcome screen ── */
     #welcome {
       position: fixed;
       left: 72px;
       top: 0; right: 0; bottom: 0;
-      background: var(--bg);
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 40%, rgba(124, 106, 242, 0.06) 0%, transparent 70%),
+        var(--bg);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 48px;
+      gap: 52px;
       z-index: 10;
+      animation: welcome-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes welcome-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     #welcome.hidden { display: none; }
 
-    .welcome-title { text-align: center; }
-
-    .welcome-title h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
+    .welcome-brand {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
     }
 
-    .welcome-title p {
+    .welcome-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent), #9d8af7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(124, 106, 242, 0.3);
+    }
+
+    .welcome-logo svg {
+      width: 28px;
+      height: 28px;
+      stroke: #fff;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .welcome-brand h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: -0.03em;
+    }
+
+    .welcome-brand p {
       font-size: 14px;
       color: var(--text-muted);
     }
 
     .welcome-cards {
       display: flex;
-      gap: 20px;
+      gap: 16px;
     }
 
     .welcome-card {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      width: 190px;
-      padding: 32px 20px;
-      background: #1e1e1e;
+      gap: 16px;
+      width: 200px;
+      padding: 32px 20px 28px;
+      background: rgba(255, 255, 255, 0.025);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       cursor: pointer;
-      transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+      transition: background var(--transition), border-color var(--transition),
+                  transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                  box-shadow 200ms ease;
       -webkit-app-region: no-drag;
+      animation: card-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .welcome-card:nth-child(1) { animation-delay: 80ms; }
+    .welcome-card:nth-child(2) { animation-delay: 150ms; }
+    .welcome-card:nth-child(3) { animation-delay: 220ms; }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .welcome-card:hover {
-      background: #252525;
-      border-color: var(--accent);
-      transform: translateY(-3px);
+      background: rgba(124, 106, 242, 0.06);
+      border-color: rgba(124, 106, 242, 0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(124, 106, 242, 0.12);
     }
 
-    .welcome-card:active { transform: translateY(0); }
+    .welcome-card:active {
+      transform: translateY(-1px);
+      transition-duration: 60ms;
+    }
 
-    .welcome-card-icon { font-size: 34px; line-height: 1; }
+    .welcome-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius);
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .welcome-card-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--accent);
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
     .welcome-card-name {
       font-size: 15px;
       font-weight: 600;
-      color: var(--text);
+      color: var(--text-bright);
     }
 
     .welcome-card-desc {
       font-size: 12px;
       color: var(--text-muted);
       text-align: center;
-      line-height: 1.5;
+      line-height: 1.55;
     }
   </style>
 </head>
@@ -362,158 +548,223 @@
   <div class="drag-region"></div>
 
   <div class="slots">
-    <button class="slot-btn" data-slot="work" title="Work">
-      <div class="dot"></div>
-      <span class="slot-icon">◈</span>
+    <button class="slot-btn" data-slot="work">
+      <div class="status-ring"></div>
+      <span class="slot-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </span>
       <span class="slot-label">Work</span>
+      <span class="tooltip">OpenWork</span>
     </button>
 
-    <button class="slot-btn" data-slot="code" title="Code">
-      <div class="dot"></div>
-      <span class="slot-icon">&lt;/&gt;</span>
+    <button class="slot-btn" data-slot="code">
+      <div class="status-ring"></div>
+      <span class="slot-icon">
+        <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      </span>
       <span class="slot-label">Code</span>
+      <span class="tooltip">OpenCode</span>
     </button>
 
-    <button class="slot-btn" data-slot="design" title="Design">
-      <div class="dot"></div>
-      <span class="slot-icon">✦</span>
+    <button class="slot-btn" data-slot="design">
+      <div class="status-ring"></div>
+      <span class="slot-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </span>
       <span class="slot-label">Design</span>
+      <span class="tooltip">Open Design</span>
     </button>
   </div>
 
   <div class="divider"></div>
 
   <div class="bottom-slots">
-    <button class="slot-btn" data-slot="config" title="Configuration">
-      <span class="slot-icon">⚙</span>
+    <button class="slot-btn" data-slot="config">
+      <span class="slot-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </span>
       <span class="slot-label">Config</span>
+      <span class="tooltip">Paramètres</span>
     </button>
   </div>
 </div>
 
 <!-- Welcome screen -->
 <div id="welcome">
-  <div class="welcome-title">
+  <div class="welcome-brand">
+    <div class="welcome-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
     <h1>OpenHub</h1>
-    <p>Choisissez un outil pour commencer</p>
+    <p>Choisissez un espace pour commencer</p>
   </div>
   <div class="welcome-cards">
     <div class="welcome-card" data-slot="work">
-      <span class="welcome-card-icon">◈</span>
+      <div class="welcome-card-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </div>
       <span class="welcome-card-name">Work</span>
-      <span class="welcome-card-desc">Gestion de projets et de tâches avec l'IA</span>
+      <span class="welcome-card-desc">Planifier, collaborer et piloter vos projets avec l'IA</span>
     </div>
     <div class="welcome-card" data-slot="code">
-      <span class="welcome-card-icon">&lt;/&gt;</span>
+      <div class="welcome-card-icon">
+        <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      </div>
       <span class="welcome-card-name">Code</span>
-      <span class="welcome-card-desc">Assistant de développement et de code</span>
+      <span class="welcome-card-desc">Coder, déboguer et déployer avec un assistant IA intégré</span>
     </div>
     <div class="welcome-card" data-slot="design">
-      <span class="welcome-card-icon">✦</span>
+      <div class="welcome-card-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
       <span class="welcome-card-name">Design</span>
-      <span class="welcome-card-desc">Création et édition de designs avec l'IA</span>
+      <span class="welcome-card-desc">Générer des prototypes, slides et visuels par prompt</span>
     </div>
   </div>
 </div>
 
-<!-- Config top-sheet (slides down from top of content area) -->
+<!-- Config top-sheet -->
 <div id="config-panel">
   <div class="config-card">
-    <div>
-      <h2>⚙ Configuration</h2>
+    <div class="config-header">
+      <h2>
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Configuration
+      </h2>
+      <p>Clés API stockées dans le Keychain macOS</p>
     </div>
     <div class="config-sections">
       <div class="config-section">
-        <h3>Clés API</h3>
-        <div class="config-row">
+        <h3>Modèles IA</h3>
+        <div class="config-field">
           <label>Anthropic</label>
-          <input type="password" id="key-anthropic" placeholder="sk-ant-..." />
+          <div class="config-input-wrap">
+            <input type="password" id="key-anthropic" placeholder="sk-ant-..." />
+            <button class="btn-reveal" data-target="key-anthropic" aria-label="Afficher">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
-        <div class="config-row">
+        <div class="config-field">
           <label>OpenAI</label>
-          <input type="password" id="key-openai" placeholder="sk-..." />
+          <div class="config-input-wrap">
+            <input type="password" id="key-openai" placeholder="sk-..." />
+            <button class="btn-reveal" data-target="key-openai" aria-label="Afficher">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
-        <div class="config-row">
+        <div class="config-field">
           <label>Ollama URL</label>
-          <input type="text" id="key-ollama" placeholder="http://localhost:11434" />
+          <div class="config-input-wrap">
+            <input type="text" id="key-ollama" placeholder="http://localhost:11434" />
+          </div>
         </div>
       </div>
       <div class="config-section">
-        <h3>OAuth</h3>
-        <div class="config-row">
+        <h3>Intégrations</h3>
+        <div class="config-field">
           <label>GitHub Token</label>
-          <input type="password" id="key-github" placeholder="ghp_..." />
+          <div class="config-input-wrap">
+            <input type="password" id="key-github" placeholder="ghp_..." />
+            <button class="btn-reveal" data-target="key-github" aria-label="Afficher">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
-        <h3 style="margin-top:12px">Web Search</h3>
-        <div class="config-row">
-          <label>Brave Search</label>
-          <input type="password" id="key-brave" placeholder="BSA..." />
+        <div class="config-field">
+          <label>Brave Search API</label>
+          <div class="config-input-wrap">
+            <input type="password" id="key-brave" placeholder="BSA..." />
+            <button class="btn-reveal" data-target="key-brave" aria-label="Afficher">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
     <div class="config-actions">
-      <button class="btn-close" id="close-config">✕</button>
-      <button class="btn-save" id="save-config">Enregistrer</button>
+      <button class="btn-close-cfg" id="close-config" aria-label="Fermer">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <button class="btn-save" id="save-config">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Enregistrer
+      </button>
     </div>
   </div>
 </div>
-<!-- Backdrop — click outside to close -->
 <div id="config-backdrop"></div>
 
 <script>
-  const buttons = document.querySelectorAll('.slot-btn[data-slot]');
-  const configPanel = document.getElementById('config-panel');
-  const welcome = document.getElementById('welcome');
+  var buttons = document.querySelectorAll('.slot-btn[data-slot]');
+  var configPanel = document.getElementById('config-panel');
+  var welcome = document.getElementById('welcome');
+  var backdrop = document.getElementById('config-backdrop');
 
-  // Welcome screen — click a card to launch that slot
-  document.querySelectorAll('.welcome-card[data-slot]').forEach(card => {
-    card.addEventListener('click', async () => {
-      const slot = card.dataset.slot;
+  // SVG templates for reveal toggle
+  var eyeOpenSVG = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  var eyeClosedSVG = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  var saveSVGContent = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Enregistrer';
+  var checkSVGContent = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><polyline points="20 6 9 17 4 12"/></svg> Enregistré';
+
+  // Welcome screen cards
+  document.querySelectorAll('.welcome-card[data-slot]').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var slot = card.dataset.slot;
       welcome.classList.add('hidden');
       setLoading(slot, true);
-      try {
-        await window.openhub.switchSlot(slot);
-      } catch (err) {
+      window.openhub.switchSlot(slot).catch(function(err) {
         console.error('[sidebar] welcome switchSlot failed:', err);
         setLoading(slot, false);
-      }
+      });
     });
   });
 
   function setLoading(slot, isLoading) {
-    const btn = document.querySelector(`[data-slot="${slot}"]`);
+    var btn = document.querySelector('.slot-btn[data-slot="' + slot + '"]');
     if (btn) btn.classList.toggle('loading', isLoading);
   }
 
-  // Slot switching with loading feedback
-  buttons.forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const slot = btn.dataset.slot;
+  // Sidebar slot buttons
+  buttons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var slot = btn.dataset.slot;
       if (!slot || slot === 'config') return;
+      welcome.classList.add('hidden');
       setLoading(slot, true);
-      try {
-        await window.openhub.switchSlot(slot);
-      } catch (err) {
+      window.openhub.switchSlot(slot).catch(function(err) {
         console.error('[sidebar] switchSlot failed:', err);
         setLoading(slot, false);
-      }
+      });
     });
   });
 
-  // Active state synced from main process
-  window.openhub.onSlotChanged(slot => {
-    buttons.forEach(b => {
+  // Sync active state
+  window.openhub.onSlotChanged(function(slot) {
+    buttons.forEach(function(b) {
       b.classList.toggle('active', b.dataset.slot === slot);
       b.classList.remove('loading');
     });
   });
 
-  const backdrop = document.getElementById('config-backdrop');
-
+  // Config panel
   function openConfig() {
     configPanel.classList.add('open');
     window.openhub.notifyConfigVisibility(true);
+    if (window.openhub.getApiKeys) {
+      window.openhub.getApiKeys().then(function(keys) {
+        if (!keys) return;
+        if (keys.anthropic) document.getElementById('key-anthropic').value = keys.anthropic;
+        if (keys.openai) document.getElementById('key-openai').value = keys.openai;
+        if (keys.ollamaUrl && keys.ollamaUrl !== 'http://127.0.0.1:11434')
+          document.getElementById('key-ollama').value = keys.ollamaUrl;
+        if (keys.githubToken) document.getElementById('key-github').value = keys.githubToken;
+        if (keys.braveSearchKey) document.getElementById('key-brave').value = keys.braveSearchKey;
+      }).catch(function() {});
+    }
   }
+
   function closeConfig() {
     configPanel.classList.remove('open');
     window.openhub.notifyConfigVisibility(false);
@@ -523,20 +774,53 @@
   document.getElementById('close-config').addEventListener('click', closeConfig);
   backdrop.addEventListener('click', closeConfig);
 
-  document.getElementById('save-config').addEventListener('click', async () => {
-    await window.openhub.saveApiKeys({
+  // Save with feedback
+  document.getElementById('save-config').addEventListener('click', function() {
+    var btn = this;
+    window.openhub.saveApiKeys({
       anthropic: document.getElementById('key-anthropic').value,
       openai: document.getElementById('key-openai').value,
       ollamaUrl: document.getElementById('key-ollama').value,
       githubToken: document.getElementById('key-github').value,
       braveSearchKey: document.getElementById('key-brave').value,
+    }).then(function() {
+      btn.classList.add('saved');
+      btn.textContent = '';
+      var tmp = document.createElement('span');
+      tmp.insertAdjacentHTML('afterbegin', checkSVGContent);
+      while (tmp.firstChild) btn.appendChild(tmp.firstChild);
+      setTimeout(function() {
+        btn.classList.remove('saved');
+        btn.textContent = '';
+        var tmp2 = document.createElement('span');
+        tmp2.insertAdjacentHTML('afterbegin', saveSVGContent);
+        while (tmp2.firstChild) btn.appendChild(tmp2.firstChild);
+        closeConfig();
+      }, 1200);
     });
-    configPanel.classList.remove('open');
   });
 
   // Config button
-  document.querySelector('[data-slot="config"]').addEventListener('click', () => {
-    if (openhub) openhub.switchSlot('config');
+  document.querySelector('[data-slot="config"]').addEventListener('click', function() {
+    if (window.openhub) window.openhub.switchSlot('config');
+  });
+
+  // Reveal/hide password
+  document.querySelectorAll('.btn-reveal').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      var isPass = input.type === 'password';
+      input.type = isPass ? 'text' : 'password';
+      var svg = btn.querySelector('svg');
+      if (svg) {
+        var tmp = document.createElement('span');
+        tmp.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24">' + (isPass ? eyeClosedSVG : eyeOpenSVG) + '</svg>');
+        var newSvg = tmp.querySelector('svg');
+        newSvg.style.cssText = 'width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.75';
+        svg.replaceWith(newSvg);
+      }
+    });
   });
 </script>
 
