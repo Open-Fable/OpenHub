@@ -1,9 +1,9 @@
 /**
  * OpenWork desktop bridge polyfill
  *
- * 1. Sets window.__OPENWORK_ELECTRON__ so isDesktopRuntime() returns true
- * 2. Intercepts fetch() to fake OpenWork server endpoints that opencode
- *    serve does not provide (/workspaces/*, /status, etc.)
+ * 1. Sets window.__OPENWORK_ELECTRON__ for isDesktopRuntime()
+ * 2. Patches globalThis.fetch AND window.fetch to intercept workspace API calls
+ *    that opencode serve cannot handle
  */
 (function () {
   "use strict";
@@ -27,9 +27,11 @@
     },
   };
 
-  // ── Fetch interceptor for OpenWork server API ──
-  var realFetch = window.fetch;
-  var SERVER_BASE = "http://127.0.0.1:4096";
+  // ── Fetch interceptor ──
+  // desktopFetch calls globalThis.fetch for loopback URLs at call time.
+  // We need to patch the actual fetch property on both window and globalThis
+  // so any reference path resolves to our interceptor.
+  var nativeFetch = globalThis.fetch.bind(globalThis);
 
   function jsonResponse(data, status) {
     return new Response(JSON.stringify(data), {
@@ -56,25 +58,49 @@
     };
   }
 
-  window.fetch = function (input, init) {
-    var url = typeof input === "string"
-      ? input
-      : input instanceof Request ? input.url : String(input);
-
-    if (url.indexOf(SERVER_BASE) !== 0) {
-      return realFetch.apply(this, arguments);
+  function interceptedFetch(input, init) {
+    var url;
+    if (typeof input === "string") {
+      url = input;
+    } else if (typeof Request !== "undefined" && input instanceof Request) {
+      url = input.url;
+    } else if (input instanceof URL) {
+      url = input.toString();
+    } else {
+      url = String(input);
     }
 
-    var path = url.slice(SERVER_BASE.length).split("?")[0];
-    var method = (init && init.method) ? init.method.toUpperCase() : "GET";
+    // Only intercept opencode serve workspace endpoints
+    var isServerUrl = url.indexOf("://127.0.0.1:4096") !== -1 || url.indexOf("://localhost:4096") !== -1;
+    if (!isServerUrl) {
+      return nativeFetch(input, init);
+    }
+
+    try {
+      var parsed = new URL(url);
+      var path = parsed.pathname;
+    } catch (e) {
+      return nativeFetch(input, init);
+    }
+
+    var method = "GET";
+    if (init && init.method) {
+      method = init.method.toUpperCase();
+    } else if (typeof Request !== "undefined" && input instanceof Request) {
+      method = input.method.toUpperCase();
+    }
+
+    // Extract body from either init or Request
+    var bodyStr = null;
+    if (init && typeof init.body === "string") {
+      bodyStr = init.body;
+    }
 
     // POST /workspaces/local
     if (path === "/workspaces/local" && method === "POST") {
       try {
-        var body = init && init.body ? JSON.parse(init.body) : {};
-        return Promise.resolve(jsonResponse(
-          makeWorkspaceList(body.folderPath || "/", body.name)
-        ));
+        var body = bodyStr ? JSON.parse(bodyStr) : {};
+        return Promise.resolve(jsonResponse(makeWorkspaceList(body.folderPath || "/", body.name)));
       } catch (e) {
         return Promise.resolve(jsonResponse(makeWorkspaceList("/")));
       }
@@ -92,36 +118,43 @@
     // POST /workspaces/remote
     if (path === "/workspaces/remote" && method === "POST") {
       try {
-        var remoteBody = init && init.body ? JSON.parse(init.body) : {};
-        return Promise.resolve(jsonResponse(
-          makeWorkspaceList(remoteBody.baseUrl || "/", remoteBody.name)
-        ));
+        var rBody = bodyStr ? JSON.parse(bodyStr) : {};
+        return Promise.resolve(jsonResponse(makeWorkspaceList(rBody.baseUrl || "/", rBody.name)));
       } catch (e) {
         return Promise.resolve(jsonResponse(makeWorkspaceList("/")));
       }
     }
 
-    // PUT /workspaces/*/display-name
-    if (/^\/workspaces\/[^/]+\/display-name$/.test(path) && method === "PUT") {
-      return Promise.resolve(jsonResponse({ ok: true }));
-    }
-
-    // POST /workspaces/*/activate
+    // Workspace mutations — activate, display-name, delete
     if (/^\/workspaces\/[^/]+\/activate/.test(path) && method === "POST") {
       return Promise.resolve(jsonResponse({ ok: true }));
     }
-
-    // DELETE /workspaces/*
+    if (/^\/workspaces\/[^/]+\/display-name$/.test(path) && method === "PUT") {
+      return Promise.resolve(jsonResponse({ ok: true }));
+    }
     if (/^\/workspaces\/[^/]+$/.test(path) && method === "DELETE") {
       return Promise.resolve(jsonResponse({ ok: true }));
     }
 
-    // GET /status or /health
+    // Status checks
     if (path === "/status" || path === "/health") {
       return Promise.resolve(jsonResponse({ running: true, version: "openhub" }));
     }
 
-    // Everything else — pass through to opencode serve
-    return realFetch.apply(this, arguments);
-  };
+    // Everything else passes through to opencode serve
+    return nativeFetch(input, init);
+  }
+
+  // Patch both references so any code path (window.fetch, globalThis.fetch,
+  // or a cached module-level reference) picks up our interceptor.
+  Object.defineProperty(window, "fetch", {
+    value: interceptedFetch,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "fetch", {
+    value: interceptedFetch,
+    writable: true,
+    configurable: true,
+  });
 })();
