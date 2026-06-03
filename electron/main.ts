@@ -226,9 +226,25 @@ ipcMain.handle(
         return result.canceled ? null : (result.filePaths[0] ?? null);
       }
       // ── OpenWork boot ──────────────────────────────────────────────────────
-      // workspaceBootstrap: empty list → boot goes to startServerWithoutDesktop
+      // workspaceBootstrap: return a default local workspace so OpenWork skips
+      // the welcome/create-workspace screen and boots directly into the main UI.
+      // A pre-populated workspace also routes the boot through runtimeBootstrap
+      // (Electron path) which we handle with skipped=true → instant markReady().
       case "workspaceBootstrap":
-        return { workspaces: [], selectedId: null, activeId: null };
+        return {
+          workspaces: [
+            {
+              id: "openhub-default",
+              name: "OpenHub",
+              path: homedir(),
+              preset: "default",
+              workspaceType: "local",
+              displayName: "OpenHub",
+            },
+          ],
+          selectedId: "openhub-default",
+          activeId: "openhub-default",
+        };
 
       // openworkServerRestart/Info: point to our running opencode serve
       // isOpenworkServerReady() requires running=true + baseUrl + ownerToken
