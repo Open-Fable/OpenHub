@@ -1,42 +1,30 @@
 /*
- * OpenHub → Open Design — unified palette + hide native sidebar
+ * OpenHub → Open Design — unified neutral palette + hide native nav
  */
 
-/* ── Hide native left nav rail (we have our own sidebar) ── */
-.entry-nav-rail {
-  display: none !important;
-}
+/* Hide native left nav rail */
+.entry-nav-rail { display: none !important; }
+.entry-shell--no-header { --entry-rail-width: 0px !important; }
 
-/* Reclaim the space the rail occupied */
-.entry-shell--no-header {
-  --entry-rail-width: 0px !important;
-}
+/* Hide top chrome bar */
+.workspace-tabs-chrome.app-chrome-header { display: none !important; }
 
-/* Also hide the top chrome bar (Star/Discord/CLI buttons) */
-.workspace-tabs-chrome.app-chrome-header {
-  display: none !important;
-}
-
-/* ── Color overrides ── */
 [data-theme="dark"],
 :root {
-  /* Backgrounds — neutral, no warm undertone */
-  --bg: #111114 !important;
-  --bg-app: #111114 !important;
-  --bg-panel: #19191d !important;
-  --bg-subtle: #222228 !important;
-  --bg-muted: #292930 !important;
-  --bg-elevated: #1e1e22 !important;
+  --bg: #0e0e12 !important;
+  --bg-app: #0e0e12 !important;
+  --bg-panel: #141418 !important;
+  --bg-subtle: #1c1c24 !important;
+  --bg-muted: #23232c !important;
+  --bg-elevated: #1a1a22 !important;
 
-  /* Borders */
-  --border: #2a2a32 !important;
-  --border-strong: #363640 !important;
-  --border-soft: #222228 !important;
+  --border: #2a2a34 !important;
+  --border-strong: #343440 !important;
+  --border-soft: #1c1c24 !important;
 
-  /* Text — neutral cool gray */
-  --text: #e0e0e6 !important;
-  --text-strong: #ededf0 !important;
-  --text-muted: #8a8a98 !important;
-  --text-soft: #5c5c6c !important;
-  --text-faint: #444452 !important;
+  --text: #e0e0ea !important;
+  --text-strong: #ededf4 !important;
+  --text-muted: #8888a0 !important;
+  --text-soft: #5c5c72 !important;
+  --text-faint: #404050 !important;
 }
