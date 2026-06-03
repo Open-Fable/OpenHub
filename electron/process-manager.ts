@@ -12,7 +12,8 @@ const HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_POLL_MS = 500;
 
 interface RunningApp {
-  readonly process: ChildProcess;
+  // null when slot was reused from an already-running external process
+  readonly process: ChildProcess | null;
   port: number;
   healthy: boolean;
 }
@@ -56,11 +57,7 @@ export class ProcessManager {
     if (knownUrl && (await this.isAlreadyHealthy(knownUrl))) {
       const port = parseInt(new URL(knownUrl).port);
       console.warn(`[${slot}] reusing existing process on :${port}`);
-      this.running.set(slot, {
-        process: null as unknown as ChildProcess,
-        port,
-        healthy: true,
-      });
+      this.running.set(slot, { process: null, port, healthy: true });
       return port;
     }
 

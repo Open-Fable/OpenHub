@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("openhub", {
 
   webSearch: (query: string) => ipcRenderer.invoke("web-search", query),
 
+  getApiKeys: () => ipcRenderer.invoke("get-api-keys"),
+
   saveApiKeys: (keys: {
     anthropic?: string;
     openai?: string;
