@@ -244,6 +244,80 @@
       cursor: pointer;
       line-height: 1;
     }
+
+    /* ── Welcome screen ── */
+    #welcome {
+      position: fixed;
+      left: 72px;
+      top: 0; right: 0; bottom: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      z-index: 10;
+    }
+
+    #welcome.hidden { display: none; }
+
+    .welcome-title { text-align: center; }
+
+    .welcome-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .welcome-title p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .welcome-cards {
+      display: flex;
+      gap: 20px;
+    }
+
+    .welcome-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 190px;
+      padding: 32px 20px;
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+      -webkit-app-region: no-drag;
+    }
+
+    .welcome-card:hover {
+      background: #252525;
+      border-color: var(--accent);
+      transform: translateY(-3px);
+    }
+
+    .welcome-card:active { transform: translateY(0); }
+
+    .welcome-card-icon { font-size: 34px; line-height: 1; }
+
+    .welcome-card-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .welcome-card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -252,7 +326,7 @@
   <div class="drag-region"></div>
 
   <div class="slots">
-    <button class="slot-btn active" data-slot="work" title="Work">
+    <button class="slot-btn" data-slot="work" title="Work">
       <div class="dot"></div>
       <span class="slot-icon">◈</span>
       <span class="slot-label">Work</span>
@@ -278,6 +352,31 @@
       <span class="slot-icon">⚙</span>
       <span class="slot-label">Config</span>
     </button>
+  </div>
+</div>
+
+<!-- Welcome screen -->
+<div id="welcome">
+  <div class="welcome-title">
+    <h1>OpenHub</h1>
+    <p>Choisissez un outil pour commencer</p>
+  </div>
+  <div class="welcome-cards">
+    <div class="welcome-card" data-slot="work">
+      <span class="welcome-card-icon">◈</span>
+      <span class="welcome-card-name">Work</span>
+      <span class="welcome-card-desc">Gestion de projets et de tâches avec l'IA</span>
+    </div>
+    <div class="welcome-card" data-slot="code">
+      <span class="welcome-card-icon">&lt;/&gt;</span>
+      <span class="welcome-card-name">Code</span>
+      <span class="welcome-card-desc">Assistant de développement et de code</span>
+    </div>
+    <div class="welcome-card" data-slot="design">
+      <span class="welcome-card-icon">✦</span>
+      <span class="welcome-card-name">Design</span>
+      <span class="welcome-card-desc">Création et édition de designs avec l'IA</span>
+    </div>
   </div>
 </div>
 
@@ -326,6 +425,22 @@
 <script>
   const buttons = document.querySelectorAll('.slot-btn[data-slot]');
   const configPanel = document.getElementById('config-panel');
+  const welcome = document.getElementById('welcome');
+
+  // Welcome screen — click a card to launch that slot
+  document.querySelectorAll('.welcome-card[data-slot]').forEach(card => {
+    card.addEventListener('click', async () => {
+      const slot = card.dataset.slot;
+      welcome.classList.add('hidden');
+      setLoading(slot, true);
+      try {
+        await window.openhub.switchSlot(slot);
+      } catch (err) {
+        console.error('[sidebar] welcome switchSlot failed:', err);
+        setLoading(slot, false);
+      }
+    });
+  });
 
   function setLoading(slot, isLoading) {
     const btn = document.querySelector(`[data-slot="${slot}"]`);
