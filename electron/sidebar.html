@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
+  <title>OpenHub</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1a1a1a;
+      --sidebar-bg: #161616;
+      --border: #2a2a2a;
+      --text-muted: #6e6e6e;
+      --text: #d4d4d4;
+      --accent: #7c6af2;
+      --active-bg: #252525;
+      --hover-bg: #202020;
+      --radius: 10px;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--sidebar-bg);
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* Traffic light drag region */
+    .drag-region {
+      -webkit-app-region: drag;
+      height: 52px;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      width: 72px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .slots {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 8px 0;
+      flex: 1;
+    }
+
+    .slot-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      width: 52px;
+      height: 56px;
+      border: none;
+      border-radius: var(--radius);
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: background 120ms ease, color 120ms ease;
+      position: relative;
+    }
+
+    .slot-btn:hover {
+      background: var(--hover-bg);
+      color: var(--text);
+    }
+
+    .slot-btn.active {
+      background: var(--active-bg);
+      color: var(--accent);
+    }
+
+    .slot-btn.active::before {
+      content: "";
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .slot-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .slot-label {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .divider {
+      width: 36px;
+      height: 1px;
+      background: var(--border);
+      margin: 8px auto;
+    }
+
+    .bottom-slots {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+    }
+
+    /* Loading indicator dot */
+    .slot-btn .dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      opacity: 0;
+      transition: opacity 200ms;
+    }
+
+    .slot-btn.loading .dot {
+      opacity: 1;
+      background: #f0b429;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .slot-btn.ready .dot {
+      opacity: 1;
+      background: #4caf50;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Config panel overlay */
+    #config-panel {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #config-panel.open { display: flex; }
+
+    .config-card {
+      background: #222;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      width: 380px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .config-card h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .config-section { margin-bottom: 20px; }
+
+    .config-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .config-row label {
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .config-row input[type="password"],
+    .config-row input[type="text"] {
+      background: #2e2e2e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 5px 10px;
+      width: 180px;
+      outline: none;
+    }
+
+    .config-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 10px;
+      margin-top: 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="drag-region"></div>
+
+  <div class="slots">
+    <button class="slot-btn active" data-slot="work" title="Work">
+      <div class="dot"></div>
+      <span class="slot-icon">◈</span>
+      <span class="slot-label">Work</span>
+    </button>
+
+    <button class="slot-btn" data-slot="code" title="Code">
+      <div class="dot"></div>
+      <span class="slot-icon">&lt;/&gt;</span>
+      <span class="slot-label">Code</span>
+    </button>
+
+    <button class="slot-btn" data-slot="design" title="Design">
+      <div class="dot"></div>
+      <span class="slot-icon">✦</span>
+      <span class="slot-label">Design</span>
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="bottom-slots">
+    <button class="slot-btn" data-slot="config" title="Configuration">
+      <span class="slot-icon">⚙</span>
+      <span class="slot-label">Config</span>
+    </button>
+  </div>
+</div>
+
+<!-- Config panel -->
+<div id="config-panel">
+  <div class="config-card" style="position:relative">
+    <button class="btn-close" id="close-config">✕</button>
+    <h2>Configuration</h2>
+
+    <div class="config-section">
+      <h3>Clés API</h3>
+      <div class="config-row">
+        <label>Anthropic</label>
+        <input type="password" id="key-anthropic" placeholder="sk-ant-..." />
+      </div>
+      <div class="config-row">
+        <label>OpenAI</label>
+        <input type="password" id="key-openai" placeholder="sk-..." />
+      </div>
+      <div class="config-row">
+        <label>Ollama URL</label>
+        <input type="text" id="key-ollama" placeholder="http://localhost:11434" />
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h3>OAuth</h3>
+      <div class="config-row">
+        <label>GitHub Token</label>
+        <input type="password" id="key-github" placeholder="ghp_..." />
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h3>Web Search</h3>
+      <div class="config-row">
+        <label>Brave Search API</label>
+        <input type="password" id="key-brave" placeholder="BSA..." />
+      </div>
+    </div>
+
+    <button class="btn-save" id="save-config">Enregistrer dans le Keychain</button>
+  </div>
+</div>
+
+<script>
+  const buttons = document.querySelectorAll('.slot-btn[data-slot]');
+  const configPanel = document.getElementById('config-panel');
+
+  function setLoading(slot, isLoading) {
+    const btn = document.querySelector(`[data-slot="${slot}"]`);
+    if (btn) btn.classList.toggle('loading', isLoading);
+  }
+
+  // Slot switching with loading feedback
+  buttons.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const slot = btn.dataset.slot;
+      if (!slot || slot === 'config') return;
+      setLoading(slot, true);
+      try {
+        await window.openhub.switchSlot(slot);
+      } catch (err) {
+        console.error('[sidebar] switchSlot failed:', err);
+        setLoading(slot, false);
+      }
+    });
+  });
+
+  // Active state synced from main process
+  window.openhub.onSlotChanged(slot => {
+    buttons.forEach(b => {
+      b.classList.toggle('active', b.dataset.slot === slot);
+      b.classList.remove('loading');
+    });
+  });
+
+  window.openhub.onShowConfig(() => configPanel.classList.add('open'));
+
+  document.getElementById('close-config').addEventListener('click', () => {
+    configPanel.classList.remove('open');
+  });
+
+  document.getElementById('save-config').addEventListener('click', async () => {
+    await window.openhub.saveApiKeys({
+      anthropic: document.getElementById('key-anthropic').value,
+      openai: document.getElementById('key-openai').value,
+      ollamaUrl: document.getElementById('key-ollama').value,
+      githubToken: document.getElementById('key-github').value,
+      braveSearchKey: document.getElementById('key-brave').value,
+    });
+    configPanel.classList.remove('open');
+  });
+
+  // Config button
+  document.querySelector('[data-slot="config"]').addEventListener('click', () => {
+    if (openhub) openhub.switchSlot('config');
+  });
+</script>
+
+</body>
+</html>
