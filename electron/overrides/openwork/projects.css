@@ -1,0 +1,394 @@
+/* OpenHub Projects — selector + modal styles */
+
+/* ── Project Selector ───────────────────────────────────── */
+#oh-project-selector {
+  position: relative;
+  padding: 8px 12px;
+  border-top: 1px solid var(--slate-4, #23232c);
+}
+
+.oh-project-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#oh-project-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--slate-5, #2a2a34);
+  border-radius: 7px;
+  background: var(--slate-2, #141418);
+  color: var(--slate-12, #ededf4);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+#oh-project-btn:hover {
+  border-color: var(--slate-7, #42424e);
+  background: var(--slate-3, #1c1c24);
+}
+
+#oh-project-add {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--slate-5, #2a2a34);
+  border-radius: 7px;
+  background: var(--slate-2, #141418);
+  color: var(--dls-accent, #7c6af2);
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+#oh-project-add:hover {
+  border-color: var(--dls-accent, #7c6af2);
+  background: var(--slate-3, #1c1c24);
+}
+
+.oh-project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.oh-project-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oh-project-label-muted {
+  color: var(--slate-9, #68687a);
+}
+
+.oh-project-chevron {
+  color: var(--slate-8, #5a5a68);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Dropdown ────────────────────────────────────────────── */
+#oh-project-dropdown {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 12px;
+  right: 12px;
+  background: var(--slate-3, #1c1c24);
+  border: 1px solid var(--slate-5, #2a2a34);
+  border-radius: 10px;
+  padding: 4px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.oh-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--slate-11, #aeaebe);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.oh-dd-item:hover {
+  background: var(--slate-4, #23232c);
+  color: var(--slate-12, #ededf4);
+}
+
+.oh-dd-item-icon {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.oh-dd-active {
+  background: var(--slate-4, #23232c);
+  color: var(--slate-12, #ededf4);
+}
+
+.oh-dd-project-row {
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 0;
+  gap: 0;
+}
+
+.oh-dd-project-row:hover {
+  background: var(--slate-4, #23232c);
+}
+
+.oh-dd-project-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  color: var(--slate-11, #aeaebe);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+}
+
+.oh-dd-active .oh-dd-project-select {
+  color: var(--slate-12, #ededf4);
+}
+
+.oh-dd-edit-btn {
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  color: var(--slate-8, #5a5a68);
+  cursor: pointer;
+  font-size: 13px;
+  transition: color 0.1s;
+  opacity: 0;
+}
+
+.oh-dd-project-row:hover .oh-dd-edit-btn {
+  opacity: 1;
+}
+
+.oh-dd-edit-btn:hover {
+  color: var(--slate-12, #ededf4);
+}
+
+.oh-dd-sep {
+  height: 1px;
+  background: var(--slate-5, #2a2a34);
+  margin: 4px 6px;
+}
+
+.oh-dd-new {
+  color: var(--dls-accent, #7c6af2);
+  font-weight: 500;
+}
+
+.oh-dd-new:hover {
+  color: var(--dls-accent-hover, #8b7bf5);
+}
+
+/* ── Modal Overlay ───────────────────────────────────────── */
+#oh-project-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  backdrop-filter: blur(2px);
+}
+
+#oh-project-modal {
+  background: var(--slate-2, #141418);
+  border: 1px solid var(--slate-5, #2a2a34);
+  border-radius: 14px;
+  width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.oh-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--slate-4, #23232c);
+}
+
+.oh-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--slate-12, #ededf4);
+}
+
+.oh-modal-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--slate-9, #68687a);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.oh-modal-close:hover {
+  background: var(--slate-4, #23232c);
+  color: var(--slate-12, #ededf4);
+}
+
+/* ── Modal Fields ────────────────────────────────────────── */
+.oh-modal-field {
+  padding: 12px 20px 0;
+}
+
+.oh-modal-field-grow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.oh-modal-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-11, #aeaebe);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.oh-field-help {
+  display: block;
+  font-size: 12px;
+  color: var(--slate-9, #68687a);
+  margin-bottom: 8px;
+}
+
+.oh-modal-field input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--slate-5, #2a2a34);
+  border-radius: 8px;
+  background: var(--slate-1, #0e0e12);
+  color: var(--slate-12, #ededf4);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.oh-modal-field input[type="text"]:focus {
+  border-color: var(--dls-accent, #7c6af2);
+}
+
+.oh-modal-field textarea {
+  width: 100%;
+  flex: 1;
+  min-height: 140px;
+  padding: 10px 12px;
+  border: 1px solid var(--slate-5, #2a2a34);
+  border-radius: 8px;
+  background: var(--slate-1, #0e0e12);
+  color: var(--slate-12, #ededf4);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.oh-modal-field textarea:focus {
+  border-color: var(--dls-accent, #7c6af2);
+}
+
+/* ── Color Picker ────────────────────────────────────────── */
+.oh-color-row {
+  display: flex;
+  gap: 8px;
+}
+
+.oh-color-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+  padding: 0;
+}
+
+.oh-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.oh-color-selected {
+  border-color: var(--slate-12, #ededf4);
+  box-shadow: 0 0 0 2px var(--slate-1, #0e0e12);
+}
+
+/* ── Modal Footer ────────────────────────────────────────── */
+.oh-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--slate-4, #23232c);
+}
+
+.oh-btn {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.oh-btn-primary {
+  background: var(--dls-accent, #7c6af2);
+  color: #fff;
+}
+
+.oh-btn-primary:hover {
+  background: var(--dls-accent-hover, #8b7bf5);
+}
+
+.oh-btn-ghost {
+  background: transparent;
+  color: var(--slate-11, #aeaebe);
+}
+
+.oh-btn-ghost:hover {
+  background: var(--slate-4, #23232c);
+  color: var(--slate-12, #ededf4);
+}
+
+.oh-btn-danger {
+  background: transparent;
+  color: #ef4444;
+}
+
+.oh-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}

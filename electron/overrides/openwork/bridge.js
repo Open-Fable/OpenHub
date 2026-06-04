@@ -22,6 +22,30 @@
         return Promise.resolve();
       },
     },
+    updater: {
+      getChannel: function () {
+        return Promise.resolve({
+          channel: "stable",
+          currentVersion: "openhub",
+        });
+      },
+      setChannel: function (ch) {
+        return Promise.resolve({ channel: ch, currentVersion: "openhub" });
+      },
+      check: function () {
+        return Promise.resolve({
+          available: false,
+          currentVersion: "openhub",
+          reason: "unavailable",
+        });
+      },
+      download: function () {
+        return Promise.resolve({ ok: false, reason: "unavailable" });
+      },
+      installAndRestart: function () {
+        return Promise.resolve({ ok: false, reason: "unavailable" });
+      },
+    },
     meta: {
       platform: "darwin",
       version: "openhub",

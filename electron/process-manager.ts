@@ -18,10 +18,15 @@ interface RunningApp {
   healthy: boolean;
 }
 
+export interface ApiKeys {
+  googleAiKey?: string | null;
+}
+
 export class ProcessManager {
   private readonly running = new Map<string, RunningApp>();
   private readonly starting = new Map<string, Promise<number | null>>();
   private readonly proxyToken: string;
+  private readonly apiKeys: ApiKeys;
   // Generated per session, never logged
   private readonly opencodePassword = randomBytes(24).toString("hex");
 
@@ -29,8 +34,9 @@ export class ProcessManager {
     return this.opencodePassword;
   }
 
-  constructor(proxyToken: string) {
+  constructor(proxyToken: string, apiKeys: ApiKeys = {}) {
     this.proxyToken = proxyToken;
+    this.apiKeys = apiKeys;
   }
 
   async ensureRunning(slot: Exclude<SlotName, "config">): Promise<number | null> {
@@ -94,12 +100,14 @@ export class ProcessManager {
   }
 
   private sharedEnv(): NodeJS.ProcessEnv {
-    return {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
-      OPENAI_BASE_URL: "http://127.0.0.1:9999/v1",
-      OPENAI_API_KEY: "openhub-local",
       OPENHUB_TOKEN: this.proxyToken,
     };
+    if (this.apiKeys.googleAiKey) {
+      env.GOOGLE_GENERATIVE_AI_API_KEY = this.apiKeys.googleAiKey;
+    }
+    return env;
   }
 
   private killPort(port: number): void {

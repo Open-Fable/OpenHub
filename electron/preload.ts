@@ -33,4 +33,15 @@ contextBridge.exposeInMainWorld("openhub", {
     githubToken?: string;
     braveSearchKey?: string;
   }) => ipcRenderer.invoke("save-api-keys", keys),
+
+  getProjects: () => ipcRenderer.invoke("get-projects"),
+  getActiveProject: () => ipcRenderer.invoke("get-active-project"),
+  setActiveProject: (id: string | null) => ipcRenderer.invoke("set-active-project", id),
+  saveProject: (project: {
+    id?: string;
+    name: string;
+    instructions: string;
+    color: string;
+  }) => ipcRenderer.invoke("save-project", project),
+  deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
 });

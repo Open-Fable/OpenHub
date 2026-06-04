@@ -13,6 +13,14 @@ interface GenerateOptions {
 export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<void> {
   await fs.mkdir(path.dirname(CONFIG_PATH), { recursive: true });
 
+  let existing: Record<string, unknown> = {};
+  try {
+    const raw = await fs.readFile(CONFIG_PATH, "utf-8");
+    existing = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    // No existing config — start fresh
+  }
+
   const models: Record<string, { name: string }> = {};
   if (opts.anthropicKey) {
     models["claude-sonnet-4-6"] = { name: "Claude Sonnet 4.6" };
@@ -26,15 +34,18 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
   models["llama3"] = { name: "Llama 3 (local)" };
   models["mistral"] = { name: "Mistral (local)" };
 
+  const existingProviders = (existing.provider ?? {}) as Record<string, unknown>;
+
   const config = {
+    ...existing,
     $schema: "https://opencode.ai/config.json",
     provider: {
+      ...existingProviders,
       openhub: {
         npm: "@ai-sdk/openai-compatible",
         name: "OpenHub Proxy",
         options: {
           baseURL: "http://localhost:9999/v1",
-          // Proxy token (not a user API key — valid only for this session)
           apiKey: opts.proxyToken,
         },
         models,
