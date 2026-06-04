@@ -1,0 +1,266 @@
+/*
+ * OpenHub → OpenCode — native directory picker bridge
+ *
+ * Intercepts OpenCode's web-based DialogSelectDirectory and opens the
+ * native macOS Finder instead. Uses OpenCode's deep link mechanism
+ * for smooth in-app navigation, with localStorage + full reload as
+ * fallback if the deep link doesn't trigger within 600ms.
+ */
+(function () {
+  if (!window.openhub) return;
+
+  var picking = false;
+  var DEEP_LINK_EVENT = "opencode:deep-link";
+
+  function base64Encode(value) {
+    var bytes = new TextEncoder().encode(value);
+    var binary = Array.from(bytes, function (b) {
+      return String.fromCharCode(b);
+    }).join("");
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  }
+
+  function addProjectToLocalStorage(directory) {
+    var STORAGE_KEY = "opencode.global.dat:server";
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      var projects = data.projects;
+      if (!projects || typeof projects !== "object") return;
+
+      var serverKey = Object.keys(projects)[0];
+      if (!serverKey) {
+        serverKey = location.origin;
+        projects[serverKey] = [];
+      }
+      var list = projects[serverKey];
+      if (!Array.isArray(list)) {
+        list = [];
+        projects[serverKey] = list;
+      }
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].worktree === directory) return;
+      }
+      list.unshift({ worktree: directory, expanded: true });
+      data.lastProject = data.lastProject || {};
+      data.lastProject[serverKey] = directory;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function pickAndOpen() {
+    if (picking) return;
+    picking = true;
+    window.openhub
+      .openworkDesktopInvoke("pickDirectory")
+      .then(function (dir) {
+        picking = false;
+        if (!dir) return;
+
+        // 1. Write to localStorage as safety net (persists across reload)
+        addProjectToLocalStorage(dir);
+
+        // 2. Try deep link — OpenCode's layout handles it via SolidJS router
+        //    (no page reload, project added to sidebar reactively)
+        var deepLinkUrl = "opencode://open-project?directory=" + encodeURIComponent(dir);
+
+        window.dispatchEvent(
+          new CustomEvent(DEEP_LINK_EVENT, {
+            detail: { urls: [deepLinkUrl] },
+          }),
+        );
+
+        // 3. Fallback: if the URL hasn't changed after 600ms,
+        //    the deep link didn't navigate — do a full reload
+        var before = location.pathname;
+        setTimeout(function () {
+          if (location.pathname === before) {
+            var encoded = base64Encode(dir);
+            location.href = "/" + encoded + "/session";
+          }
+        }, 600);
+      })
+      .catch(function () {
+        picking = false;
+      });
+  }
+
+  // ── 1. Sidebar "+" button ──
+  document.addEventListener(
+    "click",
+    function (event) {
+      var btn = event.target.closest(
+        '[data-component="sidebar-rail"] [data-component="icon-button"][data-icon="plus"]',
+      );
+      if (!btn) return;
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      pickAndOpen();
+    },
+    { capture: true },
+  );
+
+  // ── 2. Detect DialogSelectDirectory (home page, prompt input, etc.) ──
+  var observer = new MutationObserver(function (mutations) {
+    if (picking) return;
+    for (var i = 0; i < mutations.length; i++) {
+      var added = mutations[i].addedNodes;
+      for (var j = 0; j < added.length; j++) {
+        var node = added[j];
+        if (!(node instanceof HTMLElement)) continue;
+        scheduleDialogCheck(node);
+      }
+    }
+  });
+
+  function scheduleDialogCheck(root) {
+    var dialog =
+      root.querySelector("[data-component='dialog']") ||
+      (root.getAttribute && root.getAttribute("data-component") === "dialog"
+        ? root
+        : null);
+    if (!dialog) return;
+    requestAnimationFrame(function () {
+      if (picking) return;
+      if (isDirectoryPickerDialog(dialog)) {
+        closeDialog(dialog);
+        pickAndOpen();
+      }
+    });
+  }
+
+  function isDirectoryPickerDialog(dialog) {
+    if (!dialog.isConnected) return false;
+    var input = dialog.querySelector("input");
+    if (!input) return false;
+    var list = dialog.querySelector(".px-3");
+    if (!list) return false;
+    if (dialog.querySelector("[role='tablist']")) return false;
+    return true;
+  }
+
+  function closeDialog(dialog) {
+    var closeBtn = dialog.querySelector("[data-slot='dialog-close-button']");
+    if (closeBtn) {
+      closeBtn.click();
+      return;
+    }
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        code: "Escape",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }
+
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener("DOMContentLoaded", function () {
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+
+  // ── 3. Prevent sidebar from auto-closing on project navigation ──
+  var preservedWidth = null;
+  var preservedDisplay = null;
+
+  function findSidebarPanel() {
+    var rail = document.querySelector('[data-component="sidebar-rail"]');
+    if (!rail) return null;
+    // Panel is typically a sibling or child of the rail parent
+    var parent = rail.parentElement;
+    if (!parent) return null;
+    // Look for a visible panel element (not the rail itself, not the main content)
+    var children = parent.children;
+    for (var i = 0; i < children.length; i++) {
+      var el = children[i];
+      if (el === rail) continue;
+      var rect = el.getBoundingClientRect();
+      if (rect.width > 100 && rect.width < 500 && rect.left > 0 && rect.left < 200) return el;
+    }
+    return null;
+  }
+
+  function forceSidebarPanelVisible() {
+    var panel = findSidebarPanel();
+    if (!panel) return;
+    var cs = getComputedStyle(panel);
+    if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.width) === 0) {
+      panel.style.setProperty("display", preservedDisplay || "block", "important");
+      panel.style.setProperty("visibility", "visible", "important");
+      panel.style.setProperty("opacity", "1", "important");
+      panel.style.setProperty("transform", "none", "important");
+      if (preservedWidth) {
+        panel.style.setProperty("width", preservedWidth, "important");
+        panel.style.setProperty("min-width", preservedWidth, "important");
+        panel.style.setProperty("max-width", preservedWidth, "important");
+      }
+      panel.style.setProperty("pointer-events", "auto", "important");
+      panel.style.setProperty("overflow", "auto", "important");
+    }
+  }
+
+  function saveSidebarState() {
+    var panel = findSidebarPanel();
+    if (panel) {
+      var cs = getComputedStyle(panel);
+      if (cs.display !== "none") preservedDisplay = cs.display;
+      var w = parseFloat(cs.width);
+      if (w > 0) preservedWidth = cs.width;
+    }
+  }
+
+  // Save state early, then watch for collapse
+  setTimeout(function () {
+    saveSidebarState();
+    forceSidebarPanelVisible();
+  }, 500);
+
+  var sidebarObserver = new MutationObserver(function () {
+    forceSidebarPanelVisible();
+  });
+
+  function attachSidebarObserver() {
+    var rail = document.querySelector('[data-component="sidebar-rail"]');
+    if (!rail) {
+      setTimeout(attachSidebarObserver, 200);
+      return;
+    }
+    var root = rail.parentElement || rail;
+    sidebarObserver.observe(root, {
+      attributes: true,
+      attributeFilter: ["class", "style", "hidden", "data-closed", "data-collapsed"],
+      subtree: true,
+      childList: true,
+    });
+  }
+
+  setTimeout(attachSidebarObserver, 300);
+
+  // Re-check after navigation (URL changes)
+  var lastUrl = location.href;
+  setInterval(function () {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      setTimeout(function () {
+        saveSidebarState();
+        forceSidebarPanelVisible();
+      }, 200);
+    }
+  }, 300);
+
+  // ── 4. CSS injection: force sidebar panel to stay visible ──
+  var sidebarCSS = document.createElement("style");
+  sidebarCSS.textContent = [
+    '[data-component="sidebar-rail"] ~ div { display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; }',
+    '[data-component="sidebar-rail"] + * { display: block !important; }',
+    '[class*="sidebar"][class*="panel"] { display: block !important; visibility: visible !important; }',
+  ].join("\n");
+  document.head.appendChild(sidebarCSS);
+})();

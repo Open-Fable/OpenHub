@@ -120,6 +120,12 @@ scripts/            ← Setup, update, selector-check utilities
 - Injected JS: UI only, zero secrets inline
 - opencode serve: `OPENCODE_SERVER_PASSWORD` generated per session, never logged
 
+### Opencode Usage
+
+This project was originally configured for Claude Code. You now run under **Opencode**.
+The only agent types available are `explore` (codebase discovery) and `general-purpose`
+(implementation). See `AGENTS.md` for details.
+
 ### Commands
 
 ```bash

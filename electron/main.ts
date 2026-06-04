@@ -1,11 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  dialog,
-  shell,
-  WebContentsView,
-} from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, WebContentsView } from "electron";
 import path from "path";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
@@ -14,6 +7,13 @@ import { startProxy } from "./proxy/index.js";
 import { loadOverrides } from "./override-loader.js";
 import { generateOpenCodeConfig } from "./config-generator.js";
 import { readSecret } from "./keychain.js";
+import {
+  getProjects,
+  saveProject,
+  deleteProject,
+  setActiveProject,
+  getActiveProject,
+} from "./project-store.js";
 import type { SlotName } from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -72,6 +72,18 @@ function createSlotView(slot: Exclude<SlotName, "config">): WebContentsView {
 
   view.webContents.on("did-navigate", () => injectOverrides(slot, view));
   view.webContents.on("did-navigate-in-page", () => injectOverrides(slot, view));
+
+  // OAuth + external links: open in system browser instead of Electron popup
+  view.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+
+  view.webContents.on("console-message", (_e, level, message) => {
+    if (level >= 2) console.warn(`[${slot}:console] ${message}`);
+  });
 
   return view;
 }
@@ -332,6 +344,13 @@ ipcMain.handle(
       case "engineRestart":
         return { ok: true };
 
+      // ── Electron update stubs (suppress "not in Electron desktop app" toast) ──
+      case "checkForUpdates":
+      case "getUpdateStatus":
+      case "installUpdate":
+      case "quitAndInstall":
+        return { available: false, checking: false, version: null };
+
       case "__homeDir":
         return homedir();
       case "__joinPath":
@@ -347,6 +366,17 @@ ipcMain.handle(
   },
 );
 
+// ── Project management ──────────────────────────────────────────────────────
+ipcMain.handle("get-projects", () => getProjects());
+ipcMain.handle("get-active-project", () => getActiveProject());
+ipcMain.handle("set-active-project", (_e, id: string | null) => setActiveProject(id));
+ipcMain.handle(
+  "save-project",
+  (_e, project: { id?: string; name: string; instructions: string; color: string }) =>
+    saveProject(project),
+);
+ipcMain.handle("delete-project", (_e, id: string) => deleteProject(id));
+
 ipcMain.handle("get-api-keys", async () => {
   const { readAllApiKeys } = await import("./keychain.js");
   return readAllApiKeys();
@@ -357,6 +387,7 @@ ipcMain.handle("save-api-keys", async (_e, keys: Record<string, string>) => {
   const map: Record<string, string> = {
     anthropic: "anthropic-api-key",
     openai: "openai-api-key",
+    googleAiKey: "google-ai-key",
     ollamaUrl: "ollama-url",
     githubToken: "github-token",
     braveSearchKey: "brave-search-key",
@@ -368,11 +399,19 @@ ipcMain.handle("save-api-keys", async (_e, keys: Record<string, string>) => {
 
 app.whenReady().then(async () => {
   const proxyToken = await startProxy();
-  processManager = new ProcessManager(proxyToken);
 
   const anthropicKey = await readSecret("openhub", "anthropic-api-key");
   const openaiKey = await readSecret("openhub", "openai-api-key");
+  const googleAiKey = await readSecret("openhub", "google-ai-key");
+
+  processManager = new ProcessManager(proxyToken, { googleAiKey });
   await generateOpenCodeConfig({ proxyToken, anthropicKey, openaiKey });
+
+  // Start opencode in the background — Work slot needs the opencode engine
+  // for workspace sessions. Don't await: let it start while window loads.
+  processManager.ensureRunning("code").catch((err) => {
+    console.warn("[main] background opencode start failed:", err);
+  });
 
   await createWindow();
 });
