@@ -1,9 +1,10 @@
 /*
  * OpenHub → Open Design — unified neutral palette + collapse native nav
+ * v1.1 — Palette premium anthracite chaud, mode clair first-class.
  */
 
 /* Collapse native left nav rail to 0px (display:none breaks the grid layout) */
-.entry-nav-rail {
+/* .entry-nav-rail {
   width: 0 !important;
   min-width: 0 !important;
   padding: 0 !important;
@@ -11,46 +12,301 @@
   overflow: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
-}
+} */
 
-.entry-shell--no-header {
+/* .entry-shell--no-header {
   --entry-rail-width: 0px !important;
-}
+} */
 
 /* Collapse top chrome bar */
-.workspace-tabs-chrome.app-chrome-header {
+/* .workspace-tabs-chrome.app-chrome-header {
   height: 0 !important;
   min-height: 0 !important;
   padding: 0 !important;
   border: none !important;
   overflow: hidden !important;
   opacity: 0 !important;
+} */
+
+/* ── Light theme (default) ── */
+:root,
+html:not(.dark) {
+  --bg: #FBFBF9 !important;
+  --bg-app: #FBFBF9 !important;
+  --bg-panel: #F6F6F3 !important;
+  --bg-subtle: #EFEFEC !important;
+  --bg-muted: #EBEBE6 !important;
+  --bg-elevated: #FFFFFF !important;
+
+  --border: #DEDED8 !important;
+  --border-strong: #CECEC6 !important;
+  --border-soft: #EBEBE6 !important;
+
+  --text: #1E1E2C !important;
+  --text-strong: #1E1E2C !important;
+  --text-muted: #9494A6 !important;
+  --text-soft: #C6C6D4 !important;
+  --text-faint: #DEDED8 !important;
+
+  --accent: #6352D0 !important;
+  --accent-strong: #5846C0 !important;
+  --accent-soft: rgba(99, 82, 208, 0.08) !important;
+  --accent-tint: rgba(99, 82, 208, 0.06) !important;
+  --accent-hover: #5846C0 !important;
+
+  --oh-success:  #10B981 !important;
+  --oh-warning:  #F59E0B !important;
+  --oh-error:    #EF4444 !important;
+  --oh-info:     #3B82F6 !important;
+
+  --oh-shadow-xs:  0 1px 2px rgba(0,0,0,0.06) !important;
+  --oh-shadow-sm:  0 2px 8px rgba(0,0,0,0.08) !important;
+  --oh-shadow-md:  0 4px 16px rgba(0,0,0,0.1) !important;
+
+  --oh-bg-surface:  #F3F3FA !important;
+  --oh-bg-overlay:  #EDEDF5 !important;
+  --oh-accent-subtle: rgba(99,82,208,0.08) !important;
+  --oh-accent-design: #D97706 !important;
 }
 
-/* ── Color overrides ── */
-[data-theme="dark"],
-:root {
-  --bg: #0e0e12 !important;
-  --bg-app: #0e0e12 !important;
-  --bg-panel: #141418 !important;
-  --bg-subtle: #1c1c24 !important;
-  --bg-muted: #23232c !important;
-  --bg-elevated: #1a1a22 !important;
+/* ── Dark theme ── */
+@media (prefers-color-scheme: dark) {
+  html.dark,
+  [data-theme="dark"],
+  :root {
+    --bg: #18181e !important;
+    --bg-app: #18181e !important;
+    --bg-panel: #202028 !important;
+    --bg-subtle: #282834 !important;
+    --bg-muted: #30303e !important;
+    --bg-elevated: #1e1e28 !important;
 
-  --border: #2a2a34 !important;
-  --border-strong: #343440 !important;
-  --border-soft: #1c1c24 !important;
+    --border: #2e2e3e !important;
+    --border-strong: #3a3a4c !important;
+    --border-soft: #242432 !important;
 
-  --text: #e0e0ea !important;
-  --text-strong: #ededf4 !important;
-  --text-muted: #8888a0 !important;
-  --text-soft: #5c5c72 !important;
-  --text-faint: #404050 !important;
+    --text: #eaeaf0 !important;
+    --text-strong: #eaeaf0 !important;
+    --text-muted: #747488 !important;
+    --text-soft: #4e4e5e !important;
+    --text-faint: #3a3a4c !important;
 
-  /* Remap orange accent → OpenHub violet */
-  --accent: #7c6af2 !important;
-  --accent-strong: #8b7bf5 !important;
-  --accent-soft: rgba(124, 106, 242, 0.18) !important;
-  --accent-tint: rgba(124, 106, 242, 0.10) !important;
-  --accent-hover: #8b7bf5 !important;
+    --accent: #7c6af2 !important;
+    --accent-strong: #9180f5 !important;
+    --accent-strong-soft: rgba(124, 106, 242, 0.16) !important;
+    --accent-soft: rgba(124, 106, 242, 0.12) !important;
+    --accent-tint: rgba(124, 106, 242, 0.08) !important;
+    --accent-hover: #9180f5 !important;
+  }
+}
+
+/* ═══ 3. Composants ═══ */
+
+html,
+body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Boutons */
+button,
+[role="button"] {
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition:
+    background var(--oh-dur-150) var(--oh-ease),
+    transform 75ms var(--oh-ease),
+    border-color var(--oh-dur-150) var(--oh-ease) !important;
+  cursor: pointer !important;
+}
+button:hover,
+[role="button"]:hover {
+  background-color: var(--accent-tint) !important;
+}
+button:active,
+[role="button"]:active {
+  transform: scale(0.97) !important;
+}
+
+/* Inputs */
+input,
+textarea,
+select {
+  background: var(--bg-subtle) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 0 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  transition:
+    border-color var(--oh-dur-150) var(--oh-ease),
+    box-shadow var(--oh-dur-150) var(--oh-ease) !important;
+  outline: none !important;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-tint) !important;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-soft) !important;
+}
+textarea {
+  min-height: 80px !important;
+  padding: 10px 12px !important;
+  resize: vertical !important;
+}
+
+/* Désactivé */
+button:disabled,
+[role="button"]:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled,
+[aria-disabled="true"] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+/* Cartes */
+[role="region"],
+[role="card"] {
+  background: var(--bg-subtle) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--oh-shadow-xs) !important;
+}
+
+/* Modales */
+[role="dialog"] {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--oh-shadow-md) !important;
+}
+[role="dialog"] h2 {
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+
+/* Onglets */
+[role="tab"] {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--text-soft) !important;
+  background: none !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+}
+[role="tab"]:hover {
+  color: var(--text-muted) !important;
+}
+[role="tab"][aria-selected="true"] {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+
+/* Menus */
+[role="menu"] {
+  background: var(--bg-muted) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--oh-shadow-sm) !important;
+}
+[role="menuitem"] {
+  color: var(--text-muted) !important;
+  font-size: 13px !important;
+}
+[role="menuitem"]:hover {
+  background: var(--bg-subtle) !important;
+  color: var(--text) !important;
+}
+
+/* Tooltips */
+[role="tooltip"] {
+  background: var(--bg-elevated) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  box-shadow: var(--oh-shadow-sm) !important;
+}
+
+/* Liens */
+a {
+  color: var(--accent) !important;
+}
+a:hover {
+  color: var(--accent-hover) !important;
+}
+
+/* Sémantique */
+[data-status="success"],
+[aria-label*="succès"] {
+  color: var(--oh-success) !important;
+}
+[data-status="error"],
+[aria-label*="erreur"] {
+  color: var(--oh-error) !important;
+}
+
+hr {
+  border-color: var(--border-soft) !important;
+}
+
+/* ═══ 4. Scrollbar ═══ */
+
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 3px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Sidebar/nav rail and panels background unification */
+.entry-nav-rail,
+.split-chat-slot > .pane,
+.settings-sidebar,
+.drawer-content {
+  background-color: var(--bg-panel) !important;
+}
+
+/* Main background unification */
+.entry-main--scroll,
+.app,
+.workspace-shell {
+  background-color: var(--bg) !important;
+}
+
+/* Désactivation GLOBALE de la zone de glissement pour la vue embedded.
+   Open Design tourne dans un WebContentsView — toute région -webkit-app-region:drag
+   définie dans ses pages interfère avec les clics en haut de la vue (tabs, boutons).
+   OpenHub gère le drag via sidebar.html ; l'embedded view n'en a pas besoin. */
+html, body, * {
+  -webkit-app-region: no-drag !important;
+}
+
+/* ── Sidebar trigger Open Design — masqué (inutile dans OpenHub) ── */
+[data-sidebar="trigger"],
+[data-slot="sidebar-trigger"],
+button[data-sidebar="trigger"] {
+  display: none !important;
 }

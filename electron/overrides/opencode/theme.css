@@ -1,18 +1,31 @@
 /*
- * OpenHub → OpenCode — unified palette + violet accents
- * OpenCode has TWO token systems:
- *   OC-1: --background-*, --surface-*, --text-*, --border-* (in @media dark)
- *   v2:   --v2-blue-*, --v2-background-bg-accent, etc. (in @layer theme)
- * We override both, plus the v2-blue primitives so every blue → violet.
+ * OpenHub — OpenCode brand theme
+ * v2.2 — Grand public, accessible, minimaliste
+ *
+ * Applique les tokens de marque OpenHub à OpenCode.
+ * Palette exacte depuis fichier-de-la-marque/brand_colors.json
+ *
+ * OpenCode a DEUX systèmes de tokens internes :
+ *   OC-1 : CSS custom properties (--background-*, --surface-*, --text-*, --border-*)
+ *   v2   : --v2-blue-* (dans @layer theme)
+ *
+ * On override les DEUX pour tout passer en violet OpenHub.
+ * Les styles directs sont minimaux et ciblent uniquement des éléments
+ * HTML standards dont on est certains qu'ils existent.
+ *
+ * Mode clair = par défaut (suit prefers-color-scheme)
+ * Mode sombre = anthracite chaud #18181E
  */
 
-/* ── Override v2-blue primitives → violet scale ── */
+/* ═══════════════════════════════════════════
+   v2-blue PRIMITIVES → VIOLET OpenHub
+   ═══════════════════════════════════════════ */
 :root {
-  --v2-blue-100: #f0ecfe !important;
-  --v2-blue-200: #ddd6fc !important;
-  --v2-blue-300: #c9bcfa !important;
-  --v2-blue-400: #a99bf7 !important;
-  --v2-blue-500: #8b7bf5 !important;
+  --v2-blue-100: #f0edfe !important;
+  --v2-blue-200: #d9d2fb !important;
+  --v2-blue-300: #c2b8f8 !important;
+  --v2-blue-400: #9e8df4 !important;
+  --v2-blue-500: #8b77f1 !important;
   --v2-blue-600: #7c6af2 !important;
   --v2-blue-700: #6d5bdb !important;
   --v2-blue-800: #5e4dc4 !important;
@@ -22,46 +35,56 @@
   --v2-blue-1200: #2a2250 !important;
 }
 
-/* ── OC-1 backgrounds + accents (bare :root) ── */
+/* ═══════════════════════════════════════════
+   MODE CLAIR
+   ═══════════════════════════════════════════ */
 :root {
-  --background-base: #0e0e12 !important;
-  --background-weak: #141418 !important;
-  --background-strong: #101014 !important;
-  --background-stronger: #121216 !important;
+  --background-base: #fbfbf9 !important;
+  --background-weak: #f6f6f3 !important;
+  --background-strong: #f2f2ef !important;
+  --background-stronger: #fbfbf9 !important;
 
-  --surface-float-base: #141418 !important;
-  --surface-float-base-hover: #1c1c24 !important;
-  --surface-raised-stronger-non-alpha: #1c1c24 !important;
+  --v2-background-bg-deep: #f6f6f3 !important;
+  --v2-background-bg-base: #fbfbf9 !important;
+  --v2-background-bg-layer-01: #f6f6f3 !important;
+  --v2-background-bg-layer-02: #fbfbf9 !important;
+  --v2-background-bg-layer-03: #ebebe6 !important;
 
-  --input-base: #141418 !important;
-  --input-hover: #1c1c24 !important;
+  --surface-float-base: #ffffff !important;
+  --surface-float-base-hover: #f6f6f3 !important;
+  --surface-raised-stronger-non-alpha: #ffffff !important;
 
-  --text-strong: rgba(237, 237, 244, 0.94) !important;
-  --text-base: rgba(174, 174, 190, 0.62) !important;
+  --input-base: #f6f6f3 !important;
+  --input-hover: #efefec !important;
 
-  --border-weak-base: #1e1e28 !important;
-  --border-weaker-base: #1a1a22 !important;
+  --text-strong: #1e1e2c !important;
+  --text-base: #62627a !important;
 
-  --button-primary-base: #ededf4 !important;
-  --button-secondary-base: #141418 !important;
+  --border-weak-base: #deded8 !important;
+  --border-weaker-base: #ebebe6 !important;
 
-  --border-selected: #7c6af2 !important;
-  --text-interactive-base: #a99bf7 !important;
-  --icon-interactive-base: #7c6af2 !important;
-  --surface-brand-base: #7c6af2 !important;
-  --surface-brand-hover: #8b7bf5 !important;
-  --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
-  --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
+  --button-primary-base: #1e1e2c !important;
+  --button-secondary-base: #ffffff !important;
+
+  --border-selected: #6352d0 !important;
+  --text-interactive-base: #6352d0 !important;
+  --icon-interactive-base: #6352d0 !important;
+  --surface-brand-base: #6352d0 !important;
+  --surface-brand-hover: #5846c0 !important;
+  --surface-interactive-base: rgba(99, 82, 208, 0.06) !important;
+  --surface-interactive-hover: rgba(99, 82, 208, 0.1) !important;
 }
 
-/* ── Duplicate inside @media dark (OC-1 dark overrides live here) ── */
+/* ═══════════════════════════════════════════
+   MODE SOMBRE
+   ═══════════════════════════════════════════ */
 @media (prefers-color-scheme: dark) {
   :root {
-    --v2-blue-100: #f0ecfe !important;
-    --v2-blue-200: #ddd6fc !important;
-    --v2-blue-300: #c9bcfa !important;
-    --v2-blue-400: #a99bf7 !important;
-    --v2-blue-500: #8b7bf5 !important;
+    --v2-blue-100: #f3effe !important;
+    --v2-blue-200: #e0d8fc !important;
+    --v2-blue-300: #cbc0fa !important;
+    --v2-blue-400: #ada1f7 !important;
+    --v2-blue-500: #9180f5 !important;
     --v2-blue-600: #7c6af2 !important;
     --v2-blue-700: #6d5bdb !important;
     --v2-blue-800: #5e4dc4 !important;
@@ -70,33 +93,191 @@
     --v2-blue-1100: #362c6a !important;
     --v2-blue-1200: #2a2250 !important;
 
-    --background-base: #0e0e12 !important;
-    --background-weak: #141418 !important;
-    --background-strong: #101014 !important;
-    --background-stronger: #121216 !important;
+    --background-base: #18181e !important;
+    --background-weak: #202028 !important;
+    --background-strong: #1a1a22 !important;
+    --background-stronger: #18181e !important;
 
-    --surface-float-base: #141418 !important;
-    --surface-float-base-hover: #1c1c24 !important;
-    --surface-raised-stronger-non-alpha: #1c1c24 !important;
+    --v2-background-bg-deep: #202028 !important;
+    --v2-background-bg-base: #18181e !important;
+    --v2-background-bg-layer-01: #202028 !important;
+    --v2-background-bg-layer-02: #18181e !important;
+    --v2-background-bg-layer-03: #30303e !important;
 
-    --input-base: #141418 !important;
-    --input-hover: #1c1c24 !important;
+    --surface-float-base: #202028 !important;
+    --surface-float-base-hover: #282834 !important;
+    --surface-raised-stronger-non-alpha: #282834 !important;
 
-    --text-strong: rgba(237, 237, 244, 0.94) !important;
-    --text-base: rgba(174, 174, 190, 0.62) !important;
+    --input-base: #202028 !important;
+    --input-hover: #282834 !important;
 
-    --border-weak-base: #1e1e28 !important;
-    --border-weaker-base: #1a1a22 !important;
+    --text-strong: #eaeaf0 !important;
+    --text-base: #acacbe !important;
 
-    --button-primary-base: #ededf4 !important;
-    --button-secondary-base: #141418 !important;
+    --border-weak-base: #2e2e3e !important;
+    --border-weaker-base: #242432 !important;
+
+    --button-primary-base: #eaeaf0 !important;
+    --button-secondary-base: #202028 !important;
 
     --border-selected: #7c6af2 !important;
-    --text-interactive-base: #a99bf7 !important;
+    --text-interactive-base: #ada1f7 !important;
     --icon-interactive-base: #7c6af2 !important;
     --surface-brand-base: #7c6af2 !important;
-    --surface-brand-hover: #8b7bf5 !important;
-    --surface-interactive-base: rgba(124, 106, 242, 0.12) !important;
+    --surface-brand-hover: #9180f5 !important;
+    --surface-interactive-base: rgba(124, 106, 242, 0.1) !important;
     --surface-interactive-hover: rgba(124, 106, 242, 0.16) !important;
   }
+}
+
+/* ═══════════════════════════════════════════
+   STYLES DIRECTS — uniquement ce qui marche
+   ═══════════════════════════════════════════ */
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.16);
+}
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+}
+
+/* Selection */
+::selection {
+  background: rgba(99, 82, 208, 0.15);
+}
+@media (prefers-color-scheme: dark) {
+  ::selection {
+    background: rgba(124, 106, 242, 0.25);
+  }
+}
+
+/* Focus visible global */
+:focus-visible {
+  outline: 2px solid #6352d0;
+  outline-offset: 2px;
+}
+@media (prefers-color-scheme: dark) {
+  :focus-visible {
+    outline-color: #7c6af2;
+  }
+}
+
+/* Inputs — rondeur standard 8px + focus violet (✅ confirmé fonctionnel) */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  border-radius: 8px !important;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #6352d0 !important;
+  box-shadow: 0 0 0 3px rgba(99, 82, 208, 0.15) !important;
+  outline: none !important;
+}
+@media (prefers-color-scheme: dark) {
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: #7c6af2 !important;
+    box-shadow: 0 0 0 3px rgba(124, 106, 242, 0.2) !important;
+  }
+}
+
+/* Boutons — focus violet uniquement (ne touche pas au layout) */
+button:focus-visible {
+  outline: 2px solid #6352d0 !important;
+  outline-offset: 2px !important;
+}
+@media (prefers-color-scheme: dark) {
+  button:focus-visible {
+    outline-color: #7c6af2 !important;
+  }
+}
+
+/* Sidebar unification with Chat/OpenWork (makes left rail and panel have weak background) */
+[data-component="sidebar-nav-desktop"],
+[data-component="sidebar-nav-desktop"] [data-component="sidebar-rail"],
+[data-component="sidebar-nav-desktop"] [data-component="sidebar-rail"] + div,
+[data-component="sidebar-nav-desktop"] [data-component="sidebar-rail"] + div > div {
+  background-color: var(--background-weak) !important;
+  --background-base: var(--background-weak) !important;
+}
+
+/* Terminal background unification */
+.terminal-panel,
+div[class*="terminal"] {
+  background-color: var(--background-weak) !important;
+}
+
+/* ── Sidebar + boutons titlebar OpenCode ──────────────────────────────────
+   Les boutons (sidebar, nouveau, retour, avant) ont les classes
+   "hidden xl:flex" → display:none sous 1280px.
+   On force l'affichage pour qu'ils soient toujours visibles. */
+
+/* Force le nav desktop à être toujours visible */
+[data-component="sidebar-nav-desktop"] {
+  display: block !important;
+}
+
+/* Force les boutons titlebar à être toujours visibles :
+   - sidebar-toggle button
+   - back button  
+   - forward button
+   - new-chat button
+   Le conteneur a la classe "hidden xl:flex shrink-0 ml-2" */
+.hidden.xl\:flex:has(button) {
+  display: flex !important;
+}
+
+/* Force aussi le conteneur avec ml-14 (quand isWeb est vrai) */
+div.hidden.xl\:flex {
+  display: flex !important;
+}
+
+/* ── Sidebar responsive fix ──
+   OpenCode a DEUX sidebars : desktop (xl:block) et mobile (xl:hidden).
+   En dessous de 1280px, le nav desktop est hidden et le toggle desktop
+   ouvre la sidebar store en mémoire sans effet visuel.
+   Le main content a "inset-0" (plein écran) et z-20 > z-10 du nav.
+   On force le comportement desktop à toutes les largeurs. */
+
+/* Nav toujours visible, garde son z-index naturel */
+[data-component="sidebar-nav-desktop"] {
+  display: block !important;
+}
+
+/* Main content — respecter la sidebar même sous xl */
+[data-component="sidebar-nav-desktop"] ~ div.z-20 {
+  left: var(--main-left) !important;
+}
+
+/* Overlay/sheet mobile — masqué */
+.xl\:hidden:has(nav[data-component="sidebar-nav-mobile"]) {
+  display: none !important;
+}
+.xl\:hidden:has([data-component="sidebar-nav-mobile"]) {
+  display: none !important;
+}
+
+/* Shadow decorator (inutile sous xl) */
+.hidden.xl\:block[class*="pointer-events-none"][class*="z-25"] {
+  display: none !important;
 }
