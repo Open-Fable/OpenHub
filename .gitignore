@@ -3,9 +3,7 @@ node_modules/
 
 # Upstream app repos — cloned at runtime by scripts/setup.sh
 # Never commit these; they are independent upstream projects
-apps/openwork/
-apps/opencode/
-apps/open-design/
+apps/
 
 # Build output
 dist/
@@ -41,3 +39,26 @@ coverage/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Runtime config templates (user-specific copies, not the shared templates)
+config/openhub-settings.json
+config/openhub-projects.json
+config/openhub-memory.json
+config/selected-models.json
+config/opencode.local.json
+
+# Scratch / temp / recovery scripts
+scratch/
+salvage*.cjs
+recover_*.cjs
+
+# Graphify output (regenerated on demand, user-specific)
+graphify-out/
+
+# Brand design files (working documents, user-specific)
+fichier-de-la-marque/
+
+# User-specific memory / personal data (never share between users)
+/AGENT-MEMORY.md
+/MEMORY-SYSTEM.md
+/openhub-projects.html
