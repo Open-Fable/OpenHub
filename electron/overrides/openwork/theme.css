@@ -1,27 +1,56 @@
 /*
  * OpenHub → OpenWork — unified neutral palette
+ * v1.1 — Premium anthracite chaud.
  */
 
 [data-theme="dark"] {
-  --slate-1: #0e0e12 !important;
-  --slate-2: #141418 !important;
-  --slate-3: #1c1c24 !important;
-  --slate-4: #23232c !important;
-  --slate-5: #2a2a34 !important;
-  --slate-6: #343440 !important;
-  --slate-7: #42424e !important;
-  --slate-8: #5a5a68 !important;
-  --slate-9: #68687a !important;
-  --slate-10: #78788c !important;
-  --slate-11: #aeaebe !important;
-  --slate-12: #ededf4 !important;
+  --slate-1: #18181e !important;
+  --slate-2: #202028 !important;
+  --slate-3: #282834 !important;
+  --slate-4: #30303e !important;
+  --slate-5: #3a3a4c !important;
+  --slate-6: #444458 !important;
+  --slate-7: #525266 !important;
+  --slate-8: #68687a !important;
+  --slate-9: #747488 !important;
+  --slate-10: #8c8c9e !important;
+  --slate-11: #acacbe !important;
+  --slate-12: #eaeaf0 !important;
 
-  --dls-border: #1e1e28 !important;
+  --dls-border: #2e2e3e !important;
   --dls-accent: #7c6af2 !important;
-  --dls-accent-hover: #8b7bf5 !important;
+  --dls-accent-hover: #9180f5 !important;
   --dls-accent-fg: #ffffff !important;
 
   --primary: #7c6af2 !important;
   --ring: #7c6af2 !important;
   --sidebar-primary: #7c6af2 !important;
 }
+
+:root:not(.dark) {
+  --slate-1: #fbfbf9 !important;
+  --slate-2: #f6f6f3 !important;
+  --slate-3: #efefec !important;
+  --slate-4: #ebebe6 !important;
+  --slate-5: #e2e2dc !important;
+  --slate-6: #d8d8d0 !important;
+  --slate-7: #c8c8be !important;
+  --slate-8: #acac9e !important;
+  --slate-9: #949488 !important;
+  --slate-10: #808078 !important;
+  --slate-11: #62625a !important;
+  --slate-12: #1e1e2c !important;
+
+  --dls-border: #deded8 !important;
+  --dls-accent: #6352d0 !important;
+  --dls-accent-hover: #5846c0 !important;
+  --dls-accent-fg: #ffffff !important;
+
+  --primary: #6352d0 !important;
+  --ring: #6352d0 !important;
+  --sidebar-primary: #6352d0 !important;
+}
+
+
+
+

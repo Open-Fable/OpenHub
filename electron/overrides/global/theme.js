@@ -1,76 +1,101 @@
 /**
- * OpenHub — Universal dark mode enforcer
- * Injected into ALL app webviews via executeJavaScript().
+ * OpenHub — Brand theme sync
+ * v2.0 — Grand public, respecte prefers-color-scheme macOS
  *
- * Guards against infinite loops: the re-entrancy flag `applying` prevents
- * the MutationObserver from calling forceDark() while it is already running.
+ * Garde les apps synchronisées avec le thème système.
+ * Les apps SPA peuvent essayer de forcer leur propre thème ;
+ * ce script les ramène à la préférence système.
+ *
+ * Re-entrancy flag `applying` empêche les boucles infinies MutationObserver.
  */
 (function () {
   "use strict";
 
+  if (window.__OPENHUB_THEME_INJECTED__) return;
+  window.__OPENHUB_THEME_INJECTED__ = true;
+
   var applying = false;
 
-  function forceDark() {
+  function getSystemTheme() {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function syncTheme() {
     if (applying) return;
     applying = true;
 
     try {
+      var theme = getSystemTheme();
       var html = document.documentElement;
       var body = document.body;
 
-      // Only mutate if needed — avoids unnecessary observer triggers
-      if (!html.classList.contains("dark")) html.classList.add("dark");
-      if (html.getAttribute("data-theme") !== "dark")
-        html.setAttribute("data-theme", "dark");
+      if (theme === "dark") {
+        if (!html.classList.contains("dark")) html.classList.add("dark");
+        if (html.getAttribute("data-theme") !== "dark")
+          html.setAttribute("data-theme", "dark");
 
-      // OpenWork Electron variant classes
+        if (body && !body.classList.contains("dark")) body.classList.add("dark");
+
+        try {
+          if (localStorage.getItem("openwork.react.settings.theme-mode") !== "dark") {
+            localStorage.setItem("openwork.react.settings.theme-mode", "dark");
+          }
+        } catch {}
+
+        try {
+          var raw = localStorage.getItem("open-design:config");
+          var config = raw ? JSON.parse(raw) : {};
+          if (config.theme !== "dark") {
+            config.theme = "dark";
+            localStorage.setItem("open-design:config", JSON.stringify(config));
+          }
+        } catch {}
+      } else {
+        if (html.classList.contains("dark")) html.classList.remove("dark");
+        if (html.getAttribute("data-theme") === "dark")
+          html.removeAttribute("data-theme");
+
+        if (body && body.classList.contains("dark")) body.classList.remove("dark");
+
+        try {
+          if (localStorage.getItem("openwork.react.settings.theme-mode") !== "light") {
+            localStorage.setItem("openwork.react.settings.theme-mode", "light");
+          }
+        } catch {}
+
+        try {
+          var rawLight = localStorage.getItem("open-design:config");
+          var configLight = rawLight ? JSON.parse(rawLight) : {};
+          if (configLight.theme !== "light") {
+            configLight.theme = "light";
+            localStorage.setItem("open-design:config", JSON.stringify(configLight));
+          }
+        } catch {}
+      }
+
+      // Platform classes (always needed for Electron)
       if (!html.classList.contains("openwork-electron"))
         html.classList.add("openwork-electron");
       if (!html.classList.contains("openwork-platform-mac"))
         html.classList.add("openwork-platform-mac");
-
-      // Body fallback
-      if (body && !body.classList.contains("dark")) body.classList.add("dark");
-
-      // OpenWork: localStorage theme preference
-      // Key: "openwork.react.settings.theme-mode" — read by bootstrapTheme()
-      // before React mounts. Setting it here ensures dark mode is picked up
-      // on first load, before our MutationObserver is even set up.
-      try {
-        if (localStorage.getItem("openwork.react.settings.theme-mode") !== "dark") {
-          localStorage.setItem("openwork.react.settings.theme-mode", "dark");
-        }
-      } catch (e) {
-        /* ignore */
-      }
-
-      // Open Design: localStorage config
-      try {
-        var raw = localStorage.getItem("open-design:config");
-        var config = raw ? JSON.parse(raw) : {};
-        if (config.theme !== "dark") {
-          config.theme = "dark";
-          localStorage.setItem("open-design:config", JSON.stringify(config));
-        }
-      } catch (e) {
-        /* ignore */
-      }
     } finally {
       applying = false;
     }
   }
 
-  // Apply immediately
-  forceDark();
+  syncTheme();
 
-  // Re-apply after DOM ready (catches SPA initial render)
+  // Re-sync after DOM ready (catches SPA initial render)
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", forceDark);
+    document.addEventListener("DOMContentLoaded", syncTheme);
   }
 
-  // Watch for apps trying to switch back to light mode
+  // Watch for OS theme changes
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncTheme);
+
+  // Watch for apps trying to override the theme
   var observer = new MutationObserver(function () {
-    if (!applying) forceDark();
+    if (!applying) syncTheme();
   });
 
   observer.observe(document.documentElement, {
@@ -78,7 +103,6 @@
     attributeFilter: ["class", "data-theme"],
   });
 
-  // Also watch body once it exists
   function watchBody() {
     if (document.body) {
       observer.observe(document.body, {
@@ -93,4 +117,103 @@
   } else {
     document.addEventListener("DOMContentLoaded", watchBody);
   }
+
+  // ── Global Drag & Drop Handler ──
+  var dragOverlay = null;
+  var dragCounter = 0;
+
+  function showDragOverlay() {
+    if (dragOverlay) return;
+    dragOverlay = document.createElement("div");
+    dragOverlay.style.position = "fixed";
+    dragOverlay.style.inset = "0";
+    dragOverlay.style.zIndex = "999999";
+    dragOverlay.style.background = "rgba(124, 106, 242, 0.06)";
+    dragOverlay.style.border = "2px dashed #7C6AF2";
+    dragOverlay.style.borderRadius = "12px";
+    dragOverlay.style.display = "flex";
+    dragOverlay.style.alignItems = "center";
+    dragOverlay.style.justifyContent = "center";
+    dragOverlay.style.pointerEvents = "none";
+
+    var label = document.createElement("div");
+    label.style.background = "rgba(30, 30, 40, 0.95)";
+    label.style.border = "1px solid #2E2E3E";
+    label.style.color = "#EAEAF0";
+    label.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
+    label.textContent = "Déposer les fichiers à importer";
+
+    dragOverlay.appendChild(label);
+    document.body.appendChild(dragOverlay);
+  }
+
+  function hideDragOverlay() {
+    if (dragOverlay) {
+      dragOverlay.remove();
+      dragOverlay = null;
+    }
+  }
+
+  window.addEventListener(
+    "dragenter",
+    function (e) {
+      if (e.dataTransfer && e.dataTransfer.types.includes("Files")) {
+        e.preventDefault();
+        dragCounter++;
+        if (dragCounter === 1) showDragOverlay();
+      }
+    },
+    false,
+  );
+
+  window.addEventListener(
+    "dragleave",
+    function (e) {
+      if (e.dataTransfer && e.dataTransfer.types.includes("Files")) {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+          dragCounter = 0;
+          hideDragOverlay();
+        }
+      }
+    },
+    false,
+  );
+
+  window.addEventListener(
+    "dragover",
+    function (e) {
+      if (e.dataTransfer && e.dataTransfer.types.includes("Files")) {
+        e.preventDefault();
+      }
+    },
+    false,
+  );
+
+  window.addEventListener(
+    "drop",
+    function (e) {
+      dragCounter = 0;
+      hideDragOverlay();
+      if (e.defaultPrevented) return;
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        e.preventDefault();
+        var fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) {
+          try {
+            var dt = new DataTransfer();
+            for (var i = 0; i < e.dataTransfer.files.length; i++) {
+              dt.items.add(e.dataTransfer.files[i]);
+            }
+            fileInput.files = dt.files;
+            fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+          } catch (err) {
+            console.error("[openhub] Global drop handler failed to set files:", err);
+          }
+        }
+      }
+    },
+    false,
+  );
 })();

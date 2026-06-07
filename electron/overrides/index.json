@@ -4,6 +4,6 @@
     "layout": true
   },
   "openwork": { "bridge": true, "theme": true, "projects": true },
-  "opencode": { "bridge": true, "theme": true },
+  "opencode": { "bridge": true, "theme": true, "graphify": true, "recover-projects": true },
   "open-design": { "bridge": true, "theme": true }
 }
