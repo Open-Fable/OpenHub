@@ -1,0 +1,42 @@
+name: Feature Request
+description: Proposer une nouvelle fonctionnalite ou une amelioration
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Probleme ou besoin
+      description: Quel probleme cette fonctionnalite resoudrait ?
+      placeholder: Je suis souvent frustre quand...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposee
+      description: Decris ce que tu aimerais voir.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considerees
+      description: As-tu envisage d'autres approches ?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Composant concerne
+      options:
+        - OpenHub (shell)
+        - Proxy LLM
+        - Chat integre
+        - Systeme de projets
+        - Memoire persistante
+        - Overrides CSS/JS
+        - Autre
+    validations:
+      required: true

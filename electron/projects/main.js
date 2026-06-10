@@ -70,6 +70,25 @@ function openNewWorkflowModal() {
   }, 100);
 }
 
+function switchPanelTab(tab) {
+  var tabChat = document.getElementById("tabChat");
+  var tabHistory = document.getElementById("tabHistory");
+  var contentChat = document.getElementById("tabContentChat");
+  var contentHistory = document.getElementById("tabContentHistory");
+  if (tab === "chat") {
+    tabChat.classList.add("active");
+    tabHistory.classList.remove("active");
+    contentChat.classList.add("active");
+    contentHistory.classList.remove("active");
+  } else {
+    tabChat.classList.remove("active");
+    tabHistory.classList.add("active");
+    contentChat.classList.remove("active");
+    contentHistory.classList.add("active");
+    loadOrchHistory();
+  }
+}
+
 function collapseChat() {
   document.getElementById("chatPanel").style.display = "none";
   document.getElementById("chatCollapsedBar").style.display = "flex";
