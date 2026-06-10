@@ -64,7 +64,10 @@ if command -v opencode &>/dev/null; then
   info "opencode déjà installé: $(opencode --version 2>/dev/null || echo 'présent') ✓"
 else
   warn "Installation de opencode CLI..."
-  curl -fsSL https://opencode.ai/install | bash
+  INSTALL_SCRIPT=$(mktemp -t opencode-install.XXXXXX)
+  curl -fsSL https://opencode.ai/install -o "$INSTALL_SCRIPT"
+  bash "$INSTALL_SCRIPT"
+  rm "$INSTALL_SCRIPT"
   info "opencode CLI installé ✓"
 fi
 

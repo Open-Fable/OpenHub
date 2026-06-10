@@ -10,6 +10,7 @@ if [ -f "$ROOT/dist/electron/preload.js" ]; then
 fi
 
 cp "$ROOT/electron/sidebar.html" "$ROOT/dist/electron/sidebar.html"
+cp "$ROOT/electron/splash.html" "$ROOT/dist/electron/splash.html"
 cp "$ROOT/electron/chat.html" "$ROOT/dist/electron/chat.html"
 cp "$ROOT/electron/projects.html" "$ROOT/dist/electron/projects.html"
 
