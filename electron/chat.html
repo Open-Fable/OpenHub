@@ -1037,7 +1037,7 @@
       }
       .input-bar:focus-within {
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px var(--accent-subtle);
+        box-shadow: 0 0 0 3px var(--accent-subtle);
       }
       .input-bar-input-row {
         display: flex;
@@ -1172,6 +1172,9 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        transition:
+          background var(--duration-150) var(--ease-default),
+          transform var(--duration-75) var(--ease-default);
       }
       .btn-send svg {
         width: 16px;
@@ -1180,6 +1183,10 @@
       }
       .btn-send:hover {
         background: var(--accent-hover);
+      }
+      .btn-send:active {
+        background: var(--accent-active);
+        transform: scale(0.97);
       }
       .btn-send:disabled {
         background: transparent;
@@ -1284,8 +1291,8 @@
         height: 18px;
         border-radius: 50%;
         border: none;
-        background: rgba(0, 0, 0, 0.7);
-        color: var(--text-primary);
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -1389,6 +1396,10 @@
         font-size: 12px;
         font-weight: 500;
         cursor: pointer;
+        transition:
+          background var(--duration-150) var(--ease-default),
+          color var(--duration-150) var(--ease-default),
+          transform var(--duration-75) var(--ease-default);
       }
       .oh-btn-primary {
         background: var(--accent-primary);
@@ -1396,6 +1407,10 @@
       }
       .oh-btn-primary:hover {
         background: var(--accent-hover);
+      }
+      .oh-btn-primary:active {
+        background: var(--accent-active);
+        transform: scale(0.97);
       }
       .oh-btn-ghost {
         background: transparent;
@@ -1547,7 +1562,7 @@
         display: none;
         border-top: 1px solid var(--border-subtle);
         padding: 12px 14px;
-        background: rgba(0, 0, 0, 0.03);
+        background: var(--bg-surface);
         max-height: 250px;
         overflow-y: auto;
       }
@@ -1624,7 +1639,7 @@
         align-items: center;
         gap: 6px;
         padding: 5px 10px;
-        background: rgba(0, 0, 0, 0.03);
+        background: var(--bg-surface);
         border-radius: var(--radius-sm);
         border: 1px solid var(--border-subtle);
         font-size: 12px;
@@ -1861,7 +1876,7 @@
       }
       .oh-modal-field input[type="text"]:focus {
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px var(--accent-subtle);
+        box-shadow: 0 0 0 3px var(--accent-subtle);
       }
       .oh-modal-field textarea {
         width: 100%;
@@ -1881,7 +1896,7 @@
       }
       .oh-modal-field textarea:focus {
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px var(--accent-subtle);
+        box-shadow: 0 0 0 3px var(--accent-subtle);
       }
       .oh-color-row {
         display: flex;
@@ -3569,7 +3584,7 @@
 
         function getSourceBadge(source) {
           if (source === "openrouter") {
-            return '<span class="oh-catalog-source-badge" style="background:rgba(245,158,11,0.12);color:var(--warning);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">OpenRouter</span>';
+            return '<span class="oh-catalog-source-badge" style="background:var(--warning-subtle);color:var(--warning);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">OpenRouter</span>';
           } else if (source === "local") {
             return '<span class="oh-catalog-source-badge" style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Local</span>';
           } else if (source === "workflow") {
@@ -3922,10 +3937,10 @@
             var badge = "";
             if (m.source === "openrouter") {
               badge =
-                '<span style="background:rgba(245,158,11,0.12);color:var(--warning);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">OpenRouter</span>';
+                '<span style="background:var(--warning-subtle);color:var(--warning);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">OpenRouter</span>';
             } else if (m.source === "local") {
               badge =
-                '<span style="background:rgba(16,185,129,0.12);color:var(--success);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Local</span>';
+                '<span style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Local</span>';
             } else if (m.source === "workflow") {
               badge =
                 '<span style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Workflow</span>';
@@ -5074,7 +5089,7 @@
             '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-mono)"><thead><tr>';
           for (var h = 0; h < rows[0].length; h++)
             table +=
-              '<th style="padding:6px 12px;border:1px solid var(--border-subtle);text-align:left;background:rgba(0,0,0,0.04);color:var(--text-primary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em">' +
+              '<th style="padding:6px 12px;border:1px solid var(--border-subtle);text-align:left;background:var(--bg-surface);color:var(--text-primary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em">' +
               escapeHtml(rows[0][h]) +
               "</th>";
           table += "</tr></thead><tbody>";
