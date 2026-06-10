@@ -6,13 +6,16 @@
     "electron/overrides/**/*",
     "electron/settings/**/*",
     "electron/sidebar.html",
-    "electron/chat.html"
+    "electron/splash.html",
+    "electron/chat.html",
+    "electron/orchestrator.html"
   ],
   "extraMetadata": {
     "main": "dist/electron/main.js"
   },
   "mac": {
     "category": "public.app-category.developer-tools",
+    "icon": "build/icon.icns",
     "target": ["dmg"]
   },
   "directories": {
