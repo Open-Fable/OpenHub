@@ -3,7 +3,13 @@
     "theme": true,
     "layout": true
   },
-  "openwork": { "bridge": true, "theme": true, "projects": true },
-  "opencode": { "bridge": true, "theme": true, "graphify": true, "recover-projects": true },
+  "openwork": { "bridge": true, "theme": true, "projects": true, "projects-hub": true },
+  "opencode": {
+    "bridge": true,
+    "theme": true,
+    "graphify": true,
+    "recover-projects": true,
+    "reasoning-indicator": true
+  },
   "open-design": { "bridge": true, "theme": true }
 }
