@@ -1,42 +1,44 @@
+<div align="center">
+
 # OpenHub
 
+**One window. Three AI tools. Zero Docker.**
+
+A macOS desktop shell that unifies [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode), and [Open Design](https://github.com/nexu-io/open-design) behind a single sidebar — with a local LLM proxy that routes to any provider.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![macOS](https://img.shields.io/badge/platform-macOS-black?logo=apple)](https://www.apple.com/macos)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?logo=node.js)](https://nodejs.org)
+[![macOS](https://img.shields.io/badge/platform-macOS_14+-black?logo=apple)](https://www.apple.com/macos)
+[![Electron](https://img.shields.io/badge/Electron-32+-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-**OpenHub** est un hub desktop macOS qui réunit plusieurs outils IA open-source
-dans une interface unique, inspirée de l'app native Claude macOS.
+[Francais](#-version-francaise) | [Installation](#-installation) | [Architecture](#-architecture) | [Contributing](CONTRIBUTING.md)
 
-Une seule fenêtre, une sidebar à icônes, un proxy LLM central — et ton
-environnement de développement IA préféré, unifié.
-
----
-
-## ✨ Fonctionnalités
-
-| | |
-|---|---|
-| 🎯 **3 apps en 1** | Bascule entre [OpenWork](https://github.com/different-ai/openwork) (orchestration), [OpenCode](https://github.com/sst/opencode) (agent de code), et [Open Design](https://github.com/nexu-io/open-design) (design visuel) |
-| 🔌 **Proxy LLM unifié** | Route les appels vers Anthropic, OpenAI, OpenRouter, Ollama, **et Google Gemini direct** (via OAuth) — sur `127.0.0.1:9999` |
-| 🧠 **Mémoire persistante** | L'IA se souvient de ton projet et de tes décisions entre les sessions |
-| 💬 **Chat intégré** | Interface de chat avec sélection de modèle, historique, et sauvegarde automatique |
-| 📁 **Gestion de projets** | Multiple projets avec instructions personnalisées, colorés, injectés dans le contexte IA |
-| 🎨 **Thème unifié** | Override CSS/JS par app pour une expérience visuelle cohérente |
-| 🤖 **Orchestrateur multi-agent** | Exécute des workflows complexes avec classification intelligente et routage pro/flash |
-| 🏎️ **Cache DeepSeek** | Optimisé pour le prefix caching — jusqu'à 90% d'économie sur les tokens système |
-| 🔒 **Sécurisé** | Les clés API dans le **macOS Keychain**, jamais sur disque |
+</div>
 
 ---
 
-## 📸 Aperçu
+## Why OpenHub?
 
-_(Ajoute ici une capture d'écran de l'application)_
+Running OpenWork, OpenCode, and Open Design separately means three terminals, three ports, three configs, and no shared context. OpenHub wraps them in a single Electron window with a unified LLM proxy — your AI tools share memory, projects, and API keys without touching their source code.
+
+## Features
+
+|                              |                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **3 apps, 1 window**         | Switch between OpenWork (orchestration), OpenCode (code agent), and Open Design (visual design) via a sidebar |
+| **Unified LLM proxy**        | Routes calls to Anthropic, OpenAI, OpenRouter, Ollama, and Google Gemini — on `127.0.0.1:9999`                |
+| **Persistent memory**        | AI remembers your project and decisions across sessions                                                       |
+| **Built-in chat**            | Model selector, history, auto-save                                                                            |
+| **Project management**       | Multiple projects with custom instructions, injected into AI context                                          |
+| **Unified theming**          | CSS/JS overrides per app for a cohesive look — upstream code is never modified                                |
+| **Multi-agent orchestrator** | Complex workflows with smart classification and pro/flash routing                                             |
+| **Secure by default**        | API keys in **macOS Keychain**, never on disk. WebViews sandboxed. Proxy localhost-only with Bearer auth      |
 
 ---
 
-## 🚀 Installation
+## Installation
 
-**Prérequis :** macOS 14+, Node.js 22+, Git
+**Prerequisites:** macOS 14+, Node.js 22+, Git
 
 ```bash
 git clone https://github.com/1zalt/OpenHub.git
@@ -45,111 +47,113 @@ bash scripts/setup.sh
 npm run dev
 ```
 
-Le script `setup.sh` s'occupe de tout automatiquement :
-- ✅ Vérifie Node.js, Git, pnpm
-- ✅ Installe le binaire `opencode` CLI
-- ✅ Clone les 3 apps upstream dans `apps/`
-- ✅ Crée les fichiers de configuration dans `~/.config/`
-- ✅ Compile le TypeScript et copie les assets
+`setup.sh` handles everything:
 
-### Après le premier lancement
+- Verifies Node.js, Git, pnpm
+- Installs the `opencode` CLI binary
+- Clones the 3 upstream apps into `apps/`
+- Creates config files in `~/.config/`
+- Compiles TypeScript and copies assets
 
-1. Ouvre le panneau **Config** (⚙️ dans la sidebar)
-2. Ajoute tes clés API (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search)
-   → Elles sont stockées dans le **macOS Keychain** (sécurisé)
-3. Configure les modèles souhaités
+### First launch
 
-> 💡 Pour utiliser les modèles Google Gemini directement (sans passer par OpenRouter),
-> exécute `opencode auth login` dans ton terminal.
+1. Open the **Config** panel (gear icon in the sidebar)
+2. Add your API keys (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — stored in macOS Keychain
+3. Pick your models
+
+> To use Google Gemini models directly (without OpenRouter), run `opencode auth login` in your terminal.
 
 ---
 
-## 🧱 Architecture
+## Architecture
 
 ```
 OpenHub/
-├── electron/                # Shell Electron
-│   ├── main.ts             # Process principal + IPC handlers
-│   ├── preload.ts          # ContextBridge pour les WebViews
-│   ├── proxy/
-│   │   ├── index.ts        # Proxy LLM Express (Anthropic, OpenAI, OpenRouter, Ollama, Gemini)
-│   │   └── vision.ts       # Proxy vision (description d'images par IA)
-│   ├── overrides/          # CSS/JS injectés par app (jamais dans le source upstream)
-│   ├── memory-store.ts     # Mémoire persistante avec recherche sémantique
-│   ├── project-store.ts    # Gestion de projets
-│   ├── cache-metrics.ts    # Métriques de cache LLM
-│   ├── orchestrator-runner.ts  # Orchestrateur multi-agent
-│   ├── ollama-manager.ts   # Gestion des modèles Ollama
-│   ├── chat.html           # Interface de chat
-│   ├── sidebar.html        # Sidebar + panneau config
-│   └── projects.html       # Interface projets
-├── apps/                   # Dépôts upstream clonés (gitignorés)
-│   ├── openwork/
-│   ├── opencode/
-│   └── open-design/
-├── config/templates/       # Templates de configuration (setup.sh)
-└── scripts/                # Utilitaires
+├── electron/              # Electron shell
+│   ├── main.ts            # Main process + IPC
+│   ├── preload.ts         # ContextBridge
+│   ├── proxy/             # LLM proxy (Express, localhost:9999)
+│   ├── overrides/         # CSS/JS injected per app (never touches upstream source)
+│   ├── memory-store.ts    # Persistent memory with semantic search
+│   ├── project-store.ts   # Project management
+│   └── orchestrator-runner.ts  # Multi-agent orchestrator
+├── apps/                  # Upstream repos (cloned by setup.sh, gitignored)
+└── scripts/               # Setup & utilities
 ```
 
-### 🔄 Flux de données
+### Data flow
 
 ```
-Navigateur WebView (OpenWork / OpenCode / Open Design)
-       │
-       ├── CSS/JS overrides ←── electron/overrides/
-       │
-       └── Appels LLM ──→ Proxy :9999 ──→ Anthropic / OpenAI / OpenRouter / Ollama / Gemini
-                                │
-                                ├── Injection contexte (projet, mémoire, architecture)
-                                ├── Compteur de cache
-                                └── Extraction mémoire (background)
+WebView (OpenWork / OpenCode / Open Design)
+    │
+    ├── CSS/JS overrides  ←──  electron/overrides/
+    │
+    └── LLM calls  ──→  Proxy :9999  ──→  Anthropic / OpenAI / OpenRouter / Ollama / Gemini
+                             │
+                             ├── Context injection (project, memory)
+                             └── Background memory extraction
 ```
 
 ---
 
-## 🔧 Commandes
+## Commands
 
-| Commande | Description |
-|----------|-------------|
-| `npm run dev` | Lance l'application en mode développement |
-| `npm run build` | Compile et package l'application |
-| `npm run typecheck` | Vérification TypeScript |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier |
-| `npm test` | Tests unitaires (Vitest) |
-| `bash scripts/setup.sh` | Setup complet + mise à jour des apps upstream |
-
----
-
-## 🔐 Sécurité
-
-- **Clés API :** Stockées dans le macOS Keychain via `keytar` — jamais écrites sur disque
-- **Proxy LLM :** Tourne sur `127.0.0.1:9999` avec authentification Bearer par session
-- **WebViews :** Sandboxées (`contextIsolation`, `sandbox`, pas de `nodeIntegration`)
-- **Overrides :** CSS/JS injectés uniquement — le code source upstream n'est jamais modifié
+| Command                 | Description                       |
+| ----------------------- | --------------------------------- |
+| `npm run dev`           | Start in development mode         |
+| `npm run build`         | Build and package the app         |
+| `npm run typecheck`     | TypeScript check                  |
+| `npm run lint`          | ESLint                            |
+| `npm test`              | Unit tests (Vitest)               |
+| `bash scripts/setup.sh` | Full setup / update upstream apps |
 
 ---
 
-## 📁 Fichiers externes
+## Security
 
-Ces fichiers sont créés automatiquement — pas besoin d'y toucher :
-
-| Emplacement | Usage |
-|------------|-------|
-| `~/.config/opencode/opencode.json` | Configuration provider LLM |
-| `~/.config/openhub/settings.json` | Paramètres OpenHub |
-| `~/.config/openhub/memory.json` | Mémoire persistante |
-| `~/.config/openhub/projects.json` | Projets sauvegardés |
-| `~/.config/openhub/cache-metrics.json` | Métriques de cache |
-| `~/.opencode/bin/opencode` | Binaire CLI Opencode |
-| `~/.local/share/opencode/account.json` | Auth Google OAuth |
+- **API keys** stored in macOS Keychain via `keytar` — never written to disk
+- **LLM proxy** runs on `127.0.0.1:9999` with per-session Bearer auth
+- **WebViews** sandboxed (`contextIsolation`, `sandbox`, no `nodeIntegration`)
+- **Overrides** are CSS/JS injection only — upstream source code is never modified
 
 ---
 
-## 📄 Licence
+## License
 
-MIT — voir [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-*Construit avec ❤️ pour les développeurs qui veulent garder le contrôle de leurs outils IA.*
+## Version francaise
+
+**OpenHub** est un hub desktop macOS qui reunit plusieurs outils IA open-source dans une interface unique.
+
+Une seule fenetre, une sidebar a icones, un proxy LLM central — et ton environnement de developpement IA prefere, unifie.
+
+### Fonctionnalites
+
+- **3 apps en 1** — Bascule entre OpenWork (orchestration), OpenCode (agent de code), et Open Design (design visuel)
+- **Proxy LLM unifie** — Route les appels vers Anthropic, OpenAI, OpenRouter, Ollama, et Google Gemini
+- **Memoire persistante** — L'IA se souvient de ton projet et de tes decisions entre les sessions
+- **Chat integre** — Selection de modele, historique, sauvegarde automatique
+- **Gestion de projets** — Projets multiples avec instructions personnalisees injectees dans le contexte IA
+- **Theme unifie** — Override CSS/JS par app pour une experience visuelle coherente
+- **Orchestrateur multi-agent** — Workflows complexes avec classification intelligente
+- **Securise** — Cles API dans le macOS Keychain, jamais sur disque
+
+### Installation
+
+```bash
+git clone https://github.com/1zalt/OpenHub.git
+cd OpenHub
+bash scripts/setup.sh
+npm run dev
+```
+
+Le script `setup.sh` s'occupe de tout : verification des prerequis, installation d'opencode, clonage des apps, configuration, et compilation.
+
+Apres le premier lancement, ouvre le panneau Config pour ajouter tes cles API (stockees dans le Keychain) et configurer tes modeles.
+
+---
+
+_Built for developers who want to stay in control of their AI tools._

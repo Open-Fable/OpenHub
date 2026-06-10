@@ -47,10 +47,16 @@ config/openhub-memory.json
 config/selected-models.json
 config/opencode.local.json
 
+# Build artifacts
+build/
+
 # Scratch / temp / recovery scripts
 scratch/
 salvage*.cjs
 recover_*.cjs
+check_keys.js
+test_syntax.py
+SECURITY_AND_BUGS_REPORT.md
 
 # Graphify output (regenerated on demand, user-specific)
 graphify-out/
@@ -62,3 +68,8 @@ fichier-de-la-marque/
 /AGENT-MEMORY.md
 /MEMORY-SYSTEM.md
 /openhub-projects.html
+
+# AI agent config (user-specific)
+.claude/
+.codex/
+.agents/
