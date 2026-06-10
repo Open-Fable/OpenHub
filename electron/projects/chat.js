@@ -151,9 +151,11 @@ function makeCopyButton(bubble) {
     var txt = bubble.textContent || "";
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(txt);
+      copyBtn.style.color = "var(--success)";
       copyBtn.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
       setTimeout(function () {
+        copyBtn.style.color = "";
         copyBtn.innerHTML =
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
       }, 2000);
@@ -479,7 +481,7 @@ async function confirmAction(actionJson, silent) {
         var p = await window.openhub.saveProject({
           name: action.name,
           instructions: action.instructions || "Tu es un expert.",
-          color: "#7c5cfc",
+          color: "#0d9488",
         });
         if (action.linkToWf && activeWorkflowId) {
           await linkProjectToWf(activeWorkflowId, p.id);
