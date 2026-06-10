@@ -116,7 +116,7 @@ async function importDemoTemplate() {
       name: "API Backend — Authentification",
       instructions:
         "Tu es un expert backend Node.js/TypeScript. Tu écris du code sécurisé, avec des tests unitaires Jest. Tu utilises PostgreSQL.",
-      color: "#7c5cfc",
+      color: "#0d9488",
       type: "code",
       x: 420,
       y: 120,
@@ -126,7 +126,7 @@ async function importDemoTemplate() {
       name: "Design System — Composants",
       instructions:
         "Tu es un designer UI/UX expert en design systems. Tu crées des composants accessibles WCAG AA, avec des styles CSS propres.",
-      color: "#f59e0b",
+      color: "#d97706",
       type: "design",
       x: 420,
       y: 280,
@@ -136,7 +136,7 @@ async function importDemoTemplate() {
       name: "Pipeline CI/CD — Déploiement",
       instructions:
         "Tu es un ingénieur DevOps. Tu configures des pipelines CI/CD GitHub Actions robustes.",
-      color: "#10b981",
+      color: "#0d9488",
       type: "work",
       x: 420,
       y: 440,
@@ -146,7 +146,7 @@ async function importDemoTemplate() {
       name: "Tests E2E — Playwright",
       instructions:
         "Tu es un ingénieur QA. Tu écris des tests de bout en bout robustes avec Playwright.",
-      color: "#ef4444",
+      color: "#dc2626",
       type: "code",
       dependencies: [p1.id],
       x: 700,
@@ -156,7 +156,7 @@ async function importDemoTemplate() {
     var p6 = await window.openhub.saveProject({
       name: "Vérification qualité globale",
       instructions: "Tu es un vérificateur qualité.",
-      color: "#3b82f6",
+      color: "#0d9488",
       type: "verifier",
       dependencies: [p1.id, p2.id, p3.id, p5.id],
       x: 700,
@@ -167,7 +167,7 @@ async function importDemoTemplate() {
     var orch = await window.openhub.saveProject({
       name: "Refonte onboarding",
       instructions: "Tu es un chef de projet IA.",
-      color: "#10b981",
+      color: "#0d9488",
       type: "orchestrator",
       linked: [p1.id, p2.id, p3.id, p5.id, p6.id],
       orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
@@ -189,7 +189,7 @@ async function importWebsiteTemplate() {
     var p1 = await window.openhub.saveProject({
       name: "Styles & Design CSS",
       instructions: "Tu es un designer CSS expert.",
-      color: "#f59e0b",
+      color: "#d97706",
       type: "design",
       x: 420,
       y: 120,
@@ -198,7 +198,7 @@ async function importWebsiteTemplate() {
     var p2 = await window.openhub.saveProject({
       name: "Intégration HTML/JS",
       instructions: "Tu es un développeur frontend senior.",
-      color: "#7c5cfc",
+      color: "#0d9488",
       type: "code",
       dependencies: [p1.id],
       x: 700,
@@ -208,7 +208,7 @@ async function importWebsiteTemplate() {
     var p3 = await window.openhub.saveProject({
       name: "Vérificateur Accessibilité & RGPD",
       instructions: "Tu es un expert en conformité web.",
-      color: "#2563eb",
+      color: "#0d9488",
       type: "verifier",
       dependencies: [p2.id],
       x: 700,
@@ -250,7 +250,7 @@ async function importSEOContentTemplate() {
     var p2 = await window.openhub.saveProject({
       name: "Traduction Anglaise (EN)",
       instructions: "Tu es un traducteur bilingue.",
-      color: "#7c5cfc",
+      color: "#0d9488",
       type: "work",
       dependencies: [p1.id],
       x: 700,
@@ -260,7 +260,7 @@ async function importSEOContentTemplate() {
     var p3 = await window.openhub.saveProject({
       name: "Audit & Optimisation SEO",
       instructions: "Tu es un expert en référencement naturel.",
-      color: "#2563eb",
+      color: "#0d9488",
       type: "verifier",
       dependencies: [p1.id],
       x: 700,
@@ -271,7 +271,7 @@ async function importSEOContentTemplate() {
     var orch = await window.openhub.saveProject({
       name: "Campagne Contenu SEO",
       instructions: "Tu es un responsable éditorial.",
-      color: "#10b981",
+      color: "#0d9488",
       type: "orchestrator",
       linked: [p1.id, p2.id, p3.id],
       orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
@@ -293,7 +293,7 @@ async function importSimpleOrchestrator() {
     var orch = await window.openhub.saveProject({
       name: "Mon Orchestrateur",
       instructions: "Tu es un coordinateur d'agents internes.",
-      color: "#10b981",
+      color: "#0d9488",
       type: "orchestrator",
       linked: [],
       orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },

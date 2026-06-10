@@ -133,6 +133,27 @@ body {
   }
 }
 
+/* ── Focus & a11y ── */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ── App Layout ── */
 .app-layout {
   display: flex;
@@ -386,6 +407,7 @@ body {
 }
 .chat-input:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .chat-send-btn {
   width: 32px;
@@ -529,6 +551,7 @@ body {
 }
 .canvas-search:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .canvas {
@@ -771,6 +794,7 @@ body {
 }
 .detail-textarea:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .detail-textarea--mono {
   font-family: var(--font-mono);
@@ -1007,6 +1031,11 @@ body {
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    background var(--duration-150) var(--ease-default),
+    color var(--duration-150) var(--ease-default),
+    border-color var(--duration-150) var(--ease-default),
+    transform var(--duration-75) var(--ease-default);
 }
 .btn--primary {
   background: var(--accent-primary);
@@ -1017,6 +1046,7 @@ body {
 }
 .btn--primary:active {
   background: var(--accent-active);
+  transform: scale(0.97);
 }
 .btn--secondary {
   background: var(--bg-surface);
@@ -1351,24 +1381,24 @@ body {
 
 /* ── Dark Console (dcon) ── */
 .dcon {
-  background: #141414;
-  color: #ececec;
-  border-color: #2a2a2a;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-color: var(--border-default);
 }
 .dcon .console-info {
-  color: #14b8a6;
+  color: var(--accent-primary);
 }
 .dcon .console-done {
-  color: #22c55e;
+  color: var(--success);
 }
 .dcon .console-error {
-  color: #ef4444;
+  color: var(--error);
 }
 .dcon .console-chunk {
-  color: #ececec;
+  color: var(--text-primary);
 }
 .dcon .console-skip {
-  color: #666666;
+  color: var(--text-muted);
 }
 
 /* ── Toast ── */
@@ -1428,11 +1458,13 @@ body {
   position: fixed;
   inset: 0;
   background: var(--overlay-modal);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn var(--duration-75) var(--ease-out);
+  animation: fadeIn var(--duration-250) var(--ease-out);
 }
 .modal-dialog {
   background: var(--bg-elevated);
@@ -1516,6 +1548,7 @@ body {
 }
 .form-input:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .form-textarea {
   width: 100%;
@@ -1533,6 +1566,7 @@ body {
 }
 .form-textarea:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .form-select {
   width: 100%;
@@ -1547,13 +1581,14 @@ body {
   outline: none;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239494A6' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 28px;
 }
 .form-select:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .dependency-checkbox-list {
   display: flex;
@@ -1712,10 +1747,12 @@ body {
   inset: 0;
   z-index: 200;
   background: var(--overlay-modal);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: none;
   align-items: center;
   justify-content: center;
-  animation: fadeIn var(--duration-75) var(--ease-out);
+  animation: fadeIn var(--duration-250) var(--ease-out);
 }
 #modalConfirmDelete.open {
   display: flex;
@@ -1736,7 +1773,7 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--error-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1788,7 +1825,7 @@ body {
   cursor: pointer;
 }
 .confirm-btn-delete:hover {
-  background: #dc2626;
+  opacity: 0.9;
 }
 
 /* ═══════════════════════════════════════════
@@ -2241,7 +2278,7 @@ body {
 .mgmt-btn-danger {
   padding: 7px 16px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--error-subtle);
   background: transparent;
   color: var(--error);
   font-size: 12px;
@@ -2544,4 +2581,5 @@ body {
 }
 .question-custom-input:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
