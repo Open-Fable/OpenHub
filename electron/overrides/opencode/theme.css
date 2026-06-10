@@ -66,6 +66,7 @@
   --button-primary-base: #111111 !important;
   --button-secondary-base: #ffffff !important;
 
+  /* OC-1 accent tokens */
   --border-selected: #0d9488 !important;
   --text-interactive-base: #0d9488 !important;
   --icon-interactive-base: #0d9488 !important;
@@ -73,6 +74,14 @@
   --surface-brand-hover: #0f766e !important;
   --surface-interactive-base: rgba(13, 148, 136, 0.06) !important;
   --surface-interactive-hover: rgba(13, 148, 136, 0.1) !important;
+
+  /* v2 semantic accent tokens — explicit override so dynamic theme doesn't restore blue */
+  --v2-background-bg-accent: #14b8a6 !important;
+  --v2-text-text-accent: #14b8a6 !important;
+  --v2-text-text-accent-hover: #0d9488 !important;
+  --v2-icon-icon-accent: #14b8a6 !important;
+  --v2-icon-icon-accent-hover: #0d9488 !important;
+  --v2-border-border-focus: #2dd4bf !important;
 }
 
 /* ═══════════════════════════════════════════
@@ -120,6 +129,7 @@
     --button-primary-base: #ececec !important;
     --button-secondary-base: #141414 !important;
 
+    /* OC-1 accent tokens */
     --border-selected: #14b8a6 !important;
     --text-interactive-base: #2dd4bf !important;
     --icon-interactive-base: #14b8a6 !important;
@@ -127,6 +137,14 @@
     --surface-brand-hover: #2dd4bf !important;
     --surface-interactive-base: rgba(20, 184, 166, 0.1) !important;
     --surface-interactive-hover: rgba(20, 184, 166, 0.16) !important;
+
+    /* v2 semantic accent tokens — explicit override so dynamic theme doesn't restore blue */
+    --v2-background-bg-accent: #14b8a6 !important;
+    --v2-text-text-accent: #5eead4 !important;
+    --v2-text-text-accent-hover: #99f6e4 !important;
+    --v2-icon-icon-accent: #5eead4 !important;
+    --v2-icon-icon-accent-hover: #99f6e4 !important;
+    --v2-border-border-focus: #2dd4bf !important;
   }
 }
 
