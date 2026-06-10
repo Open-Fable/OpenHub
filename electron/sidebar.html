@@ -135,7 +135,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--oh-color-border-subtle);
       }
 
       .window-controls-spacer {
@@ -161,6 +161,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        color: var(--oh-color-accent-primary);
       }
 
       .brand-logo svg {
@@ -201,6 +202,10 @@
         z-index: -1;
         pointer-events: none;
         opacity: 0;
+        transition:
+          width var(--duration-250) var(--ease-default),
+          left var(--duration-250) var(--ease-default),
+          opacity var(--duration-150) var(--ease-default);
       }
       
       .slot-btn.active {
@@ -215,7 +220,7 @@
         }
       }
 
-      /* ── Tabs Buttons (plus de rondeur) ── */
+      /* ── Tabs Buttons ── */
       .slot-btn {
         display: flex;
         align-items: center;
@@ -233,15 +238,19 @@
         -webkit-app-region: no-drag;
         font-size: 13px;
         font-weight: 500;
+        transition:
+          color var(--duration-150) var(--ease-default),
+          background var(--duration-150) var(--ease-default),
+          transform var(--duration-150) var(--ease-default);
       }
 
       .slot-btn:hover {
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.05);
         color: var(--oh-color-text-primary);
       }
 
       .slot-btn:active {
-        opacity: 0.8;
+        transform: scale(0.97);
       }
 
       @media (prefers-color-scheme: light) {
@@ -317,13 +326,20 @@
         transform: translateY(-50%);
       }
 
+      .btn-config {
+        transition:
+          color var(--duration-150) var(--ease-default),
+          background var(--duration-150) var(--ease-default),
+          transform var(--duration-150) var(--ease-default);
+      }
+
       .btn-config:hover {
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.05);
         color: var(--oh-color-text-primary);
       }
 
       .btn-config:active {
-        opacity: 0.8;
+        transform: scale(0.97);
       }
 
       @media (prefers-color-scheme: light) {
@@ -1262,11 +1278,11 @@
                 cx="16"
                 cy="16"
                 r="8"
-                stroke="#7B67EE"
+                stroke="currentColor"
                 stroke-width="2.5"
                 opacity="0.9"
               />
-              <circle cx="16" cy="16" r="3.5" fill="#7B67EE" opacity="0.9" />
+              <circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.9" />
             </svg>
           </div>
           <span>OpenHub</span>
