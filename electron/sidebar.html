@@ -369,8 +369,21 @@
 
       .slot-btn.loading .status-ring {
         opacity: 1;
-        background: var(--oh-color-warning);
-        box-shadow: 0 0 6px var(--oh-color-warning);
+        background: none;
+        box-shadow: none;
+        width: 14px;
+        height: 14px;
+        top: 2px;
+        right: 2px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='76' stroke-linecap='round' opacity='0.25'%3E%3Cpath d='M 311.4 103.8 A 162 162 0 0 1 415.5 284.1'/%3E%3Cpath d='M 360.1 380.1 A 162 162 0 0 1 151.9 380.1'/%3E%3Cpath d='M 96.5 284.1 A 162 162 0 0 1 200.6 103.8'/%3E%3C/g%3E%3Cg stroke='%2314B8A6' stroke-width='76' stroke-linecap='round'%3E%3Cpath d='M 311.4 103.8 A 162 162 0 0 1 415.5 284.1'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: contain;
+        border-radius: 0;
+        animation: oh-spin 1.8s linear infinite;
+      }
+
+      @keyframes oh-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
 
       .slot-btn.ready .status-ring {
@@ -1273,16 +1286,12 @@
         <div class="window-controls-spacer"></div>
         <div class="brand-title">
           <div class="brand-logo">
-            <svg viewBox="0 0 32 32" fill="none">
-              <circle
-                cx="16"
-                cy="16"
-                r="8"
-                stroke="currentColor"
-                stroke-width="2.5"
-                opacity="0.9"
-              />
-              <circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.9" />
+            <svg viewBox="0 0 512 512" fill="none">
+              <g stroke="currentColor" stroke-width="76" stroke-linecap="round">
+                <path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/>
+                <path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/>
+                <path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/>
+              </g>
             </svg>
           </div>
           <span>OpenHub</span>
