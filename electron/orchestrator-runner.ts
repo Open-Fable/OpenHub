@@ -3,6 +3,23 @@ import path from "path";
 import { homedir } from "os";
 import { getProjects, saveProject, setActiveProject, Project } from "./project-store.js";
 import { getActiveWorkspaceDir } from "./proxy/index.js";
+import {
+  buildWorkspaceContext,
+  buildDependencyContext,
+  buildPlanningSystemPrompt,
+  buildPlanningUserPrompt,
+  buildNodeSystemPrompt,
+  buildNodeUserPrompt,
+  buildContinuationPrompt,
+  buildVerifyPromptsSystemPrompt,
+  buildVerifyPromptsUserPrompt,
+  buildVerifyOutputSystemPrompt,
+  buildVerifyOutputUserPrompt,
+  buildBrandComplianceSystemPrompt,
+  buildBrandComplianceUserPrompt,
+  buildWorkspaceIndexSystemPrompt,
+  buildWorkspaceIndexUserPrompt,
+} from "./orchestrator-prompts.js";
 
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -56,6 +73,9 @@ export class OrchestratorRunner {
       // Initialize workspace index file
       await this.ensureWorkspaceIndexFile(workspaceDir);
 
+      // Accumulate results from each node for inter-agent context
+      const executionResults = new Map<string, string>();
+
       // Step 1: Initialize status of all linked nodes to idle
       const linkedIds = orchestrator.linked || [];
       const linkedProjects = allProjects.filter((p) => linkedIds.includes(p.id));
@@ -66,9 +86,15 @@ export class OrchestratorRunner {
       }
 
       // Step 2: Orchestrator planning phase (Auto-distribute tasks)
+      const wsContext = await buildWorkspaceContext(workspaceDir);
       let tasksMap: Record<string, string> = {};
       if (orchestrator.orchSettings?.autoDistribute) {
-        tasksMap = await this.generatePlanning(orchestrator, linkedProjects, task);
+        tasksMap = await this.generatePlanning(
+          orchestrator,
+          linkedProjects,
+          task,
+          wsContext,
+        );
         console.warn("[orchestrator] Planning generated:", tasksMap);
 
         // Save generated tasks and update UI
@@ -95,7 +121,12 @@ export class OrchestratorRunner {
             status: "running",
             task: "Vérification des prompts...",
           });
-          const isValid = await this.verifyPrompts(verifier, task, tasksMap);
+          const isValid = await this.verifyPrompts(
+            verifier,
+            task,
+            tasksMap,
+            linkedProjects,
+          );
           if (!isValid) {
             this.sendStatus({
               projectId: verifier.id,
@@ -146,7 +177,12 @@ export class OrchestratorRunner {
         // Execute node
         this.sendStatus({ projectId: node.id, status: "running" });
         try {
-          const resultText = await this.executeNode(node);
+          const resultText = await this.executeNode(
+            node,
+            allProjects,
+            executionResults,
+            wsContext,
+          );
 
           // Post-execution: check renders & quality
           await this.postExecuteProcessing(node, workspaceDir, resultText);
@@ -162,6 +198,7 @@ export class OrchestratorRunner {
 
           if (nodeValid) {
             executionStatuses[node.id] = "done";
+            executionResults.set(node.id, resultText);
             this.sendStatus({ projectId: node.id, status: "done" });
 
             // Document changes in workspace manifest
@@ -264,24 +301,10 @@ export class OrchestratorRunner {
     orchestrator: Project,
     linked: Project[],
     globalTask: string,
+    workspaceContext: string,
   ): Promise<Record<string, string>> {
-    const systemPrompt =
-      orchestrator.instructions ||
-      "Tu es un chef de projet IA coordonnant des agents techniques.";
-    const userPrompt = `
-Tâche globale à orchestrer : "${globalTask}"
-
-Voici les agents disponibles sous forme de projets distincts :
-${linked.map((p) => `- ID: ${p.id}, Nom: "${p.name}", Type: ${p.type}, Prompt de l'agent: "${p.instructions}"`).join("\n")}
-
-Rôle : Attribue une consigne (prompt spécifique) claire et détaillée à chaque agent pour réaliser la tâche globale de manière cohérente.
-Renvoie STRICTEMENT un objet JSON plat sans autre texte ou balise markdown. Les clés doivent être les identifiants de projet (ex: "p1") et les valeurs la tâche générée pour chaque projet.
-Exemple de réponse attendue :
-{
-  "p1": "Écris l'API d'authentification...",
-  "p2": "Crée la feuille de style CSS..."
-}
-`;
+    const systemPrompt = buildPlanningSystemPrompt(orchestrator);
+    const userPrompt = buildPlanningUserPrompt(globalTask, linked, workspaceContext);
     const response = await this.callLLM(orchestrator, systemPrompt, userPrompt, true);
     try {
       // Strip markdown code blocks if any
@@ -306,21 +329,14 @@ Exemple de réponse attendue :
     verifier: Project,
     globalTask: string,
     promptsMap: Record<string, string>,
+    linkedProjects: readonly Project[],
   ): Promise<boolean> {
-    const systemPrompt =
-      verifier.instructions || "Tu es un vérificateur de qualité d'instructions.";
-    const userPrompt = `
-Tâche globale : "${globalTask}"
-Instructions générées par l'Orchestrateur pour chaque projet lié :
-${JSON.stringify(promptsMap, null, 2)}
-
-Analyse si ces instructions couvrent tout le périmètre de la tâche globale, si elles ne se contredisent pas et s'assurer qu'elles sont cohérentes.
-Réponds STRICTEMENT par un JSON valide :
-{
-  "valid": true ou false,
-  "reason": "Explication si invalide"
-}
-`;
+    const systemPrompt = buildVerifyPromptsSystemPrompt(verifier);
+    const userPrompt = buildVerifyPromptsUserPrompt(
+      globalTask,
+      promptsMap,
+      linkedProjects,
+    );
     const response = await this.callLLM(verifier, systemPrompt, userPrompt, true);
     try {
       const cleaned = response
@@ -342,22 +358,8 @@ Réponds STRICTEMENT par un JSON valide :
     node: Project,
     resultText: string,
   ): Promise<boolean> {
-    const systemPrompt =
-      verifier.instructions || "Tu es un réviseur de code et de livrables.";
-    const userPrompt = `
-Tâche de l'agent "${node.name}" : "${node.task}"
-Livrable / Réponse de l'agent :
----
-${resultText}
----
-
-Vérifie si le livrable est fonctionnel, s'il répond précisément aux attentes et s'il ne présente pas d'erreurs structurelles évidentes.
-Réponds par un JSON strict :
-{
-  "valid": true ou false,
-  "reason": "Explication en cas d'erreur"
-}
-`;
+    const systemPrompt = buildVerifyOutputSystemPrompt(verifier);
+    const userPrompt = buildVerifyOutputUserPrompt(node, resultText);
     const response = await this.callLLM(verifier, systemPrompt, userPrompt, true);
     try {
       const cleaned = response
@@ -393,21 +395,8 @@ Réponds par un JSON strict :
       if (docs.length > 0) brandGuidelines = docs.join("\n\n");
     } catch {}
 
-    const systemPrompt =
-      verifier.instructions || "Tu es le gardien de la charte de marque.";
-    const userPrompt = `
-Guide de style et de marque de l'application :
----
-${brandGuidelines}
----
-
-Examine les modifications globales et assure-toi que l'application respecte les règles de design de la marque, les polices, et les palettes de couleurs.
-Réponds par un JSON strict :
-{
-  "valid": true ou false,
-  "reason": "Explication des écarts de marque"
-}
-`;
+    const systemPrompt = buildBrandComplianceSystemPrompt(verifier);
+    const userPrompt = buildBrandComplianceUserPrompt(brandGuidelines);
     const response = await this.callLLM(verifier, systemPrompt, userPrompt, true);
     try {
       const cleaned = response
@@ -424,11 +413,19 @@ Réponds par un JSON strict :
   /**
    * Execute a single project node with watchdog-supported streaming for auto-continuation
    */
-  private async executeNode(node: Project): Promise<string> {
+  private async executeNode(
+    node: Project,
+    allProjects: readonly Project[],
+    executionResults: ReadonlyMap<string, string>,
+    workspaceContext: string,
+  ): Promise<string> {
     console.warn(`[orchestrator] Executing node: ${node.name} (${node.type})`);
 
     // Temporarily switch active project in store so proxy intercepts with this node's instructions
     await setActiveProject(node.id);
+
+    const systemPrompt = buildNodeSystemPrompt(node);
+    const depContext = buildDependencyContext(node, allProjects, executionResults);
 
     try {
       const maxRetries = node.maxRetries || 3;
@@ -438,11 +435,12 @@ Réponds par un JSON strict :
 
       while (attempt < maxRetries && !isDone) {
         attempt++;
-        let prompt = node.task || "";
+        let prompt: string;
 
-        // If we are continuing a previous generation
         if (finalResponseText.length > 0) {
-          prompt = `Poursuis ton travail exactement là où tu l'as laissé. Conserve le code et les explications écrites. Voici la fin de ton dernier texte généré : \n"... ${finalResponseText.slice(-150)}"`;
+          prompt = buildContinuationPrompt(node, finalResponseText, attempt, maxRetries);
+        } else {
+          prompt = buildNodeUserPrompt(node, workspaceContext, depContext);
         }
 
         console.warn(
@@ -451,7 +449,12 @@ Réponds par un JSON strict :
         const chunkTimeout = 60000; // Watchdog timeout: 60s
 
         try {
-          const response = await this.callLLMWithWatchdog(node, prompt, chunkTimeout);
+          const response = await this.callLLMWithWatchdog(
+            node,
+            prompt,
+            chunkTimeout,
+            systemPrompt,
+          );
           finalResponseText += response;
           isDone = true; // Completed successfully without timeout
         } catch (err: unknown) {
@@ -488,15 +491,22 @@ Réponds par un JSON strict :
     node: Project,
     prompt: string,
     timeoutMs: number,
+    systemPrompt?: string,
   ): Promise<string> {
     const proxyUrl = "http://127.0.0.1:9999/v1/chat/completions";
 
+    const messages: Array<{ role: string; content: string }> = [];
+    if (systemPrompt) {
+      messages.push({ role: "system", content: systemPrompt });
+    }
+    messages.push({ role: "user", content: prompt });
+
     const body = {
-      model: node.model || "workflow-deepseek-pro-flash", // Fallback model or default
-      messages: [{ role: "user", content: prompt }],
+      model: node.model || "workflow-deepseek-pro-flash",
+      messages,
       stream: true,
-      temperature: 0.1, // Safe temperature to minimize hallucinations
-      bypassInjection: true,
+      temperature: 0.1,
+      bypassInjection: Boolean(node.bypassMemory),
     };
 
     const controller = new AbortController();
@@ -605,7 +615,7 @@ Réponds par un JSON strict :
         { role: "user", content: userPrompt },
       ],
       temperature: 0.1,
-      bypassInjection: bypassMemory || node.bypassMemory || true,
+      bypassInjection: bypassMemory || Boolean(node.bypassMemory),
     };
 
     const signal = this.abortController?.signal;
@@ -728,33 +738,18 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
       let content = await fs.readFile(indexPath, "utf-8");
 
       // 2. Ask LLM to generate the file map updates and changelog line based on the agent's work
-      const verifierProj = {
+      const indexerProj = {
         id: "sys-indexer",
         name: "Indexeur de Fichiers",
-        instructions: "Tu es un indexeur de code de documentation.",
+        instructions: "",
         color: "#ccc",
         createdAt: Date.now(),
         updatedAt: Date.now(),
       } as Project;
 
-      const systemPrompt = "Tu es un analyste de documentation projet.";
-      const userPrompt = `
-Voici le résumé de l'exécution de l'agent "${node.name}" (${(node.type || "code").toUpperCase()}) :
----
-${resultText.substring(0, 3000)}
----
-
-Génère deux blocs d'information à ajouter au registre :
-Bloc 1 : Nouvelles lignes pour le tableau de cartographie de fichier, au format : \`| chemin/du/fichier | Fonction courte |\` (uniquement si de nouveaux fichiers ont été créés/découverts).
-Bloc 2 : Une ligne pour le tableau de Changelog, au format : \`| ${new Date().toLocaleDateString("fr-FR")} | ${node.name} | chemin/du/fichier | Rôle des modifications |\`.
-
-Réponds sous forme de JSON strict :
-{
-  "newFiles": "ligne1\\nligne2",
-  "changelogLine": "| date | agent | fichiers | description |"
-}
-`;
-      const response = await this.callLLM(verifierProj, systemPrompt, userPrompt, true);
+      const systemPrompt = buildWorkspaceIndexSystemPrompt();
+      const userPrompt = buildWorkspaceIndexUserPrompt(node, resultText);
+      const response = await this.callLLM(indexerProj, systemPrompt, userPrompt, true);
       const cleaned = response
         .replace(/```json/gi, "")
         .replace(/```/g, "")
