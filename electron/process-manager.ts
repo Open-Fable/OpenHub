@@ -132,6 +132,22 @@ exec "\$REAL_PATH" "\${args[@]}"
     return out;
   }
 
+  stop(slot: Exclude<SlotName, "config" | "chat" | "projects">): void {
+    const app = this.running.get(slot);
+    if (!app) return;
+    for (const proc of app.processes) {
+      try {
+        proc.kill("SIGTERM");
+      } catch {
+        /* already dead */
+      }
+    }
+    this.killPort(app.port);
+    if (slot === "design") this.killPort(7456);
+    this.running.delete(slot);
+    console.warn(`[${slot}] stopped`);
+  }
+
   stopAll(): void {
     for (const [slot, app] of this.running) {
       for (const proc of app.processes) {
