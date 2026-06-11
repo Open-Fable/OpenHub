@@ -1,0 +1,10 @@
+# Fix GitHub language stats — TypeScript is the actual project language
+# HTML files contain large inline CSS/JS blocks that skew detection
+electron/*.html linguist-documentation
+electron/projects.html linguist-documentation
+
+# Lock files are generated — hide from diffs and language stats
+package-lock.json linguist-generated=true
+
+# Ensure LF line endings for shell scripts (avoids CRLF issues on Windows)
+*.sh text eol=lf
