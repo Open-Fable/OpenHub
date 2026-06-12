@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { request as httpRequest } from "http";
-import { homedir } from "os";
+import { homedir, platform, arch } from "os";
 import { promises as fs } from "fs";
 import path from "path";
 import { readAllApiKeys } from "../keychain.js";
@@ -56,11 +56,22 @@ export async function startProxy(): Promise<string> {
   const app = express();
   app.use(express.json({ limit: "10mb" }));
 
-  // ── CORS — OpenWork webview (localhost:5173) calls 127.0.0.1:9999 cross-origin ──
-  // Handle preflight + set headers in a single middleware so Express 5's
-  // changed wildcard semantics don't break OPTIONS routing.
+  // ── CORS — restrict to known local origins ──
+  const ALLOWED_ORIGINS = new Set([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4096",
+    "http://127.0.0.1:4096",
+    "http://localhost:9999",
+    "http://127.0.0.1:9999",
+  ]);
   app.use((req: Request, res: Response, next: NextFunction) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin ?? "";
+    const allowed = ALLOWED_ORIGINS.has(origin) || origin.startsWith("file://");
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      allowed ? origin : "http://127.0.0.1:9999",
+    );
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
@@ -68,6 +79,34 @@ export async function startProxy(): Promise<string> {
     );
     if (req.method === "OPTIONS") {
       res.status(204).end();
+      return;
+    }
+    next();
+  });
+
+  // ── Auth middleware — placed BEFORE all data endpoints ──
+  // Accept both the proxy session token and "openhub-local" (for OpenWork webview).
+  // Only /status, /health, /capabilities, /runtime/versions are exempt (above).
+  const OPENWORK_LOCAL_TOKEN = "openhub-local";
+  const PUBLIC_PATHS = new Set([
+    "/status",
+    "/health",
+    "/capabilities",
+    "/runtime/versions",
+  ]);
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (PUBLIC_PATHS.has(req.path)) {
+      next();
+      return;
+    }
+    const auth = req.headers["authorization"] ?? "";
+    if (!auth.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const token = auth.slice(7);
+    if (token !== sessionToken && token !== OPENWORK_LOCAL_TOKEN) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
     next();
@@ -465,6 +504,7 @@ export async function startProxy(): Promise<string> {
 
     const projects = context?.projects || [];
     const workflows = context?.workflows || [];
+    const availableModels: string[] = context?.availableModels || [];
     const activeWfId = context?.activeWorkflowId || null;
     const activeWf = activeWfId
       ? workflows.find((w: Record<string, unknown>) => w.id === activeWfId)
@@ -527,6 +567,11 @@ Exemple de mauvais message :
 
 QUAND L'UTILISATEUR EST VAGUE, POSE LUI DES QUESTIONS :
 Si la demande de l'utilisateur n'est pas assez précise pour créer des projets, pose-lui des questions pour clarifier.
+Tu disposes de ${MAX_QUESTION_ROUNDS} VAGUES de questions au total dans la conversation. Utilise-les intelligemment :
+- VAGUE 1 : Questions générales pour comprendre le besoin global (objectif, cible, périmètre)
+- VAGUE 2 : Questions de précision après les premières réponses (fonctionnalités détaillées, contraintes, préférences)
+- VAGUE 3 : Dernières clarifications avant de proposer les projets (confirmations, choix finaux)
+Après chaque réponse de l'utilisateur, ÉVALUE s'il reste des zones floues. Si oui et qu'il te reste des vagues, REPOSE des questions. Ne te précipite pas à proposer des projets tant que tu n'as pas suffisamment d'informations, même si l'utilisateur a déjà répondu à un premier lot de questions.
 Utilise ce format structuré pour poser plusieurs questions à la fois :
 
 \`\`\`questions
@@ -538,14 +583,21 @@ Utilise ce format structuré pour poser plusieurs questions à la fois :
 \`\`\`
 
 Règles pour les questions :
-- Pose autant de questions que nécessaire (entre 1 et 15) pour bien comprendre le besoin
+- Tu as le droit à ${MAX_QUESTION_ROUNDS} tours de questions maximum dans une conversation
+- Tu as déjà posé ${questionRounds} tour(s) de questions${questionRounds >= MAX_QUESTION_ROUNDS ? "\n- TU AS ATTEINT LA LIMITE DE QUESTIONS. Ne pose PLUS de questions. Utilise les informations disponibles pour proposer directement des projets." : questionRounds === MAX_QUESTION_ROUNDS - 1 ? "\n- C'est ton DERNIER tour de questions possible. Après celui-ci, tu devras proposer directement." : ""}
+- CALIBRE LE NOMBRE DE QUESTIONS selon la précision de la demande :
+  - Demande vague ("je veux un site", "j'ai une idée d'app") → pose 10 à 15 questions couvrant : objectif, cible, fonctionnalités, contenu, design, budget, délais, contraintes techniques, concurrence, monétisation, etc.
+  - Demande moyennement précise ("je veux un site e-commerce pour vendre des bijoux") → pose 6 à 10 questions sur les détails manquants
+  - Demande déjà détaillée → pose 1 à 5 questions de confirmation uniquement
+- N'aie PAS PEUR de poser beaucoup de questions. 15 questions bien ciblées valent mieux qu'un projet mal compris.
+- Organise les questions par thème (objectif, public, contenu, design, fonctionnalités, contraintes) pour que ce soit clair
 - Chaque question doit avoir 2 à 5 options de réponse
 - Quand l'utilisateur répond, utilise sa réponse pour adapter ta proposition
 - Si l'utilisateur répond "Je ne sais pas", prend une décision raisonnable à sa place
 - Les questions doivent être simples, avec des mots de tous les jours
-- Tu peux poser des questions de suivi après les réponses de l'utilisateur si tu as besoin de plus de détails
-- Tu as le droit à ${MAX_QUESTION_ROUNDS} tours de questions maximum dans une conversation
-- Tu as déjà posé ${questionRounds} tour(s) de questions${questionRounds >= MAX_QUESTION_ROUNDS ? "\n- TU AS ATTEINT LA LIMITE DE QUESTIONS. Ne pose PLUS de questions. Utilise les informations disponibles pour proposer directement des projets." : questionRounds === MAX_QUESTION_ROUNDS - 1 ? "\n- C'est ton DERNIER tour de questions possible. Après celui-ci, tu devras proposer directement." : ""}
+- Après chaque réponse de l'utilisateur, VÉRIFIE s'il reste des informations manquantes. Si oui et qu'il te reste des vagues disponibles (${MAX_QUESTION_ROUNDS - questionRounds} restante(s)), pose un NOUVEAU bloc de questions ciblées sur ce qui manque encore. Ne propose des projets que quand tu as assez d'informations OU que tu as épuisé tes ${MAX_QUESTION_ROUNDS} vagues
+- QUESTION OBLIGATOIRE — MODÈLE IA : Dans CHAQUE bloc de questions, inclus TOUJOURS une question sur le modèle d'IA à utiliser pour le projet. Propose UNIQUEMENT les modèles disponibles dans le catalogue ci-dessous. Utilise des noms simplifiés pour les options (pas les identifiants techniques). Ajoute l'option "Je ne sais pas, choisis pour moi" pour les utilisateurs qui ne connaissent pas les modèles.
+  Modèles disponibles : ${availableModels.length > 0 ? availableModels.join(", ") : "aucun modèle configuré"}
 
 QUAND TU PROPOSES DES PROJETS :
 - Donne-leur des noms que tout le monde comprend, comme "Gestion des comptes" au lieu de "API Authentification".
@@ -587,15 +639,58 @@ Créer un workflow :
 {"type": "create_workflow", "name": "Nom du workflow", "auto": true}
 \`\`\`
 
+Définir la tâche globale du workflow (ce que l'orchestrateur doit accomplir dans son ensemble) :
+\`\`\`action
+{"type": "set_task", "task": "Description claire et complète de ce que le projet doit réaliser. Cette tâche est le résumé global qui guide la répartition du travail entre tous les agents.", "auto": true}
+\`\`\`
+
+RÈGLE TÂCHE GLOBALE :
+- Quand tu crées un workflow, génère TOUJOURS une action set_task juste après le create_workflow pour définir la tâche globale
+- La tâche globale doit résumer l'objectif final du projet en s'appuyant sur les réponses de l'utilisateur
+- Elle doit être assez détaillée pour qu'un coordinateur puisse répartir le travail sans ambiguïté
+- Si l'utilisateur modifie sa demande ou précise son besoin, mets à jour la tâche globale avec set_task
+- L'utilisateur peut aussi te demander directement de changer la tâche globale ("change la tâche", "modifie l'objectif", etc.)
+
 Créer un agent et le lier au workflow actif :
 \`\`\`action
-{"type": "create_project", "name": "Nom du projet", "instructions": "Instructions détaillées...", "agentType": "code", "linkToWf": true, "auto": true}
+{"type": "create_project", "name": "Nom du projet", "instructions": "Instructions détaillées...", "task": "Tâche spécifique de cet agent...", "agentType": "code", "model": "identifiant-du-modele", "linkToWf": true, "dependencies": ["Nom d'un autre agent"], "auto": true}
 \`\`\`
+
+RÈGLE MODÈLE À LA CRÉATION :
+- Le champ "model" est OPTIONNEL dans create_project
+- Si l'utilisateur a choisi un modèle lors des questions, ajoute "model" à CHAQUE create_project avec l'identifiant exact du modèle choisi
+- Si l'utilisateur n'a pas encore choisi de modèle, ne mets pas le champ "model" — il pourra être défini plus tard avec set_model
+- Quand l'utilisateur demande de "changer le modèle de tous les agents", utilise set_model avec target "all"
+
+RÈGLE CRITIQUE — TOUJOURS RELIER LES AGENTS (dependencies) :
+Le champ "dependencies" liste les agents qui doivent TERMINER leur travail AVANT que cet agent démarre.
+Référence-les par leur NOM EXACT (agents créés plus haut dans la même réponse) ou par leur id (agents existants du contexte).
+C'est ce qui dessine les flèches entre les agents sur le canvas et définit l'ordre d'exécution.
+- Les agents de départ (recherche, analyse) n'ont pas de dependencies
+- TOUT autre agent DOIT avoir au moins une dépendance vers le ou les agents dont il utilise le travail
+- Exemple : "Construction du site" dépend de ["Maquette des pages", "Création des textes"] ; "Vérification qualité" dépend de ["Construction du site"] ; "Mise en ligne" dépend de ["Vérification qualité"]
+- Ne livre JAMAIS un ensemble d'agents sans chaîne de dépendances : un graphe où tous les agents sont isolés est une erreur
 
 Lier un agent EXISTANT au workflow actif (utilise l'id du projet depuis le contexte) :
 \`\`\`action
 {"type": "link_project", "projectId": "id-du-projet", "auto": true}
 \`\`\`
+
+Changer le modèle d'IA d'un agent spécifique (par id ou par nom) :
+\`\`\`action
+{"type": "set_model", "model": "identifiant-du-modele", "projectId": "id-du-projet", "auto": true}
+\`\`\`
+\`\`\`action
+{"type": "set_model", "model": "identifiant-du-modele", "projectName": "Nom de l'agent", "auto": true}
+\`\`\`
+
+Changer le modèle d'IA de TOUS les agents du workflow actif d'un coup :
+\`\`\`action
+{"type": "set_model", "model": "identifiant-du-modele", "target": "all", "auto": true}
+\`\`\`
+
+RÈGLE MODÈLE — Utilise UNIQUEMENT les identifiants exacts de la liste des modèles disponibles (voir contexte en bas). Quand l'utilisateur choisit un modèle par son nom simplifié lors d'une question, fais correspondre sa réponse à l'identifiant exact.
+Quand l'utilisateur répond à la question sur le modèle, génère automatiquement l'action set_model correspondante avec target "all" (sauf s'il a précisé un agent spécifique).
 
 Les valeurs possibles de agentType (OBLIGATOIRE pour chaque projet) :
 - "code" → programme, API, logique serveur, base de données
@@ -627,7 +722,10 @@ RÈGLES IMPORTANTES :
 - Sois concis mais complet
 
 Contexte actuel :
-${contextBlock}`;
+${contextBlock}
+
+Modèles IA disponibles (identifiants exacts à utiliser dans set_model) :
+${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join("\n") : "Aucun modèle configuré."}`;
 
     // Prevent timeout for SSE
     req.socket.setTimeout(0);
@@ -654,25 +752,27 @@ ${contextBlock}`;
         isGemini = true;
         const googleAuth = await getGoogleAuth();
         if (!googleAuth) {
-          res
-            .status(401)
-            .json({
-              error:
-                "Token Google expiré — lance 'opencode auth login' dans un terminal pour te reconnecter",
-            });
+          res.status(401).json({
+            error:
+              "Token Google expiré — lance 'opencode auth login' dans un terminal pour te reconnecter",
+          });
           return;
         }
+        const geminiModel = upstreamModel ?? model.replace("google/", "");
         headers["Authorization"] = `Bearer ${googleAuth.accessToken}`;
+        headers["User-Agent"] = buildGeminiUserAgent(geminiModel);
+        headers["x-activity-request-id"] = createActivityRequestId();
 
         const { contents, systemInstruction } = convertOpenAIToGemini(allMessages);
         const innerRequest: Record<string, unknown> = {
           contents,
           generationConfig: { temperature: 0.3 },
+          session_id: GEMINI_SESSION_ID,
         };
         if (systemInstruction) innerRequest.systemInstruction = systemInstruction;
         requestBody = JSON.stringify({
           project: googleAuth.managedProjectId,
-          model: upstreamModel ?? model.replace("google/", ""),
+          model: geminiModel,
           user_prompt_id: randomBytes(16).toString("hex"),
           request: innerRequest,
         });
@@ -766,24 +866,6 @@ ${contextBlock}`;
       return {};
     }
   }
-
-  // ── Auth middleware for LLM proxy routes ──
-  // Accept both the proxy session token (for LLM calls) and "openhub-local"
-  // (hardcoded token OpenWork receives via openworkServerInfo IPC).
-  const OPENWORK_LOCAL_TOKEN = "openhub-local";
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const auth = req.headers["authorization"] ?? "";
-    if (!auth.startsWith("Bearer ")) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-    const token = auth.slice(7);
-    if (token !== sessionToken && token !== OPENWORK_LOCAL_TOKEN) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-    next();
-  });
 
   // ── In-memory selected models ──
   let selectedModelIds: string[] = [];
@@ -1198,13 +1280,15 @@ ${contextBlock}`;
           });
           return;
         }
+        const geminiModel = upstreamModel ?? model.replace("google/", "");
         headers["Authorization"] = `Bearer ${googleAuth.accessToken}`;
+        headers["User-Agent"] = buildGeminiUserAgent(geminiModel);
+        headers["x-activity-request-id"] = createActivityRequestId();
 
         const finalMsgs = (rest.messages ?? []) as Array<{
           role: string;
           content: string;
         }>;
-        const geminiModel = upstreamModel ?? model.replace("google/", "");
         const { contents, systemInstruction } = convertOpenAIToGemini(finalMsgs);
         const innerRequest: Record<string, unknown> = {
           contents,
@@ -1212,8 +1296,36 @@ ${contextBlock}`;
             temperature: (rest.temperature as number) ?? 0.7,
             ...(rest.max_tokens ? { maxOutputTokens: rest.max_tokens as number } : {}),
           },
+          session_id: GEMINI_SESSION_ID,
         };
         if (systemInstruction) innerRequest.systemInstruction = systemInstruction;
+
+        // Forward OpenAI-format tools to Gemini-native format
+        const openaiTools = rest.tools as
+          | Array<{
+              type: string;
+              function: {
+                name: string;
+                description?: string;
+                parameters?: Record<string, unknown>;
+              };
+            }>
+          | undefined;
+        if (openaiTools?.length) {
+          innerRequest.tools = [
+            {
+              functionDeclarations: openaiTools
+                .filter((t) => t.type === "function")
+                .map((t) => ({
+                  name: t.function.name,
+                  ...(t.function.description
+                    ? { description: t.function.description }
+                    : {}),
+                  ...(t.function.parameters ? { parameters: t.function.parameters } : {}),
+                })),
+            },
+          ];
+        }
         geminiBody = JSON.stringify({
           project: googleAuth.managedProjectId,
           model: geminiModel,
@@ -1380,6 +1492,11 @@ ${contextBlock}`;
           // Non-streaming: reconstruct the full OpenAI response from accumulated chunks
           let fullContent = "";
           let finalUsage: Record<string, number> | null = null;
+          const toolCalls: Array<{
+            id: string;
+            type: string;
+            function: { name: string; arguments: string };
+          }> = [];
           for (const ch of accumulatedChunks) {
             const m = ch.match(/data: (.+)/);
             if (m) {
@@ -1388,12 +1505,20 @@ ${contextBlock}`;
                 if (p.choices?.[0]?.delta?.content) {
                   fullContent += p.choices[0].delta.content;
                 }
+                if (p.choices?.[0]?.delta?.tool_calls) {
+                  toolCalls.push(...p.choices[0].delta.tool_calls);
+                }
                 if (p.usage) finalUsage = p.usage;
               } catch {
                 /* ignore */
               }
             }
           }
+          const messageObj: Record<string, unknown> = {
+            role: "assistant",
+            content: fullContent || fullResponseContent || null,
+          };
+          if (toolCalls.length > 0) messageObj.tool_calls = toolCalls;
           const response: Record<string, unknown> = {
             id: `chatcmpl-${Date.now()}`,
             object: "chat.completion",
@@ -1402,11 +1527,8 @@ ${contextBlock}`;
             choices: [
               {
                 index: 0,
-                message: {
-                  role: "assistant",
-                  content: fullContent || fullResponseContent,
-                },
-                finish_reason: "stop",
+                message: messageObj,
+                finish_reason: toolCalls.length > 0 ? "tool_calls" : "stop",
                 logprobs: null,
               },
             ],
@@ -1556,11 +1678,22 @@ const GEMINI_MODEL_NAME_MAP: Record<string, string> = {
 };
 
 const GEMINI_API_BASE = "https://cloudcode-pa.googleapis.com";
+const GEMINI_SESSION_ID = randomUUID();
+
+function buildGeminiUserAgent(model: string): string {
+  return `GeminiCLI/0.45.1/${model} (${platform()}; ${arch()}; terminal)`;
+}
+
+function createActivityRequestId(): string {
+  return Math.random().toString(36).substring(7);
+}
 
 type GoogleAuth = { accessToken: string; managedProjectId: string } | null;
 
-const OPENCODE_AUTH_URL = "https://console.opencode.ai";
-const OPENCODE_CLIENT_ID = "opencode-cli";
+const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GEMINI_CLIENT_ID =
+  "***REMOVED-CLIENT-ID***";
+const GEMINI_CLIENT_SECRET = "***REMOVED-SECRET***";
 const AUTH_JSON_PATH = path.join(homedir(), ".local", "share", "opencode", "auth.json");
 const ACCOUNT_JSON_PATH = path.join(
   homedir(),
@@ -1569,6 +1702,7 @@ const ACCOUNT_JSON_PATH = path.join(
   "opencode",
   "account.json",
 );
+const ACCESS_TOKEN_EXPIRY_BUFFER_MS = 60_000;
 
 async function readGoogleAuthFile(): Promise<{
   accessToken: string | null;
@@ -1593,7 +1727,14 @@ async function readGoogleAuthFile(): Promise<{
       const parsed = JSON.parse(raw) as {
         accounts?: Record<
           string,
-          { credential?: { access?: string; refresh?: string; type?: string } }
+          {
+            credential?: {
+              access?: string;
+              refresh?: string;
+              type?: string;
+              expires?: number;
+            };
+          }
         >;
         active?: { google?: string };
       };
@@ -1603,7 +1744,7 @@ async function readGoogleAuthFile(): Promise<{
         return {
           accessToken: cred.access,
           refreshToken: cred.refresh ?? null,
-          expires: 0,
+          expires: cred.expires ?? 0,
         };
       }
     } catch {
@@ -1613,51 +1754,98 @@ async function readGoogleAuthFile(): Promise<{
   return { accessToken: null, refreshToken: null, expires: 0 };
 }
 
-async function refreshGoogleToken(refreshToken: string): Promise<string | null> {
-  // Try opencode backend first (works for tokens obtained via opencode auth login)
+function parseRefreshParts(packed: string): {
+  refreshToken: string;
+  projectId: string | undefined;
+  managedProjectId: string | undefined;
+} {
+  const [refreshToken = "", projectId = "", managedProjectId = ""] = packed.split("|");
+  return {
+    refreshToken,
+    projectId: projectId || undefined,
+    managedProjectId: managedProjectId || undefined,
+  };
+}
+
+function formatRefreshParts(parts: {
+  refreshToken: string;
+  projectId?: string;
+  managedProjectId?: string;
+}): string {
+  if (!parts.projectId && !parts.managedProjectId) return parts.refreshToken;
+  return `${parts.refreshToken}|${parts.projectId ?? ""}|${parts.managedProjectId ?? ""}`;
+}
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshGoogleToken(packedRefresh: string): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = refreshGoogleTokenInternal(packedRefresh).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function refreshGoogleTokenInternal(packedRefresh: string): Promise<string | null> {
+  const parts = parseRefreshParts(packedRefresh);
+  if (!parts.refreshToken) return null;
+
   try {
-    const resp = await fetch(`${OPENCODE_AUTH_URL}/auth/device/token`, {
+    const resp = await fetch(GOOGLE_OAUTH_TOKEN_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
         grant_type: "refresh_token",
-        refresh_token: refreshToken,
-        client_id: OPENCODE_CLIENT_ID,
+        refresh_token: parts.refreshToken,
+        client_id: GEMINI_CLIENT_ID,
+        client_secret: GEMINI_CLIENT_SECRET,
       }),
     });
-    if (resp.ok) {
-      const data = (await resp.json()) as {
-        access_token?: string;
-        refresh_token?: string;
-        expires_in?: number;
-      };
-      if (data.access_token) {
-        const newExpires = Date.now() + (data.expires_in ?? 3600) * 1000;
-        const existingRaw = await fs.readFile(AUTH_JSON_PATH, "utf-8").catch(() => "{}");
-        const existing = JSON.parse(existingRaw) as Record<string, unknown>;
-        const google = (existing.google ?? {}) as Record<string, unknown>;
-        const updated = {
-          ...existing,
-          google: {
-            ...google,
-            access: data.access_token,
-            ...(data.refresh_token ? { refresh: data.refresh_token } : {}),
-            expires: newExpires,
-          },
-        };
-        await fs.writeFile(AUTH_JSON_PATH, JSON.stringify(updated, null, 2), "utf-8");
-        console.log("[proxy] Google OAuth token refreshed via opencode backend");
-        return data.access_token;
-      }
-    }
-  } catch {
-    /* backend refresh failed, continue */
-  }
 
-  console.warn(
-    "[proxy] Google OAuth token expired — run 'opencode auth login' to refresh",
-  );
-  return null;
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => "");
+      console.warn(`[proxy] Google token refresh failed (${resp.status}): ${errText}`);
+      if (errText.includes("invalid_grant")) {
+        console.warn(
+          "[proxy] Refresh token revoked — lance 'opencode auth login' pour te reconnecter",
+        );
+      }
+      return null;
+    }
+
+    const data = (await resp.json()) as {
+      access_token: string;
+      expires_in: number;
+      refresh_token?: string;
+    };
+
+    const newExpires = Date.now() + data.expires_in * 1000;
+    const newRefreshToken = data.refresh_token ?? parts.refreshToken;
+    const newPacked = formatRefreshParts({
+      refreshToken: newRefreshToken,
+      projectId: parts.projectId,
+      managedProjectId: parts.managedProjectId,
+    });
+
+    const existingRaw = await fs.readFile(AUTH_JSON_PATH, "utf-8").catch(() => "{}");
+    const existing = JSON.parse(existingRaw) as Record<string, unknown>;
+    const google = (existing.google ?? {}) as Record<string, unknown>;
+    const updated = {
+      ...existing,
+      google: {
+        ...google,
+        access: data.access_token,
+        refresh: newPacked,
+        expires: newExpires,
+      },
+    };
+    await fs.writeFile(AUTH_JSON_PATH, JSON.stringify(updated, null, 2), "utf-8");
+    console.warn("[proxy] Google OAuth token refreshed");
+    return data.access_token;
+  } catch (err) {
+    console.error("[proxy] Google token refresh error:", err);
+    return null;
+  }
 }
 
 async function getGoogleAuth(): Promise<GoogleAuth> {
@@ -1665,15 +1853,15 @@ async function getGoogleAuth(): Promise<GoogleAuth> {
     const { accessToken, refreshToken, expires } = await readGoogleAuthFile();
     if (!accessToken) return null;
 
-    const parts = (refreshToken ?? "").split("|");
-    const managedProjectId = parts[2] || parts[1] || "";
+    const parts = parseRefreshParts(refreshToken ?? "");
+    const managedProjectId = parts.managedProjectId ?? "";
 
-    const isExpired = expires > 0 && Date.now() > expires;
-    if (isExpired && refreshToken) {
+    const needsRefresh =
+      !expires || expires <= Date.now() + ACCESS_TOKEN_EXPIRY_BUFFER_MS;
+    if (needsRefresh && refreshToken) {
       const newToken = await refreshGoogleToken(refreshToken);
       if (newToken) return { accessToken: newToken, managedProjectId };
-      // Token expired and refresh failed — return null so callers show a clear message
-      return null;
+      if (!expires || Date.now() > expires) return null;
     }
 
     return { accessToken, managedProjectId };
@@ -1682,8 +1870,19 @@ async function getGoogleAuth(): Promise<GoogleAuth> {
   }
 }
 
-function convertOpenAIToGemini(messages: Array<{ role: string; content: string }>): {
-  contents: Array<{ role: string; parts: Array<{ text: string }> }>;
+function convertOpenAIToGemini(
+  messages: Array<{
+    role: string;
+    content: string | null;
+    tool_calls?: Array<{
+      id: string;
+      type: string;
+      function: { name: string; arguments: string };
+    }>;
+    tool_call_id?: string;
+  }>,
+): {
+  contents: Array<{ role: string; parts: Array<Record<string, unknown>> }>;
   systemInstruction?: { parts: Array<{ text: string }> };
 } {
   const systemMsgs = messages.filter((m) => m.role === "system");
@@ -1691,14 +1890,47 @@ function convertOpenAIToGemini(messages: Array<{ role: string; content: string }
 
   const systemInstruction =
     systemMsgs.length > 0
-      ? { parts: systemMsgs.map((m) => ({ text: m.content })) }
+      ? { parts: systemMsgs.map((m) => ({ text: m.content || "" })) }
       : undefined;
 
-  const contents = nonSystemMsgs.map((m) => {
-    let role = m.role;
-    if (role === "assistant") role = "model";
-    return { role, parts: [{ text: m.content }] };
-  });
+  const contents: Array<{ role: string; parts: Array<Record<string, unknown>> }> = [];
+
+  for (const m of nonSystemMsgs) {
+    if (m.role === "assistant" && m.tool_calls?.length) {
+      const parts: Array<Record<string, unknown>> = [];
+      if (m.content) parts.push({ text: m.content });
+      for (const tc of m.tool_calls) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+        } catch {
+          /* keep empty */
+        }
+        parts.push({
+          functionCall: { name: tc.function.name, args },
+        });
+      }
+      contents.push({ role: "model", parts });
+    } else if (m.role === "tool") {
+      // Gemini expects functionResponse parts grouped under a single "user" turn
+      const frPart = {
+        functionResponse: {
+          name: "tool_response",
+          response: { content: m.content || "" },
+        },
+      };
+      const prev = contents[contents.length - 1];
+      if (prev && prev.role === "user" && prev.parts[0]?.functionResponse) {
+        prev.parts.push(frPart);
+      } else {
+        contents.push({ role: "user", parts: [frPart] });
+      }
+    } else {
+      let role = m.role;
+      if (role === "assistant") role = "model";
+      contents.push({ role, parts: [{ text: m.content || "" }] });
+    }
+  }
 
   return { contents, systemInstruction };
 }
@@ -1715,22 +1947,41 @@ function convertGeminiChunkToOpenAI(chunk: string): string | null {
     const candidate = gemini.candidates?.[0];
     if (!candidate) return null;
 
-    const text = candidate.content?.parts?.[0]?.text || "";
+    const parts = candidate.content?.parts ?? [];
+    const text =
+      parts.find((p: Record<string, unknown>) => typeof p.text === "string")?.text || "";
+    const functionCalls = parts.filter(
+      (p: Record<string, unknown>) => p.functionCall,
+    ) as Array<{ functionCall: { name: string; args: Record<string, unknown> } }>;
     const rawFinish = candidate.finishReason || null;
     const usage = gemini.usageMetadata;
 
     let finishReason: string | null = null;
     if (rawFinish) {
-      if (rawFinish === "STOP") finishReason = "stop";
+      if (rawFinish === "STOP")
+        finishReason = functionCalls.length > 0 ? "tool_calls" : "stop";
       else if (rawFinish === "MAX_TOKENS") finishReason = "length";
       else finishReason = rawFinish.toLowerCase();
+    }
+
+    const delta: Record<string, unknown> = text ? { content: text } : {};
+    if (functionCalls.length > 0) {
+      delta.tool_calls = functionCalls.map((fc, i) => ({
+        index: i,
+        id: `call_gemini_${Date.now()}_${i}`,
+        type: "function",
+        function: {
+          name: fc.functionCall.name,
+          arguments: JSON.stringify(fc.functionCall.args ?? {}),
+        },
+      }));
     }
 
     const openai: Record<string, unknown> = {
       choices: [
         {
           index: 0,
-          delta: text ? { content: text } : {},
+          delta,
           finish_reason: finishReason,
           logprobs: null,
         },
