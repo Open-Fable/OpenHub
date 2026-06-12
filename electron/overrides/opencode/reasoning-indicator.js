@@ -17,15 +17,10 @@
     { id: "max", name: "Maximum" },
   ];
 
-  var ALL_LABELS = {
-    none: "Aucun",
-    minimal: "Minimal",
-    low: "Bas",
-    medium: "Moyen",
-    high: "Élevé",
-    xhigh: "Très élevé",
-    max: "Max",
-  };
+  var ALL_LABELS = FALLBACK_LEVELS.reduce(function (acc, l) {
+    acc[l.id] = l.name;
+    return acc;
+  }, {});
 
   var currentEffort = localStorage.getItem(EFFORT_KEY) || "medium";
   var activeLevels = FALLBACK_LEVELS;
