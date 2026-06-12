@@ -324,6 +324,7 @@ ipcMain.on("show-nav-menu", (_e, x: number, y: number) => {
     parent: mainWindow,
     webPreferences: {
       contextIsolation: true,
+      sandbox: true,
       nodeIntegration: false,
       preload: path.join(__dirname, "preload.cjs"),
     },
@@ -1359,76 +1360,81 @@ ipcMain.handle("check-app-updates", async () => {
       branch?: string;
     }
   > = {};
-  for (const name of APP_NAMES) {
-    try {
-      const dir = path.join(APPS_DIR, name);
-      await fs.access(dir);
-
-      // 1. Fetch tags from origin
-      await execPromise(`git fetch origin +refs/tags/*:refs/tags/* 2>/dev/null; true`, {
-        cwd: dir,
-      });
-
-      // 2. Get tags reachable from HEAD
-      const localTagsRaw = (
-        await execPromise(`git tag --merged HEAD 2>/dev/null || echo ""`, { cwd: dir })
-      )
-        .split("\n")
-        .filter(Boolean);
-      let localTag = findLatestTag(localTagsRaw, name);
-
-      // 3. Get all tags in the repository (includes newly fetched tags)
-      const remoteTagsRaw = (
-        await execPromise(`git tag 2>/dev/null || echo ""`, { cwd: dir })
-      )
-        .split("\n")
-        .filter(Boolean);
-      const remoteTag = findLatestTag(remoteTagsRaw, name);
-
-      let behind = 0;
-      let isUpstreamUpToDate = false;
+  const entries = await Promise.all(
+    APP_NAMES.map(async (name) => {
       try {
-        const behindCountStr = (
-          await execPromise(`git rev-list --count HEAD..@{u} 2>/dev/null`, { cwd: dir })
-        ).trim();
-        const behindCount = parseInt(behindCountStr, 10);
-        if (!isNaN(behindCount)) {
-          if (behindCount > 0) {
+        const dir = path.join(APPS_DIR, name);
+        await fs.access(dir);
+
+        await execPromise(`git fetch origin +refs/tags/*:refs/tags/* 2>/dev/null; true`, {
+          cwd: dir,
+        });
+
+        const localTagsRaw = (
+          await execPromise(`git tag --merged HEAD 2>/dev/null || echo ""`, { cwd: dir })
+        )
+          .split("\n")
+          .filter(Boolean);
+        let localTag = findLatestTag(localTagsRaw, name);
+
+        const remoteTagsRaw = (
+          await execPromise(`git tag 2>/dev/null || echo ""`, { cwd: dir })
+        )
+          .split("\n")
+          .filter(Boolean);
+        const remoteTag = findLatestTag(remoteTagsRaw, name);
+
+        let behind = 0;
+        let isUpstreamUpToDate = false;
+        try {
+          const behindCountStr = (
+            await execPromise(`git rev-list --count HEAD..@{u} 2>/dev/null`, { cwd: dir })
+          ).trim();
+          const behindCount = parseInt(behindCountStr, 10);
+          if (!isNaN(behindCount)) {
+            if (behindCount > 0) {
+              behind = 1;
+            } else {
+              isUpstreamUpToDate = true;
+            }
+          }
+        } catch {
+          // No upstream branch or command failed, will fallback to tag comparison
+        }
+
+        if (isUpstreamUpToDate) {
+          behind = 0;
+          localTag = remoteTag;
+        } else {
+          if (localTag !== "none" && remoteTag !== "none") {
+            const localParsed = parseSemver(localTag, name);
+            const remoteParsed = parseSemver(remoteTag, name);
+            if (
+              localParsed &&
+              remoteParsed &&
+              compareSemver(remoteParsed, localParsed) > 0
+            ) {
+              behind = 1;
+            }
+          } else if (localTag === "none" && remoteTag !== "none") {
             behind = 1;
-          } else {
-            isUpstreamUpToDate = true;
           }
         }
-      } catch {
-        // No upstream branch or command failed, will fallback to tag comparison
-      }
 
-      if (isUpstreamUpToDate) {
-        behind = 0;
-        localTag = remoteTag;
-      } else {
-        if (localTag !== "none" && remoteTag !== "none") {
-          const localParsed = parseSemver(localTag, name);
-          const remoteParsed = parseSemver(remoteTag, name);
-          if (
-            localParsed &&
-            remoteParsed &&
-            compareSemver(remoteParsed, localParsed) > 0
-          ) {
-            behind = 1;
-          }
-        } else if (localTag === "none" && remoteTag !== "none") {
-          behind = 1;
-        }
+        return [name, { behind, localTag, remoteTag, branch: "" }] as const;
+      } catch (err) {
+        return [
+          name,
+          {
+            behind: 0,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        ] as const;
       }
-
-      results[name] = { behind, localTag, remoteTag, branch: "" };
-    } catch (err) {
-      results[name] = {
-        behind: 0,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
+    }),
+  );
+  for (const [name, result] of entries) {
+    results[name] = result;
   }
   return results;
 });
@@ -1835,10 +1841,12 @@ app.whenReady().then(async () => {
   registerOllamaHandlers();
   proxyToken = await startProxy();
 
-  const anthropicKey = await readSecret("openhub", "anthropic-api-key");
-  const openaiKey = await readSecret("openhub", "openai-api-key");
-  const openrouterKey = await readSecret("openhub", "openrouter-api-key");
-  const googleAiKey = await readSecret("openhub", "google-ai-key");
+  const [anthropicKey, openaiKey, openrouterKey, googleAiKey] = await Promise.all([
+    readSecret("openhub", "anthropic-api-key"),
+    readSecret("openhub", "openai-api-key"),
+    readSecret("openhub", "openrouter-api-key"),
+    readSecret("openhub", "google-ai-key"),
+  ]);
 
   processManager = new ProcessManager(proxyToken, { googleAiKey });
 
@@ -1862,6 +1870,17 @@ app.on("window-all-closed", () => {
   processManager?.stopAll();
   app.quit();
 });
+
+app.on("before-quit", () => {
+  processManager?.stopAll();
+});
+
+for (const sig of ["SIGTERM", "SIGINT"] as const) {
+  process.on(sig, () => {
+    processManager?.stopAll();
+    process.exit(0);
+  });
+}
 
 app.on("activate", () => {
   if (!mainWindow) createWindow();
