@@ -43,6 +43,16 @@ import {
 } from "./memory-store.js";
 import type { SlotName } from "./types.js";
 import { OrchestratorRunner } from "./orchestrator-runner.js";
+import {
+  createNotifier,
+  defaultNotifySources,
+  isNotifyMode,
+  isNotifySource,
+  DEFAULT_NOTIFY_MODE,
+  NOTIFY_SOURCES,
+  type NotifyMode,
+  type NotifySources,
+} from "./notifications.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -83,6 +93,7 @@ function createSplash(): BrowserWindow {
     backgroundColor: "#00000000",
     webPreferences: {
       contextIsolation: true,
+      sandbox: true,
       nodeIntegration: false,
     },
   });
@@ -104,6 +115,7 @@ async function createWindow(): Promise<void> {
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
+      sandbox: true,
       nodeIntegration: false,
     },
   });
@@ -645,13 +657,28 @@ ipcMain.handle(
 
       case "__homeDir":
         return homedir();
-      case "__joinPath":
-        return path.join(...(args as string[]));
-      case "__openPath":
-        return shell.openPath(args[0] as string);
-      case "__revealItemInDir":
-        shell.showItemInFolder(args[0] as string);
+      case "__joinPath": {
+        const segments = args as string[];
+        if (segments.some((s) => typeof s !== "string" || s.includes(".."))) {
+          return null;
+        }
+        return path.join(...segments);
+      }
+      case "__openPath": {
+        const target = args[0] as string;
+        if (typeof target !== "string" || target.includes("..")) return "";
+        const resolved = path.resolve(target);
+        if (!resolved.startsWith(homedir())) return "";
+        return shell.openPath(resolved);
+      }
+      case "__revealItemInDir": {
+        const itemPath = args[0] as string;
+        if (typeof itemPath !== "string" || itemPath.includes("..")) return null;
+        const resolvedItem = path.resolve(itemPath);
+        if (!resolvedItem.startsWith(homedir())) return null;
+        shell.showItemInFolder(resolvedItem);
         return null;
+      }
       default:
         return null;
     }
@@ -662,12 +689,17 @@ ipcMain.handle(
 ipcMain.handle("get-projects", () => getProjects());
 ipcMain.handle("get-active-project", () => getActiveProject());
 ipcMain.handle("set-active-project", (_e, id: string | null) => setActiveProject(id));
-ipcMain.handle(
-  "save-project",
-  (_e, project: { id?: string; name: string; instructions: string; color: string }) =>
-    saveProject(project),
+ipcMain.handle("save-project", (_e, project: Parameters<typeof saveProject>[0]) =>
+  saveProject(project),
 );
 ipcMain.handle("delete-project", (_e, id: string) => deleteProject(id));
+
+ipcMain.handle("pick-project-path", async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory", "createDirectory"],
+  });
+  return result.canceled ? null : (result.filePaths[0] ?? null);
+});
 
 ipcMain.handle("get-workflows", () => getWorkflows());
 ipcMain.handle("save-workflow", (_e, workflow) => saveWorkflow(workflow));
@@ -679,21 +711,88 @@ ipcMain.handle("delete-orch-run", (_e, id: string) => deleteOrchRun(id));
 ipcMain.handle("clear-orch-runs", (_e, workflowId?: string) => clearOrchRuns(workflowId));
 
 let runner: OrchestratorRunner | null = null;
-ipcMain.handle("execute-orchestration", async (_e, id: string, task: string) => {
-  if (!runner) {
-    runner = new OrchestratorRunner((update) => {
-      mainWindow?.webContents.send("orchestration-status", update);
-      const projView = views.get("projects");
-      if (projView) {
-        projView.webContents.send("orchestration-status", update);
-      }
+
+interface StatusUpdate {
+  projectId: string;
+  status: string;
+  task?: string;
+  error?: string;
+  result?: string;
+  systemPrompt?: string;
+  userPrompt?: string;
+  chunk?: string;
+  progress?: { current: number; total: number };
+  substep?: { current: number; total: number; title: string };
+  dependencies?: string[];
+}
+
+const orchStatusBuffer = new Map<string, StatusUpdate>();
+const orchActivityLog: Array<{
+  ts: number;
+  projectId: string;
+  status: string;
+  label?: string;
+}> = [];
+const MAX_ACTIVITY_LOG = 200;
+
+function broadcastOrchStatus(update: StatusUpdate) {
+  orchStatusBuffer.set(update.projectId, update);
+
+  if (update.status && update.status !== "idle") {
+    if (orchActivityLog.length >= MAX_ACTIVITY_LOG) orchActivityLog.shift();
+    orchActivityLog.push({
+      ts: Date.now(),
+      projectId: update.projectId,
+      status: update.status,
+      label: update.task || update.substep?.title || update.error,
     });
   }
-  await runner.run(id, task);
-});
+
+  mainWindow?.webContents.send("orchestration-status", update);
+  const projView = views.get("projects");
+  if (projView) {
+    projView.webContents.send("orchestration-status", update);
+  }
+}
+
+ipcMain.handle(
+  "execute-orchestration",
+  async (_e, id: string, task: string, workDir?: string) => {
+    orchStatusBuffer.clear();
+    orchActivityLog.length = 0;
+
+    if (!runner) {
+      runner = new OrchestratorRunner(
+        (update) => {
+          broadcastOrchStatus(update);
+          if (
+            update.projectId === runner?.activeOrchestratorId &&
+            (update.status === "done" || update.status === "error")
+          ) {
+            notifier.notify("orchestrator", {
+              body:
+                update.status === "done"
+                  ? "L'orchestration est terminée avec succès."
+                  : "L'orchestration s'est arrêtée sur une erreur.",
+            });
+          }
+        },
+        () => processManager,
+      );
+    }
+    await runner.run(id, task, workDir);
+  },
+);
 
 ipcMain.handle("cancel-orchestration", () => {
   runner?.cancel();
+});
+
+ipcMain.handle("get-orch-status-buffer", () => {
+  return {
+    statuses: Object.fromEntries(orchStatusBuffer),
+    activity: [...orchActivityLog],
+  };
 });
 
 // ── Chat backup (file-system persistence for conversations) ─────────────────
@@ -1446,7 +1545,31 @@ let visionDetailLevel = "high";
 let aiWorkflowProModel = "deepseek/deepseek-v4-pro";
 let aiWorkflowFlashModel = "deepseek/deepseek-v4-flash";
 let aiClassifierModel = "deepseek/deepseek-v4-flash";
+let notifyMode: NotifyMode = DEFAULT_NOTIFY_MODE;
+let notifySources: NotifySources = defaultNotifySources();
 const SETTINGS_PATH = path.join(homedir(), ".config", "openhub", "settings.json");
+
+const notifier = createNotifier({
+  getWindow: () => mainWindow,
+  getActiveSlot: () => activeSlot,
+  getMode: () => notifyMode,
+  getSources: () => notifySources,
+  focusSource: (slot) => {
+    switchSlot(slot).catch((err) => {
+      console.error("[notifications] switchSlot failed:", err);
+    });
+  },
+});
+
+function parseNotifySources(raw: unknown, base?: NotifySources): NotifySources {
+  const sources = base ? { ...base } : defaultNotifySources();
+  if (typeof raw !== "object" || raw === null) return sources;
+  const record = raw as Record<string, unknown>;
+  for (const key of NOTIFY_SOURCES) {
+    if (typeof record[key] === "boolean") sources[key] = record[key] as boolean;
+  }
+  return sources;
+}
 
 async function loadSettings(): Promise<void> {
   try {
@@ -1461,6 +1584,10 @@ async function loadSettings(): Promise<void> {
     aiWorkflowProModel = parsed.aiWorkflowProModel || "deepseek/deepseek-v4-pro";
     aiWorkflowFlashModel = parsed.aiWorkflowFlashModel || "deepseek/deepseek-v4-flash";
     aiClassifierModel = parsed.aiClassifierModel || "deepseek/deepseek-v4-flash";
+    notifyMode = isNotifyMode(parsed.notifyMode)
+      ? parsed.notifyMode
+      : DEFAULT_NOTIFY_MODE;
+    notifySources = parseNotifySources(parsed.notifySources);
   } catch {
     navMode = "topbar";
     headerHeight = HEADER_HEIGHT_TOPBAR;
@@ -1471,6 +1598,8 @@ async function loadSettings(): Promise<void> {
     aiWorkflowProModel = "deepseek/deepseek-v4-pro";
     aiWorkflowFlashModel = "deepseek/deepseek-v4-flash";
     aiClassifierModel = "deepseek/deepseek-v4-flash";
+    notifyMode = DEFAULT_NOTIFY_MODE;
+    notifySources = defaultNotifySources();
   }
 }
 
@@ -1490,6 +1619,8 @@ async function saveSettings(): Promise<void> {
           aiWorkflowProModel,
           aiWorkflowFlashModel,
           aiClassifierModel,
+          notifyMode,
+          notifySources,
         },
         null,
         2,
@@ -1620,6 +1751,38 @@ ipcMain.handle("get-ai-classifier-model", () => aiClassifierModel);
 ipcMain.handle("set-ai-classifier-model", async (_e, model: string) => {
   aiClassifierModel = model;
   await saveSettings();
+});
+
+// Notifications de fin de tâche
+ipcMain.handle("get-notify-mode", () => notifyMode);
+ipcMain.handle("set-notify-mode", async (_e, mode: unknown) => {
+  if (!isNotifyMode(mode)) return;
+  notifyMode = mode;
+  await saveSettings();
+});
+
+ipcMain.handle("get-notify-sources", () => ({ ...notifySources }));
+ipcMain.handle("set-notify-sources", async (_e, sources: unknown) => {
+  notifySources = parseNotifySources(sources, notifySources);
+  await saveSettings();
+});
+
+const NOTIFY_BODY_MAX = 200;
+const TASK_DONE_SENDER_SLOT: Record<string, SlotName> = {
+  chat: "projects",
+  code: "code",
+  work: "work",
+  design: "design",
+};
+ipcMain.on("task-done", (e, source: unknown, body?: unknown) => {
+  if (!isNotifySource(source)) return;
+  const expectedView = views.get(TASK_DONE_SENDER_SLOT[source]);
+  if (!expectedView || e.sender !== expectedView.webContents) return;
+  const safeBody =
+    typeof body === "string" && body.trim() !== ""
+      ? body.trim().slice(0, NOTIFY_BODY_MAX)
+      : undefined;
+  notifier.notify(source, safeBody !== undefined ? { body: safeBody } : undefined);
 });
 
 function execPromise(
