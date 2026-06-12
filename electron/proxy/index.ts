@@ -56,6 +56,13 @@ export async function startProxy(): Promise<string> {
   const app = express();
   app.use(express.json({ limit: "10mb" }));
 
+  // ── Security headers — applied to every response ──
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    next();
+  });
+
   // ── CORS — restrict to known local origins ──
   const ALLOWED_ORIGINS = new Set([
     "http://localhost:5173",
@@ -72,6 +79,7 @@ export async function startProxy(): Promise<string> {
       "Access-Control-Allow-Origin",
       allowed ? origin : "http://127.0.0.1:9999",
     );
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
@@ -1496,6 +1504,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
             id: string;
             type: string;
             function: { name: string; arguments: string };
+            thought_signature?: string;
           }> = [];
           for (const ch of accumulatedChunks) {
             const m = ch.match(/data: (.+)/);
@@ -1878,6 +1887,7 @@ function convertOpenAIToGemini(
       id: string;
       type: string;
       function: { name: string; arguments: string };
+      thought_signature?: string;
     }>;
     tool_call_id?: string;
   }>,
@@ -1906,9 +1916,18 @@ function convertOpenAIToGemini(
         } catch {
           /* keep empty */
         }
-        parts.push({
+        const fcPart: Record<string, unknown> = {
           functionCall: { name: tc.function.name, args },
-        });
+        };
+        if (tc.thought_signature) {
+          fcPart.thought_signature = tc.thought_signature;
+        }
+        console.warn(
+          "[proxy:gemini] Rebuilding functionCall part:",
+          JSON.stringify(fcPart),
+        );
+        console.warn("[proxy:gemini] Original tc keys:", Object.keys(tc));
+        parts.push(fcPart);
       }
       contents.push({ role: "model", parts });
     } else if (m.role === "tool") {
@@ -1948,11 +1967,23 @@ function convertGeminiChunkToOpenAI(chunk: string): string | null {
     if (!candidate) return null;
 
     const parts = candidate.content?.parts ?? [];
+    // Debug: log raw parts when they contain function calls
+    if (parts.some((p: Record<string, unknown>) => p.functionCall)) {
+      console.warn(
+        "[proxy:gemini] Raw response parts with functionCall:",
+        JSON.stringify(parts, null, 2),
+      );
+    }
     const text =
-      parts.find((p: Record<string, unknown>) => typeof p.text === "string")?.text || "";
+      parts.find((p: Record<string, unknown>) => typeof p.text === "string" && !p.thought)
+        ?.text || "";
     const functionCalls = parts.filter(
       (p: Record<string, unknown>) => p.functionCall,
-    ) as Array<{ functionCall: { name: string; args: Record<string, unknown> } }>;
+    ) as Array<{
+      functionCall: { name: string; args: Record<string, unknown> };
+      thought_signature?: string;
+      thoughtSignature?: string;
+    }>;
     const rawFinish = candidate.finishReason || null;
     const usage = gemini.usageMetadata;
 
@@ -1966,15 +1997,19 @@ function convertGeminiChunkToOpenAI(chunk: string): string | null {
 
     const delta: Record<string, unknown> = text ? { content: text } : {};
     if (functionCalls.length > 0) {
-      delta.tool_calls = functionCalls.map((fc, i) => ({
-        index: i,
-        id: `call_gemini_${Date.now()}_${i}`,
-        type: "function",
-        function: {
-          name: fc.functionCall.name,
-          arguments: JSON.stringify(fc.functionCall.args ?? {}),
-        },
-      }));
+      delta.tool_calls = functionCalls.map((fc, i) => {
+        const sig = fc.thought_signature ?? fc.thoughtSignature;
+        return {
+          index: i,
+          id: `call_gemini_${Date.now()}_${i}`,
+          type: "function",
+          function: {
+            name: fc.functionCall.name,
+            arguments: JSON.stringify(fc.functionCall.args ?? {}),
+          },
+          ...(sig ? { thought_signature: sig } : {}),
+        };
+      });
     }
 
     const openai: Record<string, unknown> = {
