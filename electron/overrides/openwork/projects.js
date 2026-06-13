@@ -201,8 +201,17 @@
     }
   }
 
+  // Coalescer les rafales de mutations en un seul appel par frame : le body
+  // peut muter très fréquemment pendant les re-renders, inutile de relancer
+  // ensureInjected() à chaque mutation individuelle.
+  var rafScheduled = false;
   var observer = new MutationObserver(function () {
-    ensureInjected();
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(function () {
+      rafScheduled = false;
+      ensureInjected();
+    });
   });
   if (document.body) {
     observer.observe(document.body, { childList: true, subtree: true });
