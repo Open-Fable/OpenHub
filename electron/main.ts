@@ -4,6 +4,7 @@ import {
   ipcMain,
   dialog,
   shell,
+  session,
   WebContentsView,
   Menu,
 } from "electron";
@@ -31,6 +32,11 @@ import {
   saveOrchRun,
   deleteOrchRun,
   clearOrchRuns,
+  getFolders,
+  createFolder,
+  renameFolder,
+  deleteFolder,
+  invalidateCache,
 } from "./project-store.js";
 import {
   getMemory,
@@ -687,6 +693,7 @@ ipcMain.handle(
 );
 
 // ── Project management ──────────────────────────────────────────────────────
+ipcMain.handle("reload-project-store", () => invalidateCache());
 ipcMain.handle("get-projects", () => getProjects());
 ipcMain.handle("get-active-project", () => getActiveProject());
 ipcMain.handle("set-active-project", (_e, id: string | null) => setActiveProject(id));
@@ -694,6 +701,12 @@ ipcMain.handle("save-project", (_e, project: Parameters<typeof saveProject>[0]) 
   saveProject(project),
 );
 ipcMain.handle("delete-project", (_e, id: string) => deleteProject(id));
+
+// ── Folder management ───────────────────────────────────────────────────────
+ipcMain.handle("get-folders", () => getFolders());
+ipcMain.handle("create-folder", (_e, name: string) => createFolder(name));
+ipcMain.handle("rename-folder", (_e, id: string, name: string) => renameFolder(id, name));
+ipcMain.handle("delete-folder", (_e, id: string) => deleteFolder(id));
 
 ipcMain.handle("pick-project-path", async () => {
   const result = await dialog.showOpenDialog({
@@ -756,32 +769,47 @@ function broadcastOrchStatus(update: StatusUpdate) {
   }
 }
 
+function ensureRunner(): OrchestratorRunner {
+  if (!runner) {
+    runner = new OrchestratorRunner(
+      (update) => {
+        broadcastOrchStatus(update);
+        if (
+          update.projectId === runner?.activeOrchestratorId &&
+          (update.status === "done" || update.status === "error")
+        ) {
+          notifier.notify("orchestrator", {
+            body:
+              update.status === "done"
+                ? "L'orchestration est terminée avec succès."
+                : "L'orchestration s'est arrêtée sur une erreur.",
+          });
+        }
+      },
+      () => processManager,
+    );
+  }
+  return runner;
+}
+
 ipcMain.handle(
   "execute-orchestration",
-  async (_e, id: string, task: string, workDir?: string) => {
+  async (_e, id: string, task: string, workDir?: string, workflowName?: string) => {
     orchStatusBuffer.clear();
     orchActivityLog.length = 0;
+    await ensureRunner().run(id, task, workDir, workflowName);
+  },
+);
 
-    if (!runner) {
-      runner = new OrchestratorRunner(
-        (update) => {
-          broadcastOrchStatus(update);
-          if (
-            update.projectId === runner?.activeOrchestratorId &&
-            (update.status === "done" || update.status === "error")
-          ) {
-            notifier.notify("orchestrator", {
-              body:
-                update.status === "done"
-                  ? "L'orchestration est terminée avec succès."
-                  : "L'orchestration s'est arrêtée sur une erreur.",
-            });
-          }
-        },
-        () => processManager,
-      );
-    }
-    await runner.run(id, task, workDir);
+ipcMain.handle(
+  "iterate-orchestration",
+  async (_e, id: string, feedback: string, workflowId: string) => {
+    if (!feedback?.trim()) throw new Error("Le feedback est vide.");
+    const runs = await getOrchRuns(workflowId);
+    const previousRun = runs[0];
+    if (!previousRun) throw new Error("Aucune exécution précédente pour ce workflow.");
+    const wf = (await getWorkflows()).find((w) => w.id === workflowId);
+    await ensureRunner().iterate(id, feedback.trim(), previousRun, wf?.workDir, wf?.name);
   },
 );
 
@@ -1833,9 +1861,43 @@ async function ensureBinarySynced(): Promise<void> {
   }
 }
 
+// Web UIs loaded in the WebContentsViews (work/code/design/chat/projects) could
+// request OS-sensitive capabilities. On macOS, granting camera/microphone/
+// geolocation surfaces a TCC prompt under OpenHub's identity. Deny those by
+// default; the apps never need them inside the shell. Non-sensitive permissions
+// (notifications, clipboard, fullscreen) keep their existing behaviour.
+const DENIED_PERMISSIONS = new Set([
+  "media", // camera + microphone
+  "geolocation",
+  "midi",
+  "midiSysex",
+  "hid",
+  "serial",
+  "usb",
+  "pointerLock",
+]);
+
+function applyPermissionHardening(): void {
+  for (const sess of [session.defaultSession, session.fromPartition("persist:chat")]) {
+    sess.setPermissionRequestHandler((_wc, permission, callback) => {
+      if (DENIED_PERMISSIONS.has(permission)) {
+        console.warn(`[main] Denied permission request: ${permission}`);
+        callback(false);
+        return;
+      }
+      callback(true);
+    });
+    sess.setPermissionCheckHandler((_wc, permission) => {
+      return !DENIED_PERMISSIONS.has(permission);
+    });
+  }
+}
+
 app.whenReady().then(async () => {
   splashWindow = createSplash();
   splashShownAt = Date.now();
+
+  applyPermissionHardening();
 
   await loadSettings();
   registerOllamaHandlers();
