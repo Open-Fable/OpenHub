@@ -254,10 +254,19 @@
 
   refreshModelSupport();
 
-  // Surveillance du DOM pour ré-injection si SolidJS re-render la barre
+  // Surveillance du DOM pour ré-injection si SolidJS re-render la barre.
+  // Les mutations sont coalescées via requestAnimationFrame : pendant le
+  // streaming des tokens le body mute des centaines de fois par seconde, on
+  // ne veut exécuter le travail d'injection qu'une fois par frame.
+  var rafScheduled = false;
   var observer = new MutationObserver(function () {
-    injectInlineButton();
-    refreshModelSupport();
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(function () {
+      rafScheduled = false;
+      injectInlineButton();
+      refreshModelSupport();
+    });
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
