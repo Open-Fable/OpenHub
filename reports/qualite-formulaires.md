@@ -132,3 +132,44 @@
 - **8 correctifs appliqués** (2 XSS, 3 validations, 3 double-submit)
 - **2 points à vérifier manuellement** (accessibilité labels, maxlength chat)
 - **0 régression** — tous les correctifs sont additifs (pas de changement de comportement nominal)
+
+---
+
+## Suivi — Run du 2026-06-13
+
+Vérification de second passage. L'audit du 2026-06-12 (commit `cb344f6`) avait
+couvert XSS, validations et double-submit, mais 3 gaps subsistaient sur des
+formulaires du panneau Réglages. Corrigés ce jour (commit `dd23aa0`).
+
+### Nouveaux findings
+
+| Formulaire / champ | Gap résiduel | Statut |
+| ------------------ | ------------ | ------ |
+| Clés API (`#key-*`, handler blur) | `saveApiKeys()` sans `.catch` → échec Keychain avalé en silence | **CORRIGÉ** |
+| Clés API (`#key-*`) | Pas de `.trim()` → clés collées avec espace/`\n` final rejetées par les fournisseurs | **CORRIGÉ** |
+| `#new-fact` (ajout fait mémoire) | Input sans `<label>` ni `aria-label` (a11y) | **CORRIGÉ** (aria-label ajouté) |
+| `#new-fact` | Pas de `maxlength` malgré validation JS à 500 | **CORRIGÉ** (`maxlength="500"`) |
+| `#new-fact` | Branche `> 500` laissait la bordure rouge en permanence | **CORRIGÉ** (reset 1500 ms) |
+| `#new-fact` | `addMemoryFact().then()` sans `.catch` → texte saisi perdu en cas d'échec | **CORRIGÉ** (restauration saisie) |
+| Modal création/édition agent (`btnSaveProjectConfirm`) | `saveProject()` sans `catch` → échec sans retour visible | **DÉJÀ CORRIGÉ** dans `cb344f6` (présent en HEAD) |
+
+### À VÉRIFIER MANUELLEMENT (changements visibles)
+
+- **Clés API — toast d'erreur** : un échec d'enregistrement affiche désormais
+  « Échec de l'enregistrement de la clé » et restaure la valeur précédente.
+  À vérifier visuellement en simulant un échec Keychain.
+- **`maxlength="500"` sur `#new-fact`** : la saisie est maintenant bloquée à
+  500 caractères côté navigateur (la validation JS le rejetait déjà).
+
+### Note d'exécution
+
+Plusieurs tâches planifiées s'exécutaient en parallèle sur ce dépôt pendant ce
+run (commits concurrents `f39a5b3`, `39fa0e0`, `c708ee6`). Les correctifs ont été
+isolés au seul `electron/sidebar.html` (diff vérifié : 3 hunks, aucun WIP tiers
+embarqué). Le correctif modal était déjà présent en HEAD et n'a pas été redupliqué.
+
+### Résumé du run
+
+- **6 correctifs appliqués** sur 2 formulaires (clés API, fait mémoire)
+- **1 finding déjà couvert** par le run précédent
+- **2 changements de comportement visibles** à vérifier manuellement
