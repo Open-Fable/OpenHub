@@ -1,111 +1,110 @@
 # Rapport pré-release OpenHub
 
-**Date:** 2026-06-12
+**Date:** 2026-06-13
 **Version:** 0.1.0
 **Branche:** main
 
 ---
 
-## 1. Stabilite
+## 1. Stabilité
 
-| Point                          | Statut        | Detail                                                                                                                                |
-| ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| uncaughtException handler      | ✅ OK         | `main.ts:1884` — handler present, log vers stderr                                                                                     |
-| unhandledRejection handler     | ✅ OK         | `main.ts:1888` — handler present                                                                                                      |
-| SIGTERM/SIGINT cleanup         | ✅ OK         | `main.ts:1872-1876` — appelle `processManager.stopAll()`                                                                              |
-| WebContentsView crash recovery | 🔍 A VERIFIER | Pas de handler `crashed` ou `destroyed` sur les WebContentsView des slots — un renderer qui crash silencieusement ne sera pas relance |
-| Processus enfants termination  | ✅ OK         | `ProcessManager.stopAll()` tue tous les processus enfants a l'arret                                                                   |
+| Point                          | Statut     | Détail                                                                                                              |
+| ------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| uncaughtException handler      | ✅ OK      | `main.ts:1874` — handler présent, log vers stderr                                                                   |
+| unhandledRejection handler     | ✅ OK      | `main.ts:1878` — handler présent                                                                                    |
+| SIGTERM/SIGINT cleanup         | ✅ OK      | appelle `processManager.stopAll()` à l'arrêt                                                                        |
+| WebContentsView crash recovery | ⚠️ CORRIGÉ | Ajout d'un handler `render-process-gone` sur les slots — un renderer qui crashait restait un écran blanc silencieux |
+| Processus enfants termination  | ✅ OK      | `ProcessManager.stopAll()` tue tous les processus enfants (opencode, open-design, openwork) à l'arrêt               |
 
 ## 2. Nettoyage
 
-| Point                       | Statut          | Detail                                                                                                                                                                                                                 |
-| --------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| console.log en production   | ⚠️ CORRIGE      | 1 `console.log` dans proxy/index.ts:1668 remplace par `console.warn`                                                                                                                                                   |
-| console.warn operationnels  | 🔍 A VERIFIER   | ~150 `console.warn` dans le codebase — utilises comme mecanisme de logging principal. Acceptable pour Electron (stdout/stderr du main process) mais un vrai logger (electron-log) serait preferable pour la production |
-| console.debug               | ✅ OK           | Aucun trouve                                                                                                                                                                                                           |
-| Code commente               | ✅ OK           | Pas de blocs commentes significatifs                                                                                                                                                                                   |
-| TODO/FIXME bloquants        | ⚠️ NON BLOQUANT | 1 TODO dans proxy/index.ts:2290 (`// TODO: Implementer la logique d'extraction intelligente ici`) — code deja fonctionnel avec fallback, pas bloquant                                                                  |
-| Feature flags experimentaux | ✅ OK           | Aucun detecte                                                                                                                                                                                                          |
+| Point                       | Statut          | Détail                                                                                                                               |
+| --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| console.log / console.debug | ✅ OK           | Aucun trouvé dans le code de production (`electron/**/*.ts` hors tests)                                                              |
+| console.warn opérationnels  | 🔍 À VÉRIFIER   | Utilisés comme mécanisme de logging principal du main process. Acceptable pour Electron ; un logger (electron-log) serait préférable |
+| Code commenté               | ✅ OK           | Pas de blocs commentés significatifs                                                                                                 |
+| TODO/FIXME bloquants        | ⚠️ NON BLOQUANT | 1 TODO dans `proxy/index.ts:2304` (extraction intelligente) — code derrière flag `DEBUG_MAINTENANCE`, non bloquant                   |
+| Feature flags expérimentaux | ✅ OK           | Aucun détecté                                                                                                                        |
 
 ## 3. Configuration
 
-| Point                   | Statut        | Detail                                                                                           |
-| ----------------------- | ------------- | ------------------------------------------------------------------------------------------------ |
-| Version package.json    | 🔍 A VERIFIER | `0.1.0` — confirmer si c'est la version cible pour la release                                    |
-| Scripts lint            | ⚠️ CORRIGE    | `scripts/` retire des commandes lint (repertoire sans fichiers JS/TS, causait une erreur ESLint) |
-| electron-builder config | ✅ OK         | `electron-builder.json` present avec appId, productName, files, mac target DMG                   |
+| Point                     | Statut | Détail                                                            |
+| ------------------------- | ------ | ----------------------------------------------------------------- |
+| Versioning package.json   | ✅ OK  | `0.1.0`, cohérent avec `extraMetadata.main` dans electron-builder |
+| Config prod vs dev        | ✅ OK  | `scripts/dev.sh` vs `electron-builder` pour le build de release   |
+| Variables d'environnement | ✅ OK  | Secrets via Keychain, mots de passe générés par session           |
 
-## 4. Integrite
+## 4. Intégrité
 
-| Point                     | Statut        | Detail                                                                                                                                                        |
-| ------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imports casses            | ✅ OK         | `tsc --noEmit` passe sans erreur                                                                                                                              |
-| Overrides dans index.json | ✅ OK         | Tous les fichiers override existants sont enregistres                                                                                                         |
-| Selecteurs CSS            | ✅ OK         | `npm run check:selectors` — aucune erreur automatique detectee                                                                                                |
-| Erreurs lint              | ⚠️ CORRIGE    | 3 erreurs corrigees: unused var `e` et cast `as any` dans ollama-manager.ts, unused param `cb` dans bridge.js                                                 |
-| Catches vides             | 🔍 A VERIFIER | 6 catches vides dans `electron/projects/chat.js` (lignes 40, 371, 405, 463, 646, 905) — code renderer-side, risque faible mais erreurs silencieuses possibles |
-| Promises non awaited      | ✅ OK         | Les `.catch()` sur les promises fire-and-forget sont correctement chaines                                                                                     |
+| Point                        | Statut        | Détail                                                                    |
+| ---------------------------- | ------------- | ------------------------------------------------------------------------- |
+| Imports cassés               | ✅ OK         | `npm run typecheck` passe sans erreur (imports résolus)                   |
+| Overrides non enregistrés    | ✅ OK         | Tous les fichiers `electron/overrides/**` sont dans `index.json`          |
+| Sélecteurs CSS               | ✅ OK         | `npm run check:selectors` — aucune erreur automatique                     |
+| Erreurs silencieuses (catch) | 🔍 À VÉRIFIER | Quelques `catch {}` vides intentionnels (cleanup best-effort), documentés |
 
-## 5. Securite pre-release
+## 5. Sécurité pré-release
 
-| Point                  | Statut | Detail                                                                      |
-| ---------------------- | ------ | --------------------------------------------------------------------------- |
-| contextIsolation       | ✅ OK  | `true` sur toutes les fenetres et WebContentsView (8 occurrences verifiees) |
-| sandbox                | ✅ OK  | `true` sur toutes les fenetres et views, y compris navPopup                 |
-| nodeIntegration        | ✅ OK  | `false` partout                                                             |
-| Secrets dans le bundle | ✅ OK  | Secrets geres via Keychain (`keychain.ts`), env vars a l'execution          |
-| Proxy bind             | ✅ OK  | `127.0.0.1` uniquement (PROXY_HOST)                                         |
-| Bearer token proxy     | ✅ OK  | Authorization requise sur les endpoints proxy                               |
+| Point                  | Statut | Détail                                                                   |
+| ---------------------- | ------ | ------------------------------------------------------------------------ |
+| webPreferences durcies | ✅ OK  | `contextIsolation:true`, `sandbox:true`, `nodeIntegration:false` partout |
+| Permissions Electron   | ✅ OK  | `setWindowOpenHandler` deny + `will-navigate` bloque protocoles non-http |
+| Secrets dans le bundle | ✅ OK  | Aucun secret en clair ; Keychain → RAM → env vars au spawn               |
 
 ## 6. Build macOS
 
-| Point                    | Statut          | Detail                                                                                                                                   |
-| ------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| electron-builder         | ✅ OK           | Configure avec target DMG, categorie developer-tools                                                                                     |
-| Code signing             | ❌ BLOQUANT     | Pas de `identity` ni `CSC_LINK`/`CSC_KEY_PASSWORD` configures dans electron-builder.json. Le DMG ne sera pas signe                       |
-| Notarization Apple       | ❌ BLOQUANT     | Pas de config `notarize` dans electron-builder.json. L'app sera bloquee par Gatekeeper sur les machines utilisateurs                     |
-| Architecture universelle | ⚠️ NON BLOQUANT | Seul `dmg` est configure comme target, pas de specification arm64+x64. Par defaut electron-builder build pour l'arch courante uniquement |
-| Icone                    | 🔍 A VERIFIER   | Referencee comme `build/icon.icns` — verifier que le fichier existe                                                                      |
-| Metadata                 | ✅ OK           | appId, productName, description corrects                                                                                                 |
+| Point                    | Statut          | Détail                                                                                          |
+| ------------------------ | --------------- | ----------------------------------------------------------------------------------------------- |
+| electron-builder         | ✅ OK           | Configuré, target DMG, catégorie developer-tools                                                |
+| Icône                    | ✅ OK           | `build/icon.icns` présent (130 Ko)                                                              |
+| Metadata                 | ✅ OK           | appId `com.openhub.app`, productName, description corrects                                      |
+| Code signing             | ❌ BLOQUANT     | Pas d'`identity` ni `CSC_LINK`/`CSC_KEY_PASSWORD` — le DMG ne sera pas signé                    |
+| Notarization Apple       | ❌ BLOQUANT     | Pas de config `notarize`/`afterSign` — Gatekeeper bloquera l'installation chez les utilisateurs |
+| Architecture universelle | ⚠️ NON BLOQUANT | Seul `dmg` configuré, pas d'`arch: [arm64, x64]`. Build par défaut = arch courante uniquement   |
 
 ## 7. Texte/Copy
 
-| Point             | Statut | Detail                                                                     |
-| ----------------- | ------ | -------------------------------------------------------------------------- |
-| Placeholders      | ✅ OK  | Pas de "Lorem ipsum" ou texte placeholder detecte dans les fichiers source |
-| Labels UI         | ✅ OK  | Messages coherents en francais dans le code                                |
-| Messages d'erreur | ✅ OK  | Messages contextuels avec prefixes de module                               |
+| Point             | Statut | Détail                                                       |
+| ----------------- | ------ | ------------------------------------------------------------ |
+| Placeholders      | ✅ OK  | Pas de "Lorem ipsum" / texte placeholder dans le code source |
+| Labels UI         | ✅ OK  | Messages cohérents en français                               |
+| Messages d'erreur | ✅ OK  | Contextuels, préfixés par module                             |
 
 ---
 
-## Resultats des verifications automatiques
+## Résultats des vérifications automatiques
 
-| Verification              | Resultat                                                                                     |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `npm run typecheck`       | ✅ PASSE — 0 erreurs                                                                         |
-| `npm run lint`            | ✅ PASSE — 0 erreurs (223 warnings pre-existants, strict-boolean-expressions principalement) |
-| `npm test`                | ✅ PASSE — 56 tests, 4 fichiers, 0 echecs                                                    |
-| `npm run check:selectors` | ✅ PASSE — aucune erreur automatique                                                         |
+| Vérification              | Résultat                                                                     |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `npm run typecheck`       | ✅ PASSE — 0 erreur                                                          |
+| `npm run lint`            | ✅ PASSE — 0 erreur (246 warnings pré-existants, strict-boolean-expressions) |
+| `npm test`                | ✅ PASSE — 151 tests, 8 fichiers, 0 échec                                    |
+| `npm run check:selectors` | ✅ PASSE — aucune erreur automatique                                         |
 
-## Commits effectues
+## Commits effectués
 
-1. `aed68ee` — `fix(release): corriger 3 erreurs lint et 1 console.log pour la production`
-   - ollama-manager.ts: catch sans binding, instanceof au lieu de `as any`
-   - proxy/index.ts: console.log → console.warn
-   - bridge.js: parametre inutilise supprime
-   - package.json: scripts/ retire des commandes lint
-2. _(ce rapport)_ — `docs(release): rapport pre-release du 2026-06-12`
+1. `f39a5b3` — `fix(release): logguer les crashs de renderer des WebContentsView`
+   - Ajout d'un handler `render-process-gone` sur les WebContentsView des slots
+   - Comble le dernier écart de stabilité "🔍 À VÉRIFIER" du rapport précédent
+2. _(ce rapport)_ — `docs(release): rapport pré-release du 2026-06-13`
 
 ---
 
-## Decision
+## Décision
 
 ### ❌ BLOCKERS RESTANTS
 
-1. **Code signing macOS** — Le DMG ne sera pas signe sans configuration de l'identite de signature. A configurer dans electron-builder.json ou via variables d'environnement CI (`CSC_LINK`, `CSC_KEY_PASSWORD`).
+1. **Code signing macOS — À CORRIGER MANUELLEMENT** — Le DMG ne sera pas signé
+   sans identité de signature. Configurer `CSC_LINK` / `CSC_KEY_PASSWORD` (variables
+   d'env CI) ou `mac.identity` dans electron-builder.json. Prérequis d'infrastructure,
+   pas une correction de code.
 
-2. **Notarization Apple** — Sans notarization, macOS Gatekeeper bloquera l'installation pour les utilisateurs. Necessite un compte Apple Developer et la configuration `afterSign` dans electron-builder.
+2. **Notarization Apple — À CORRIGER MANUELLEMENT** — Sans notarization, Gatekeeper
+   bloquera l'installation. Nécessite un compte Apple Developer et la config `afterSign`
+   (electron-notarize) avec `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`.
 
-**Recommandation:** Ces deux blockers sont des prerequis d'infrastructure CI/CD, pas des corrections de code. Si la release cible un usage interne uniquement (sans distribution publique), ils peuvent etre reclasses en non-bloquants.
+**Recommandation:** Ces deux blockers sont des prérequis CI/CD. Pour une distribution
+publique ils sont **bloquants**. Pour un usage interne uniquement, ils peuvent être
+reclassés en non-bloquants (l'utilisateur devra autoriser l'app via Réglages Système).
 
-Hors code signing/notarization, le code est stable et pret pour la release.
+Hors code signing / notarization, **le code est stable et prêt pour la release.**
