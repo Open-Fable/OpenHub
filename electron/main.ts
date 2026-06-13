@@ -238,6 +238,13 @@ function createSlotView(
     }
   });
 
+  // Surface renderer crashes instead of failing silently (white screen)
+  view.webContents.on("render-process-gone", (_e, details) => {
+    console.error(
+      `[main] Renderer for slot "${slot}" gone: reason=${details.reason} exitCode=${details.exitCode}`,
+    );
+  });
+
   return view;
 }
 
