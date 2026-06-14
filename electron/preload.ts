@@ -33,6 +33,9 @@ contextBridge.exposeInMainWorld("openhub", {
 
   getApiKeys: () => ipcRenderer.invoke("get-api-keys"),
 
+  geminiLogin: () => ipcRenderer.invoke("gemini-login"),
+  geminiAuthStatus: () => ipcRenderer.invoke("gemini-auth-status"),
+
   notifyConfigVisibility: (open: boolean) => ipcRenderer.send("config-visibility", open),
   showNavMenu: (x: number, y: number) => ipcRenderer.send("show-nav-menu", x, y),
   navPopupSelect: (slot: string) => ipcRenderer.send("nav-popup-select", slot),

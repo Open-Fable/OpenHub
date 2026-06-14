@@ -7,6 +7,7 @@ import {
   session,
   WebContentsView,
   Menu,
+  nativeTheme,
 } from "electron";
 import type { IpcMainInvokeEvent, IpcMainEvent } from "electron";
 import path from "path";
@@ -1230,6 +1231,16 @@ ipcHandle("save-api-keys", async (_e, keys: Record<string, string>) => {
   if (chatView) chatView.webContents.send("api-keys-updated");
 });
 
+// ── Google OAuth login for Gemini (in-app) ──────────────────────────────────
+ipcHandle("gemini-login", async () => {
+  const { loginWithGoogle } = await import("./gemini-oauth.js");
+  return loginWithGoogle((url) => shell.openExternal(url));
+});
+ipcHandle("gemini-auth-status", async () => {
+  const { getGeminiAuthStatus } = await import("./gemini-oauth.js");
+  return getGeminiAuthStatus();
+});
+
 // ── Open Design Native Bridge Handlers ──────────────────────────────────────
 ipcHandle(
   "od-dialog:pick-and-import",
@@ -2054,6 +2065,9 @@ function applyPermissionHardening(): void {
 }
 
 app.whenReady().then(async () => {
+  // Thème sombre par défaut (ADN OpenHub) : pilote prefers-color-scheme dans
+  // toutes les WebContentsView (vues internes + apps tierces).
+  nativeTheme.themeSource = "dark";
   applyNavigationHardening();
   splashWindow = createSplash();
   splashShownAt = Date.now();

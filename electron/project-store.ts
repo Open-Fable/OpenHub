@@ -18,6 +18,7 @@ export interface Project {
     readonly autoDistribute: boolean;
     readonly checkCoherence: boolean;
     readonly relaunchOnError: boolean;
+    readonly adaptToWeakModel?: boolean;
   };
   readonly bypassMemory?: boolean;
   readonly maxRetries?: number;

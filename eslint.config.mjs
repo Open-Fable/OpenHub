@@ -2,7 +2,20 @@ import tseslint from "typescript-eslint";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["dist/", "apps/", "node_modules/", "electron/projects/", "**/*.test.ts"] },
+  {
+    ignores: [
+      "dist/",
+      "apps/",
+      "node_modules/",
+      "electron/projects/",
+      // Browser-context view scripts externalized from inline <script> (CSP: script-src 'self').
+      // Plain JS run in the renderer, same category as electron/projects/*.js.
+      "electron/nav-popup.js",
+      "electron/sidebar-ui.js",
+      "electron/chat.js",
+      "**/*.test.ts",
+    ],
+  },
   ...tseslint.configs.recommended,
   {
     files: ["electron/**/*.ts", "scripts/**/*.ts"],
