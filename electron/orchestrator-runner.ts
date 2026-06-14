@@ -51,6 +51,10 @@ import {
 import { planIterationFixes, buildFixTask } from "./orchestrator-iterate.js";
 import {
   sanitizeExpectedFiles,
+  sanitizeChecks,
+  deriveFloorChecks,
+  type ChecksMap,
+  type FileChecks,
   isTrivialResult,
   enforceDeliverables,
   checkExpectedFiles,
@@ -65,6 +69,16 @@ import {
   findServedSiteProblems,
   findCssConsistencyProblems,
   findInvalidJsonFiles,
+  findCsvColumnProblems,
+  findPlaceholderDeliverables,
+  findUnreferencedModules,
+  findConsolidationShrinkage,
+  findUnstyledClasses,
+  findDivergentDuplicates,
+  findScatteredDuplicates,
+  findUnwantedWebScaffolding,
+  findUselessDesignArtifacts,
+  validateDeclaredChecks,
   buildServedSiteReport,
   parseQualityVerdict,
   buildAutoFeedback,
@@ -73,6 +87,7 @@ import {
   MIN_RESULT_CHARS,
   MAX_AUTO_QUALITY_LOOPS,
 } from "./orchestrator-quality.js";
+import { findRenderProblems } from "./orchestrator-render.js";
 const MAX_SUBSTEPS = 8;
 const MAX_PLANNING_ITERATIONS = 20;
 
@@ -87,6 +102,42 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_NODE_RETRIES = 5;
 const clampRetries = (n: number | undefined): number =>
   Math.min(Math.max(n ?? 3, 1), MAX_NODE_RETRIES);
+
+// ── Tier « modèle léger » ────────────────────────────────────────────────────
+// Profil d'exécution sélectionné par le toggle `orchSettings.adaptToWeakModel`.
+// OFF (défaut) → STRONG = comportement identique au code historique.
+// ON → WEAK = prompts compacts + plus d'itérations + décomposition des tâches
+// volumineuses, pour que les petits modèles (Flash, mini, Haiku…) produisent
+// un livrable complet.
+interface TierProfile {
+  readonly tier: "weak" | "strong";
+  readonly compactPrompts: boolean;
+  readonly maxIterations: number;
+  readonly maxSubStepIterations: number;
+  readonly forceDecomposition: boolean;
+}
+const STRONG_TIER: TierProfile = {
+  tier: "strong",
+  compactPrompts: false,
+  maxIterations: 6,
+  maxSubStepIterations: 4,
+  forceDecomposition: false,
+};
+const WEAK_TIER: TierProfile = {
+  tier: "weak",
+  compactPrompts: true,
+  maxIterations: 10,
+  maxSubStepIterations: 6,
+  forceDecomposition: true,
+};
+// En dessous de ce volume, on n'impose pas la décomposition : générer les
+// sous-étapes est une méta-tâche que les petits modèles ratent, inutile pour un
+// livrable trivial.
+const WEAK_DECOMPOSE_MIN_TASK_CHARS = 200;
+// Directive ajoutée au prompt utilisateur du chemin backend en tier weak (le
+// backend fait un seul execute() — pas de boucle d'itérations côté shell).
+const WEAK_BACKEND_DIRECTIVE =
+  "RYTHME (modèle léger) : produis UN livrable/page à la fois, vérifie-le intégralement, puis passe au suivant. Ne survole pas — termine chaque fichier avant d'enchaîner.";
 
 // System directories and sensitive home subdirectories that an orchestration
 // workspace must never point at — defense against a compromised renderer driving
@@ -188,6 +239,7 @@ interface PlanningResult {
   readonly steps: Record<string, SubStep[]>;
   readonly createdSubAgents: readonly Project[];
   readonly expectedFiles: Record<string, readonly string[]>;
+  readonly checks: Record<string, FileChecks>;
 }
 
 const PLANNING_TOOLS = [
@@ -229,6 +281,38 @@ const PLANNING_TOOLS = [
             items: { type: "string" },
             description:
               "Contrat de livrables : chemins relatifs des fichiers que l'agent DOIT produire. Un fichier absent = tâche échouée + relance auto.",
+          },
+          checks: {
+            type: "object",
+            description:
+              "Contraintes MACHINE-VÉRIFIABLES par fichier, dérivées des critères CHIFFRÉS de la demande (ex: '12 produits' → minItems:12, '8 chapitres' → minSections:8, '≥500 mots' → minWords:500). Clé = chemin relatif. Le système les vérifie automatiquement et relance si non respectées. N'invente pas de seuils ; n'émets rien si aucun critère chiffré.",
+            additionalProperties: {
+              type: "object",
+              properties: {
+                minWords: {
+                  type: "integer",
+                  description: "Nombre minimal de mots dans le fichier",
+                },
+                minItems: {
+                  type: "integer",
+                  description: "Longueur minimale du tableau JSON racine (ou .items)",
+                },
+                minSections: {
+                  type: "integer",
+                  description: "Nombre minimal de titres markdown ## / ###",
+                },
+                requiredSubstrings: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Chaînes qui DOIVENT apparaître dans le fichier",
+                },
+                format: {
+                  type: "string",
+                  enum: ["json", "csv", "md"],
+                  description: "Format structurel attendu",
+                },
+              },
+            },
           },
         },
         required: ["agent_id", "task"],
@@ -306,6 +390,7 @@ export class OrchestratorRunner {
   private readonly backendFilesWritten = new Map<string, number>();
   private fallbackModel: string | undefined = undefined;
   private fallbackReasoningEffort: string | undefined = undefined;
+  private tierProfile: TierProfile = STRONG_TIER;
 
   constructor(
     private sendStatus: (update: StatusUpdate) => void,
@@ -388,6 +473,12 @@ export class OrchestratorRunner {
         `[orchestrator] Fallback reasoning effort: ${this.fallbackReasoningEffort ?? "none"}`,
       );
 
+      // Resolve execution tier from the explicit toggle (no auto-detection).
+      this.tierProfile = orchestrator.orchSettings?.adaptToWeakModel
+        ? WEAK_TIER
+        : STRONG_TIER;
+      console.warn(`[orchestrator] Tier: ${this.tierProfile.tier}`);
+
       this.sendStatus({ projectId: orchestratorId, status: "running", workspaceDir });
       for (const p of linkedProjects) {
         this.sendStatus({ projectId: p.id, status: "idle" });
@@ -398,6 +489,7 @@ export class OrchestratorRunner {
       let tasksMap: Record<string, string> = {};
       let plannedSteps: Record<string, SubStep[]> = {};
       let expectedFilesMap: Record<string, readonly string[]> = {};
+      let checksMap: ChecksMap = {};
 
       if (orchestrator.orchSettings?.autoDistribute) {
         this.sendStatus({
@@ -415,6 +507,7 @@ export class OrchestratorRunner {
         tasksMap = planResult.tasks;
         plannedSteps = planResult.steps;
         expectedFilesMap = planResult.expectedFiles;
+        checksMap = planResult.checks;
 
         console.warn(
           `[orchestrator] Planning complete: ${Object.keys(tasksMap).length} tasks, ${Object.keys(plannedSteps).length} with steps, ${planResult.createdSubAgents.length} sub-agents created`,
@@ -520,6 +613,7 @@ export class OrchestratorRunner {
         plannedSteps,
         workspaceDir,
         expectedFilesMap,
+        checksMap,
       );
 
       // Step 6: Final Brand and Spec verification
@@ -580,6 +674,7 @@ export class OrchestratorRunner {
               executionResults,
               expectedFilesMap,
               verifier,
+              checksMap,
             );
           } catch (qErr: unknown) {
             if (this.abortSignal?.aborted) throw qErr;
@@ -653,6 +748,7 @@ export class OrchestratorRunner {
     plannedSteps: Record<string, SubStep[]>,
     workspaceDir: string,
     expectedFilesMap: Record<string, readonly string[]> = {},
+    checksMap: ChecksMap = {},
   ): Promise<Record<string, "done" | "error" | "skipped">> {
     const executionStatuses: Record<string, "done" | "error" | "skipped"> = {};
 
@@ -681,6 +777,19 @@ export class OrchestratorRunner {
       );
       console.warn(`[orchestrator]   Task: "${(node.task || "").substring(0, 120)}"`);
       this.sendStatus({ projectId: node.id, status: "running" });
+      // Content contract for this node: declared checks for its files + a
+      // deterministic prose floor. Drives both the multi-turn volume gate (A2)
+      // and the per-node enforcement retries (A1).
+      const nodeExpectedFiles = expectedFilesMap[node.id] ?? [];
+      const declaredNodeChecks: Record<string, FileChecks> = {};
+      for (const f of nodeExpectedFiles) {
+        if (checksMap[f]) declaredNodeChecks[f] = checksMap[f];
+      }
+      const nodeChecks = deriveFloorChecks(nodeExpectedFiles, declaredNodeChecks);
+      const targetWords = Math.max(
+        0,
+        ...Object.values(nodeChecks).map((c) => c.minWords ?? 0),
+      );
       try {
         let resultText = await this.executeNode(
           node,
@@ -690,6 +799,8 @@ export class OrchestratorRunner {
           plannedSteps[node.id],
           workspaceDir,
           expectedFilesMap[node.id],
+          targetWords,
+          expectedFilesMap,
         );
         console.warn(
           `[orchestrator] ✓ Node "${node.name}" executed — result length: ${resultText.length} chars`,
@@ -722,8 +833,11 @@ export class OrchestratorRunner {
         const backendFilesWritten = this.backendFilesWritten.get(node.id) ?? 0;
         const looksTrivial =
           isProducerType && isTrivialResult(resultText) && backendFilesWritten === 0;
+        // nodeChecks (declared + prose floor) was computed before executeNode.
         if (expectedFiles.length > 0 || looksTrivial) {
-          const nodeSystemPrompt = buildNodeSystemPrompt(node);
+          const nodeSystemPrompt = buildNodeSystemPrompt(node, {
+            compact: this.tierProfile.compactPrompts,
+          });
           try {
             const enforceResult = await enforceDeliverables(
               node,
@@ -746,6 +860,7 @@ export class OrchestratorRunner {
                 onStatus: (msg) =>
                   this.sendStatus({ projectId: node.id, status: "running", task: msg }),
               },
+              nodeChecks,
             );
             resultText = enforceResult.resultText;
             if (enforceResult.missing.length > 0 || enforceResult.trivial) {
@@ -763,6 +878,18 @@ export class OrchestratorRunner {
                 projectId: node.id,
                 status: "warning",
                 error: details.substring(0, 200),
+              });
+            } else if (enforceResult.unmetChecks.length > 0) {
+              // Content still below target after retries → keep the best content,
+              // surface a warning (per product decision: never block a usable doc).
+              const detail = `Contenu sous la cible après relances : ${enforceResult.unmetChecks.slice(0, 3).join(" ; ")}`;
+              console.warn(
+                `[orchestrator] Content depth below target for "${node.name}" (non-blocking): ${detail}`,
+              );
+              this.sendStatus({
+                projectId: node.id,
+                status: "warning",
+                error: detail.substring(0, 200),
               });
             }
           } catch (enforceErr: unknown) {
@@ -935,6 +1062,7 @@ export class OrchestratorRunner {
     workspaceDir: string,
     wsContext: string,
     expectedFilesMap: Record<string, readonly string[]>,
+    checksMap: ChecksMap = {},
   ): Promise<{
     statuses: Record<string, "done" | "error" | "skipped">;
     results: Map<string, string>;
@@ -989,6 +1117,7 @@ export class OrchestratorRunner {
       {},
       workspaceDir,
       expectedFilesMap,
+      checksMap,
     );
 
     return { statuses, results: executionResults };
@@ -1002,6 +1131,7 @@ export class OrchestratorRunner {
     executionStatuses: Readonly<Record<string, "done" | "error" | "skipped">>,
     executionResults: ReadonlyMap<string, string>,
     expectedFilesMap: Readonly<Record<string, readonly string[]>>,
+    checksMap: ChecksMap = {},
   ): Promise<ReturnType<typeof parseQualityVerdict>> {
     this.sendStatus({
       projectId: verifier.id,
@@ -1031,9 +1161,26 @@ export class OrchestratorRunner {
     const servedProblems = [
       ...(await findServedSiteProblems(workspaceDir)),
       ...(await findCssConsistencyProblems(workspaceDir)),
-      // Format-agnostic (non-web) deterministic check: every produced *.json must parse.
+      // Format-agnostic (non-web) deterministic checks — the floor for weak models.
       ...(await findInvalidJsonFiles(workspaceDir)),
+      ...(await findCsvColumnProblems(workspaceDir)),
+      ...(await findPlaceholderDeliverables(workspaceDir)),
+      // Consolidation that summarized instead of including full content (A4).
+      ...(await findConsolidationShrinkage(workspaceDir)),
+      // HTML pages whose classes have no CSS rule → unstyled/broken site (B2).
+      ...(await findUnstyledClasses(workspaceDir)),
     ];
+    // Machine-checkable contract declared by the planner (Couche 1) — attributed
+    // to the owning agent so the corrective cycle routes the fix correctly.
+    const declaredCheckProblems = await validateDeclaredChecks(workspaceDir, checksMap);
+    const agentOwning = (file: string): string => {
+      for (const [nodeId, files] of Object.entries(expectedFilesMap)) {
+        if (files?.includes(file)) {
+          return linkedProjects.find((p) => p.id === nodeId)?.name ?? "intégration";
+        }
+      }
+      return "intégration";
+    };
     // Missing contracted files (expected_files) are the one generic, domain-agnostic
     // deliverable contract — force-fail on them and attribute to the owning agent.
     const missingByAgent: Array<{ agent: string; file: string }> = [];
@@ -1047,7 +1194,7 @@ export class OrchestratorRunner {
     const brokenAssetsReport = [
       buildBrokenAssetsReport(brokenAssets),
       buildPageCoverageReport(uncodedMockups),
-      buildServedSiteReport(servedProblems),
+      buildServedSiteReport([...servedProblems, ...declaredCheckProblems]),
     ]
       .filter((s) => s.trim())
       .join("\n\n");
@@ -1099,6 +1246,11 @@ export class OrchestratorRunner {
         issue: `Fichier attendu manquant ou vide : ${m.file}`,
         fix: `Produire le fichier ${m.file} (complet, > ${MIN_RESULT_CHARS} caractères de contenu réel)`,
       })),
+      ...declaredCheckProblems.map((p) => ({
+        agent: agentOwning(p.sourceFile),
+        issue: `Contrainte non respectée : ${p.sourceFile} → ${p.problem}`,
+        fix: `Corriger ${p.sourceFile} pour satisfaire : ${p.problem}`,
+      })),
     ].slice(0, 30);
 
     const llmIssues = llmVerdict?.issues ?? [];
@@ -1142,6 +1294,19 @@ export class OrchestratorRunner {
       ...(await findServedSiteProblems(workspaceDir)),
       ...(await findCssConsistencyProblems(workspaceDir)),
       ...(await findInvalidJsonFiles(workspaceDir)),
+      ...(await findCsvColumnProblems(workspaceDir)),
+      ...(await findPlaceholderDeliverables(workspaceDir)),
+      ...(await findConsolidationShrinkage(workspaceDir)),
+      ...(await findUnstyledClasses(workspaceDir)),
+      // High false-positive risk → warning only, never force-fail.
+      ...(await findUnreferencedModules(workspaceDir)),
+      ...(await findDivergentDuplicates(workspaceDir)),
+      ...(await findScatteredDuplicates(workspaceDir)),
+      ...(await findUnwantedWebScaffolding(workspaceDir)),
+      ...(await findUselessDesignArtifacts(workspaceDir)),
+      // Optional headless render (Problème 8) — best-effort, dev-only, never
+      // blocking; silently skipped if Playwright/browser is unavailable.
+      ...(await findRenderProblems(workspaceDir)),
     ];
     if (broken.length === 0 && uncoded.length === 0 && served.length === 0) return;
 
@@ -1186,6 +1351,7 @@ export class OrchestratorRunner {
     executionResults: Map<string, string>,
     expectedFilesMap: Record<string, readonly string[]>,
     verifier: Project,
+    checksMap: ChecksMap,
   ): Promise<void> {
     for (let cycle = 1; cycle <= MAX_AUTO_QUALITY_LOOPS; cycle++) {
       if (this.abortController?.signal.aborted) {
@@ -1200,6 +1366,7 @@ export class OrchestratorRunner {
         executionStatuses,
         executionResults,
         expectedFilesMap,
+        checksMap,
       );
 
       if (!verdict || verdict.pass) {
@@ -1234,6 +1401,7 @@ export class OrchestratorRunner {
         workspaceDir,
         wsContext,
         expectedFilesMap,
+        checksMap,
       );
 
       for (const [id, status] of Object.entries(statuses)) {
@@ -1342,6 +1510,7 @@ export class OrchestratorRunner {
     const tasks: Record<string, string> = {};
     const steps: Record<string, SubStep[]> = {};
     const expectedFiles: Record<string, readonly string[]> = {};
+    const checks: Record<string, FileChecks> = {};
     const createdSubAgents: Project[] = [];
     const agentIds = new Set(linked.map((p) => p.id));
     const parentDepsAccumulator: Record<string, string[]> = {};
@@ -1381,7 +1550,13 @@ export class OrchestratorRunner {
           // Check if keys are agent IDs
           if (linked.some((p) => parsed[p.id])) {
             console.warn("[orchestrator] JSON fallback matched by agent IDs.");
-            return { tasks: parsed, steps: {}, createdSubAgents: [], expectedFiles: {} };
+            return {
+              tasks: parsed,
+              steps: {},
+              createdSubAgents: [],
+              expectedFiles: {},
+              checks: {},
+            };
           }
 
           // Try matching by agent name (model may use names instead of IDs)
@@ -1410,6 +1585,7 @@ export class OrchestratorRunner {
               steps: {},
               createdSubAgents: [],
               expectedFiles: {},
+              checks: {},
             };
           }
 
@@ -1426,7 +1602,13 @@ export class OrchestratorRunner {
         // Last resort: give every agent the global task
         const fallback: Record<string, string> = {};
         for (const p of linked) fallback[p.id] = globalTask;
-        return { tasks: fallback, steps: {}, createdSubAgents: [], expectedFiles: {} };
+        return {
+          tasks: fallback,
+          steps: {},
+          createdSubAgents: [],
+          expectedFiles: {},
+          checks: {},
+        };
       }
 
       messages.push(message);
@@ -1482,6 +1664,9 @@ export class OrchestratorRunner {
           if (rawExpectedFiles.length > 0) {
             expectedFiles[agentId] = rawExpectedFiles;
           }
+
+          // Machine-checkable contract, indexed by file path (the system enforces it).
+          Object.assign(checks, sanitizeChecks(args.checks));
 
           const rawSteps = args.steps;
           if (Array.isArray(rawSteps) && rawSteps.length >= 2) {
@@ -1695,7 +1880,7 @@ export class OrchestratorRunner {
       }
     }
 
-    return { tasks, steps, createdSubAgents, expectedFiles };
+    return { tasks, steps, createdSubAgents, expectedFiles, checks };
   }
 
   /**
@@ -1911,6 +2096,8 @@ export class OrchestratorRunner {
     plannedSteps?: readonly SubStep[],
     workspaceDir?: string,
     expectedFiles?: readonly string[],
+    targetWords = 0,
+    expectedFilesMap: Record<string, readonly string[]> = {},
   ): Promise<string> {
     console.warn(
       `[orchestrator] Executing node: ${node.name} (${node.type}), task="${(node.task || "").substring(0, 100)}"`,
@@ -1919,8 +2106,34 @@ export class OrchestratorRunner {
     // Temporarily switch active project in store so proxy intercepts with this node's instructions
     await setActiveProject(node.id);
 
-    const systemPrompt = buildNodeSystemPrompt(node);
-    const depContext = buildDependencyContext(node, allProjects, executionResults);
+    const systemPrompt = buildNodeSystemPrompt(node, {
+      compact: this.tierProfile.compactPrompts,
+    });
+    // Pure-LLM fidelity (Problème 7): the pure-LLM path has no disk access, so
+    // inject the REAL content of each dependency's produced files. Backend nodes
+    // (OpenCode/Open Design) read the workspace via their own tools — skip them
+    // to avoid context bloat. Bounded by a combined budget across dependencies.
+    let depDiskEvidence: Map<string, string> | undefined;
+    if (workspaceDir !== undefined && selectBackend(node.type) === null) {
+      depDiskEvidence = new Map<string, string>();
+      let evidenceBudget = 24_000;
+      for (const depId of node.dependencies ?? []) {
+        if (evidenceBudget <= 0) break;
+        const depFiles = expectedFilesMap[depId] ?? [];
+        if (depFiles.length === 0) continue;
+        const ev = await this.readDiskEvidence(workspaceDir, depFiles);
+        if (ev.trim().length === 0) continue;
+        const clipped = ev.length > evidenceBudget ? ev.substring(0, evidenceBudget) : ev;
+        depDiskEvidence.set(depId, clipped);
+        evidenceBudget -= clipped.length;
+      }
+    }
+    const depContext = buildDependencyContext(
+      node,
+      allProjects,
+      executionResults,
+      depDiskEvidence,
+    );
     const userPrompt = buildNodeUserPrompt(
       node,
       workspaceContext,
@@ -1954,6 +2167,7 @@ export class OrchestratorRunner {
 
           const appSystemPrompt = buildNodeSystemPrompt(node, {
             codeFenceFormat: false,
+            compact: this.tierProfile.compactPrompts,
           });
 
           let appUserPrompt = userPrompt;
@@ -1962,6 +2176,11 @@ export class OrchestratorRunner {
               .map((s, i) => `${i + 1}. ${s.title} — ${s.focus}`)
               .join("\n");
             appUserPrompt = `${userPrompt}\n\nÉTAPES À SUIVRE :\n${checklist}`;
+          }
+          // Backend = un seul execute() : l'Axe C (itérations) ne s'y applique
+          // pas. En tier weak, on guide le rythme via le prompt utilisateur.
+          if (this.tierProfile.tier === "weak") {
+            appUserPrompt = `${appUserPrompt}\n\n${WEAK_BACKEND_DIRECTIVE}`;
           }
 
           const pm = this.getProcessManager?.();
@@ -2052,6 +2271,34 @@ export class OrchestratorRunner {
         );
       }
 
+      // Weak tier (LLM path): make the iteration cap actually reach this node.
+      // - Large task → force step decomposition (skip trivial one-liners).
+      // - recherche/design (not multi-turn types) → route through the multi-turn
+      //   loop so the raised maxIterations + completeness checks apply.
+      if (this.tierProfile.forceDecomposition && workspaceDir) {
+        const isMultiTurnType = OrchestratorRunner.MULTI_TURN_TYPES.has(node.type ?? "");
+        if ((node.task?.length ?? 0) > WEAK_DECOMPOSE_MIN_TASK_CHARS) {
+          return await this.executeNodeWithSteps(
+            node,
+            workspaceContext,
+            depContext,
+            systemPrompt,
+            undefined,
+            workspaceDir,
+          );
+        }
+        if (!isMultiTurnType) {
+          return await this.executeMultiTurn(
+            node,
+            workspaceContext,
+            depContext,
+            systemPrompt,
+            workspaceDir,
+            targetWords,
+          );
+        }
+      }
+
       // work/code without steps: free-form multi-turn iteration
       if (OrchestratorRunner.MULTI_TURN_TYPES.has(node.type ?? "") && workspaceDir) {
         return await this.executeMultiTurn(
@@ -2060,6 +2307,7 @@ export class OrchestratorRunner {
           depContext,
           systemPrompt,
           workspaceDir,
+          targetWords,
         );
       }
 
@@ -2085,8 +2333,14 @@ export class OrchestratorRunner {
     workspaceContext: string,
     depContext: string,
   ): Promise<SubStep[]> {
-    const systemPrompt = buildDecomposeSystemPrompt(node);
-    const userPrompt = buildDecomposeUserPrompt(node, workspaceContext, depContext);
+    const compact = this.tierProfile.compactPrompts;
+    const systemPrompt = buildDecomposeSystemPrompt(node, compact);
+    const userPrompt = buildDecomposeUserPrompt(
+      node,
+      workspaceContext,
+      depContext,
+      compact,
+    );
 
     try {
       const response = await callLLM(
@@ -2190,8 +2444,10 @@ export class OrchestratorRunner {
     depContext: string,
     systemPrompt: string,
     workspaceDir: string,
+    targetWords = 0,
   ): Promise<string> {
-    const MAX_ITERATIONS = 6;
+    const MAX_ITERATIONS = this.tierProfile.maxIterations;
+    const wordCount = (t: string): number => t.trim().split(/\s+/).filter(Boolean).length;
     let accumulated = "";
     let missing = "";
 
@@ -2260,7 +2516,10 @@ export class OrchestratorRunner {
           `[orchestrator:multi] ${node.name} — completeness check: complete=${parsed.complete}, missing=${(parsed.missing || "").substring(0, 120)}`,
         );
 
-        if (parsed.complete) {
+        // Volume gate: don't accept "complete" while below the declared word
+        // target — force the agent to keep developing instead of stopping short.
+        const words = wordCount(accumulated);
+        if (parsed.complete && (targetWords === 0 || words >= targetWords)) {
           console.warn(
             `[orchestrator:multi] ${node.name} — task complete after ${iter} iteration(s)`,
           );
@@ -2268,8 +2527,10 @@ export class OrchestratorRunner {
         }
 
         missing =
-          parsed.missing ||
-          "Éléments manquants non précisés — continue à compléter la tâche.";
+          parsed.complete && targetWords > 0 && words < targetWords
+            ? `Le contenu est trop court (${words}/${targetWords} mots). DÉVELOPPE en profondeur : ajoute détails, exemples, sous-sections. Reproduis les fichiers EN ENTIER, ne résume pas.`
+            : parsed.missing ||
+              "Éléments manquants non précisés — continue à compléter la tâche.";
       } catch {
         console.warn(
           `[orchestrator:multi] ${node.name} — completeness parse failed, continuing`,
@@ -2479,7 +2740,7 @@ export class OrchestratorRunner {
     systemPrompt: string,
     workspaceDir: string,
   ): Promise<string> {
-    const MAX_ITER = 4;
+    const MAX_ITER = this.tierProfile.maxSubStepIterations;
     let accumulated = "";
     let missing = "";
 
