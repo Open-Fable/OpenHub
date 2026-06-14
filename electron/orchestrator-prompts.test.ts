@@ -132,6 +132,28 @@ describe("buildDependencyContext", () => {
     expect(out).not.toContain("MANDAT DE FIDÉLITÉ");
   });
 
+  it("injects per-dependency disk evidence when provided (Problème 7)", () => {
+    const dep = makeProject({ id: "dep1", name: "Recherche", type: "recherche" });
+    const node = makeProject({ id: "p1", type: "work", dependencies: ["dep1"] });
+    const evidence = new Map([["dep1", '✓ schema.json (120 octets) :\n{"k":"v"}']]);
+    const out = buildDependencyContext(
+      node,
+      [dep],
+      new Map([["dep1", "résumé chat"]]),
+      evidence,
+    );
+    expect(out).toContain("FICHIERS PRODUITS");
+    expect(out).toContain("schema.json");
+    expect(out).toContain('{"k":"v"}');
+  });
+
+  it("omits the disk-evidence block when none is provided for a dependency", () => {
+    const dep = makeProject({ id: "dep1", type: "work" });
+    const node = makeProject({ id: "p1", type: "work", dependencies: ["dep1"] });
+    const out = buildDependencyContext(node, [dep], new Map([["dep1", "x"]]), new Map());
+    expect(out).not.toContain("FICHIERS PRODUITS");
+  });
+
   it("does NOT append a fidelity mandate for a verifier node even with design deps", () => {
     const dep = makeProject({ id: "dep1", type: "design" });
     const node = makeProject({ id: "p1", type: "verifier", dependencies: ["dep1"] });
@@ -220,6 +242,59 @@ describe("buildNodeSystemPrompt", () => {
   it("uses node.instructions as identity when present", () => {
     const out = buildNodeSystemPrompt(makeProject({ instructions: "Je suis spécial" }));
     expect(out).toContain("Je suis spécial");
+  });
+});
+
+// ── buildNodeSystemPrompt — tier « modèle léger » (compact) ─────────────────
+
+describe("buildNodeSystemPrompt — compact", () => {
+  it("produces a shorter prompt than the non-compact variant", () => {
+    const node = makeProject({ type: "code" });
+    const full = buildNodeSystemPrompt(node, { compact: false });
+    const compact = buildNodeSystemPrompt(node, { compact: true });
+    expect(compact.length).toBeLessThan(full.length);
+  });
+
+  it("includes a good/bad mini-example in the compact variant", () => {
+    const out = buildNodeSystemPrompt(makeProject({ type: "code" }), { compact: true });
+    expect(out).toContain("✅");
+    expect(out).toContain("❌");
+  });
+
+  it("uses the short behavior block when compact, full block otherwise", () => {
+    const node = makeProject({ type: "code" });
+    expect(buildNodeSystemPrompt(node, { compact: false })).toContain(
+      "COMPORTEMENT ATTENDU",
+    );
+    const compact = buildNodeSystemPrompt(node, { compact: true });
+    expect(compact).toContain("COMPORTEMENT :");
+    expect(compact).not.toContain("COMPORTEMENT ATTENDU");
+  });
+
+  // Non-régression sécurité : les invariants critiques DOIVENT survivre au compactage.
+  it("preserves the secrets → env-var invariant in the compact code rules", () => {
+    const out = buildNodeSystemPrompt(makeProject({ type: "code" }), { compact: true });
+    expect(out).toContain("environnement");
+  });
+
+  it("preserves identity coherence in the compact code/work rules", () => {
+    const code = buildNodeSystemPrompt(makeProject({ type: "code" }), { compact: true });
+    const work = buildNodeSystemPrompt(makeProject({ type: "work" }), { compact: true });
+    expect(code).toContain("identité");
+    expect(work).toContain("identité");
+  });
+
+  it("preserves the external-image ban in the compact asset policy", () => {
+    const out = buildNodeSystemPrompt(makeProject({ type: "design" }), { compact: true });
+    expect(out.toLowerCase()).toContain("unsplash");
+    expect(out).toContain("SVG inline");
+  });
+
+  it("leaves the non-compact (strong) prompt byte-identical to the default", () => {
+    const node = makeProject({ type: "code" });
+    expect(buildNodeSystemPrompt(node, { compact: false })).toBe(
+      buildNodeSystemPrompt(node),
+    );
   });
 });
 
