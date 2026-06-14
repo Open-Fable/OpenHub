@@ -32,9 +32,9 @@ function renderWorkflowSelector() {
       return (
         '<div class="wf-dropdown-item' +
         (w.id === activeWorkflowId ? " active" : "") +
-        '" onclick="switchWorkflow(\'' +
+        '" data-action="switchWorkflow" data-arg="' +
         w.id +
-        "')\">" +
+        '">' +
         '<span class="wfd-dot" style="background:var(--accent-primary);"></span> ' +
         escapeHtml(w.name) +
         "</div>"
@@ -43,9 +43,9 @@ function renderWorkflowSelector() {
     .join("");
   if (el.innerHTML) el.innerHTML += '<div class="wf-dropdown-divider"></div>';
   el.innerHTML +=
-    '<div class="wf-dropdown-new" onclick="createWorkflow()">+ Nouveau workflow</div>';
+    '<div class="wf-dropdown-new" data-action="createWorkflow">+ Nouveau workflow</div>';
   el.innerHTML +=
-    '<div class="wf-dropdown-item" onclick="openManagement()" style="color:var(--text-muted);">Gérer les workflows</div>';
+    '<div class="wf-dropdown-item" data-action="openManagement" style="color:var(--text-muted);">Gérer les workflows</div>';
 }
 
 async function switchWorkflow(id) {

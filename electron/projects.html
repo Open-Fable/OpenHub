@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:9999; img-src 'self' data: blob:;"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src http://127.0.0.1:9999; img-src 'self' data: blob:;"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenHub — Projets</title>
+    <link rel="stylesheet" href="shared/oh-tokens.css" />
     <link rel="stylesheet" href="projects/projects.css" />
   </head>
   <body>
@@ -15,7 +16,7 @@
       <!-- ── Top Bar ── -->
       <div class="topbar">
         <div class="wf-selector">
-          <div class="wf-trigger" onclick="document.getElementById('wfDropdown').classList.toggle('open')">
+          <div class="wf-trigger" data-action="toggleWfDropdown">
             <span class="wf-dot"></span>
             <span id="wfName">Workflow</span>
             <svg class="wf-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -50,15 +51,15 @@
         <!-- Chat Panel (left, collapsible) -->
         <div class="chat-panel" id="chatPanel">
           <div class="chat-panel-tabs">
-            <button class="chat-tab active" id="tabChat" onclick="switchPanelTab('chat')">
+            <button class="chat-tab active" id="tabChat" data-action="switchPanelTab" data-arg="chat">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Assistant
             </button>
-            <button class="chat-tab" id="tabActivity" onclick="switchPanelTab('activity')">
+            <button class="chat-tab" id="tabActivity" data-action="switchPanelTab" data-arg="activity">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               Activit&eacute;
             </button>
-            <button class="chat-tab" id="tabHistory" onclick="switchPanelTab('history')">
+            <button class="chat-tab" id="tabHistory" data-action="switchPanelTab" data-arg="history">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Historique
             </button>
@@ -68,7 +69,7 @@
           <div class="chat-tab-content active" id="tabContentChat">
             <div class="chat-header">
               <div style="flex:1;min-width:0;position:relative;">
-                <div class="conv-selector" id="convSelector" onclick="toggleConvDropdown(event)">
+                <div class="conv-selector" id="convSelector" data-action="toggleConvDropdown">
                   <span id="convTitle" class="conv-title">Nouvelle conversation</span>
                   <svg class="conv-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
@@ -88,7 +89,7 @@
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-area">
               <textarea class="chat-input" id="chatInput" placeholder="Message à l'assistant…" rows="1"></textarea>
-              <button class="chat-send-btn" id="btnSendChat" onclick="sendChat()">
+              <button class="chat-send-btn" id="btnSendChat" data-action="sendChat">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </button>
             </div>
@@ -96,7 +97,7 @@
 
           <!-- Tab: Activité -->
           <div class="chat-tab-content" id="tabContentActivity">
-            <div class="activity-feed" id="activityFeed">
+            <div class="activity-feed" id="activityFeed" role="log" aria-live="polite" aria-atomic="false">
               <div class="activity-empty" id="activityEmpty">Lance une orchestration pour suivre l'activité ici.</div>
             </div>
           </div>
@@ -124,7 +125,7 @@
           <!-- Task card pinned at top of canvas -->
           <div class="canvas-mission">
             <textarea class="canvas-mission-text" id="taskCardText" rows="1" placeholder="Définis la tâche globale…" spellcheck="false"></textarea>
-            <svg class="canvas-mission-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="document.getElementById('taskCardText').focus()"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <svg class="canvas-mission-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-action="focusTaskCard"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
 
           <div class="canvas-iterate" id="iterateBar" style="display:none">
@@ -138,7 +139,7 @@
                 <svg class="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 <p class="welcome-text">Décris ton idée à l'assistant, il crée ton équipe d'agents.</p>
                 <div class="templates-grid">
-                  <div class="template-card template-card--purple" onclick="importDemoTemplate()">
+                  <div class="template-card template-card--purple" data-action="importDemoTemplate">
                     <div class="template-card-header">
                       <span class="template-card-title">Intégration &amp; QA</span>
                       <span class="template-card-badge">6 agents</span>
@@ -146,7 +147,7 @@
                     <div class="template-card-desc">Pipeline complète avec tests automatisés.</div>
                     <button class="template-card-btn">Charger <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
                   </div>
-                  <div class="template-card template-card--orange" onclick="importWebsiteTemplate()">
+                  <div class="template-card template-card--orange" data-action="importWebsiteTemplate">
                     <div class="template-card-header">
                       <span class="template-card-title">Site Web Vitrine</span>
                       <span class="template-card-badge">4 agents</span>
@@ -154,7 +155,7 @@
                     <div class="template-card-desc">Conception, rédaction et intégration.</div>
                     <button class="template-card-btn">Charger <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
                   </div>
-                  <div class="template-card template-card--green" onclick="importSEOContentTemplate()">
+                  <div class="template-card template-card--green" data-action="importSEOContentTemplate">
                     <div class="template-card-header">
                       <span class="template-card-title">Contenu SEO</span>
                       <span class="template-card-badge">4 agents</span>
@@ -213,7 +214,7 @@
                 <summary class="detail-accordion-trigger">
                   <span>Console</span>
                   <div class="detail-accordion-actions">
-                    <button class="console-copy-btn" id="consoleCopyBtn" title="Copier la console" onclick="event.stopPropagation()">
+                    <button class="console-copy-btn" id="consoleCopyBtn" title="Copier la console">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                     </button>
                     <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -310,7 +311,7 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <span class="modal-title" id="modalProjectTitle">Nouvel agent</span>
-          <button class="modal-close" onclick="closeModal('modalProject')" aria-label="Fermer">
+          <button class="modal-close" data-action="closeModal" data-arg="modalProject" aria-label="Fermer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -322,7 +323,7 @@
           </div>
           <div class="form-group">
             <span class="form-label">Type</span>
-            <select class="form-select" id="projType" onchange="onProjectTypeChange()">
+            <select class="form-select" id="projType" data-action="onProjectTypeChange">
               <option value="code">OpenCode</option>
               <option value="design">Open Design</option>
               <option value="work">OpenWork</option>
@@ -427,11 +428,18 @@
                   <span class="switch-help">Relance automatiquement un agent si sa tâche échoue.</span>
                 </div>
               </div>
+              <div class="switch-row">
+                <label class="switch"><input type="checkbox" id="chkAdaptToWeakModel"><span class="switch-slider"></span></label>
+                <div class="switch-info">
+                  <span class="switch-label">Adapter aux modèles légers</span>
+                  <span class="switch-help">Prompts compacts et plus d'itérations pour Flash, mini, Haiku…</span>
+                </div>
+              </div>
             </div>
           </details>
         </div>
         <div class="modal-footer">
-          <button class="btn btn--ghost" onclick="closeModal('modalProject')">Annuler</button>
+          <button class="btn btn--ghost" data-action="closeModal" data-arg="modalProject">Annuler</button>
           <button class="btn btn--primary" id="btnSaveProjectConfirm">Enregistrer</button>
         </div>
       </div>
@@ -440,14 +448,14 @@
     <!-- Management Overlay -->
     <div class="mgmt-overlay" id="mgmtOverlay">
       <div class="topbar">
-        <div class="topbar-back" onclick="closeManagement()">
+        <div class="topbar-back" data-action="closeManagement">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           Retour
         </div>
         <span class="topbar-title">Gestion des workflows</span>
         <div class="topbar-actions">
-          <button class="btn btn--secondary" onclick="showAllProjectsModal()">Tous les agents</button>
-          <button class="btn btn--primary" onclick="openNewProjectFromMgmt()">Nouvel agent</button>
+          <button class="btn btn--secondary" data-action="showAllProjectsModal">Tous les agents</button>
+          <button class="btn btn--primary" data-action="openNewProjectFromMgmt">Nouvel agent</button>
         </div>
       </div>
       <div class="mgmt-body">
@@ -457,7 +465,7 @@
             <span class="mgmt-wf-list-count" id="mgmtWfCount">0</span>
           </div>
           <div class="mgmt-wf-items" id="mgmtWfList"></div>
-          <button class="mgmt-wf-add" onclick="createWorkflow()">Nouveau workflow</button>
+          <button class="mgmt-wf-add" data-action="createWorkflow">Nouveau workflow</button>
         </div>
         <div class="mgmt-detail" id="mgmtDetail">
           <div class="mgmt-detail-header">
@@ -466,14 +474,14 @@
               <div class="mgmt-detail-meta" id="mgmtDetailMeta"></div>
             </div>
             <div class="mgmt-detail-actions">
-              <button class="btn btn--primary" id="mgmtOpenBtn" onclick="openWorkflowInOrch()">Ouvrir</button>
+              <button class="btn btn--primary" id="mgmtOpenBtn" data-action="openWorkflowInOrch">Ouvrir</button>
               <div class="mgmt-menu-wrap">
-                <button class="btn btn--ghost mgmt-menu-btn" id="mgmtMenuBtn" onclick="toggleMgmtMenu(event)" aria-label="Plus d'options" aria-haspopup="true">
+                <button class="btn btn--ghost mgmt-menu-btn" id="mgmtMenuBtn" data-action="toggleMgmtMenu" aria-label="Plus d'options" aria-haspopup="true">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
                 </button>
                 <div class="mgmt-menu" id="mgmtMenu">
-                  <div class="mgmt-menu-item" onclick="renameCurrentWorkflow()">Renommer</div>
-                  <div class="mgmt-menu-item mgmt-menu-item--danger" onclick="deleteCurrentWorkflow()">Supprimer</div>
+                  <div class="mgmt-menu-item" data-action="renameCurrentWorkflow">Renommer</div>
+                  <div class="mgmt-menu-item mgmt-menu-item--danger" data-action="deleteCurrentWorkflow">Supprimer</div>
                 </div>
               </div>
             </div>
@@ -492,7 +500,7 @@
       <div class="modal-dialog" style="max-width: 400px;">
         <div class="modal-header">
           <span class="modal-title">Renommer le workflow</span>
-          <button class="modal-close" onclick="closeModal('modalWorkflowPrompt')" aria-label="Fermer">
+          <button class="modal-close" data-action="closeModal" data-arg="modalWorkflowPrompt" aria-label="Fermer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -503,7 +511,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn--ghost" onclick="closeModal('modalWorkflowPrompt')">Annuler</button>
+          <button class="btn btn--ghost" data-action="closeModal" data-arg="modalWorkflowPrompt">Annuler</button>
           <button class="btn btn--primary" id="btnConfirmWorkflow">Renommer</button>
         </div>
       </div>
@@ -514,16 +522,16 @@
       <div class="modal-dialog" style="max-width: 560px;">
         <div class="modal-header">
           <span class="modal-title">Tous les agents</span>
-          <button class="modal-close" onclick="closeModal('modal-all-projects')" aria-label="Fermer">
+          <button class="modal-close" data-action="closeModal" data-arg="modal-all-projects" aria-label="Fermer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div class="modal-body" id="mgmtAllProjBody"></div>
         <div class="modal-footer">
           <span style="font-size:11px;color:var(--text-muted);margin-right:auto;" id="mgmtAllProjCount"></span>
-          <button class="btn btn--secondary" id="btnLinkSelectedProjs" style="display:none;" onclick="linkSelectedProjects()">Lier au workflow (0)</button>
-          <button class="btn btn--danger" id="btnDeleteSelectedProjs" style="display:none;" onclick="deleteSelectedProjects()">Supprimer (0)</button>
-          <button class="btn btn--ghost" onclick="closeModal('modal-all-projects')">Fermer</button>
+          <button class="btn btn--secondary" id="btnLinkSelectedProjs" style="display:none;" data-action="linkSelectedProjects">Lier au workflow (0)</button>
+          <button class="btn btn--danger" id="btnDeleteSelectedProjs" style="display:none;" data-action="deleteSelectedProjects">Supprimer (0)</button>
+          <button class="btn btn--ghost" data-action="closeModal" data-arg="modal-all-projects">Fermer</button>
         </div>
       </div>
     </div>
@@ -554,5 +562,6 @@
     <script src="projects/modals.js"></script>
     <script src="projects/management.js"></script>
     <script src="projects/main.js"></script>
+    <script src="projects/actions.js"></script>
   </body>
 </html>

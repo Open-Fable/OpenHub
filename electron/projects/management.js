@@ -51,9 +51,9 @@ function renderMgmtWfList() {
       return (
         '<div class="mgmt-wf-item' +
         (isActive ? " active" : "") +
-        '" onclick="selectMgmtWf(\'' +
+        '" data-action="selectMgmtWf" data-arg="' +
         w.id +
-        "')\">" +
+        '">' +
         '<span class="mgmt-wf-dot" style="background:var(--accent-primary);"></span>' +
         '<div class="mgmt-wf-info">' +
         '<div class="mgmt-wf-name">' +
@@ -65,9 +65,9 @@ function renderMgmtWfList() {
         (linked !== 1 ? "s" : "") +
         "</div>" +
         "</div>" +
-        '<span class="mgmt-wf-arrow" onclick="event.stopPropagation();switchWorkflowFromMgmt(\'' +
+        '<span class="mgmt-wf-arrow" data-action="switchWorkflowFromMgmt" data-arg="' +
         w.id +
-        "')\">▶</span>" +
+        '">▶</span>' +
         "</div>"
       );
     })
@@ -155,14 +155,14 @@ function renderMgmtDetail(wfId) {
         "</div></div>" +
         badge +
         inText +
-        '<span class="mgmt-p-dup" title="Dupliquer" onclick="duplicateProjectFromMgmt(\'' +
+        '<span class="mgmt-p-dup" title="Dupliquer" data-action="duplicateProjectFromMgmt" data-arg="' +
         p.id +
-        '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>' +
-        '<span class="mgmt-p-remove" onclick="unlinkProjectFromWf(\'' +
+        '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>' +
+        '<span class="mgmt-p-remove" data-action="unlinkProjectFromWf" data-arg="' +
         wf.id +
-        "','" +
+        '" data-arg2="' +
         p.id +
-        '\')" title="Dissocier">✕</span>' +
+        '" title="Dissocier">✕</span>' +
         "</div>";
     });
     html += "</div>";
@@ -174,12 +174,12 @@ function renderMgmtDetail(wfId) {
     availableProjects.length +
     ")</span>" +
     (availableProjects.length > 0
-      ? '<input class="mgmt-inline-search" id="mgmtAvailSearch" placeholder="Filtrer…" autocomplete="off" oninput="filterAvailableProjects(this.value)" />'
+      ? '<input class="mgmt-inline-search" id="mgmtAvailSearch" placeholder="Filtrer…" autocomplete="off" data-action="filterAvailableProjects" />'
       : "") +
     "</div>";
   if (availableProjects.length === 0) {
     html +=
-      '<div class="mgmt-proj-grid"><div class="mgmt-proj-empty">Aucun agent disponible. <span class="link" onclick="openNewProjectFromMgmt()">Créer un agent</span></div></div>';
+      '<div class="mgmt-proj-grid"><div class="mgmt-proj-empty">Aucun agent disponible. <span class="link" data-action="openNewProjectFromMgmt">Créer un agent</span></div></div>';
   } else {
     html += '<div class="mgmt-proj-grid">';
     availableProjects.forEach(function (p, idx) {
@@ -213,18 +213,18 @@ function renderMgmtDetail(wfId) {
         (p.model ? escapeHtml(displayModelName(p.model)) : "Modèle par défaut") +
         "</div></div>" +
         inText +
-        '<span class="mgmt-p-add" onclick="linkProjectToWf(\'' +
+        '<span class="mgmt-p-add" data-action="linkProjectToWf" data-arg="' +
         wf.id +
-        "','" +
+        '" data-arg2="' +
         p.id +
-        "')\">+ Lier</span>" +
+        '">+ Lier</span>' +
         "</div>";
     });
     if (availableProjects.length > MGMT_AVAILABLE_VISIBLE_LIMIT) {
       html +=
         '<div class="mgmt-proj-empty" id="mgmtAvailMore" style="padding:12px;">+' +
         (availableProjects.length - MGMT_AVAILABLE_VISIBLE_LIMIT) +
-        ' autres agents. Filtre ci-dessus ou <span class="link" onclick="showAllProjectsModal()">voir tout</span>.</div>';
+        ' autres agents. Filtre ci-dessus ou <span class="link" data-action="showAllProjectsModal">voir tout</span>.</div>';
     }
     html +=
       '<div class="mgmt-proj-empty" id="mgmtAvailNoMatch" style="padding:12px;display:none;">Aucun agent ne correspond.</div>';
@@ -239,9 +239,9 @@ function renderMgmtDetail(wfId) {
     '<span class="path">' +
     escapeHtml(wf.workDir || "Aucun dossier sélectionné") +
     "</span>" +
-    '<span class="pick" onclick="pickWfWorkdir(\'' +
+    '<span class="pick" data-action="pickWfWorkdir" data-arg="' +
     wf.id +
-    "')\">Choisir</span>" +
+    '">Choisir</span>' +
     "</div>" +
     "</div>";
 
@@ -366,20 +366,20 @@ function showAllProjectsModal() {
       return p.type !== "orchestrator";
     });
     var html =
-      '<input class="form-input" id="mgmtSearchProj" placeholder="Rechercher un agent…" style="margin-bottom:8px;" oninput="filterMgmtProjects(this.value)" />';
+      '<input class="form-input" id="mgmtSearchProj" placeholder="Rechercher un agent…" style="margin-bottom:8px;" data-action="filterMgmtProjects" />';
     html += '<div class="mgmt-filter-chips" id="mgmtFilterChips">';
     html +=
-      '<button class="filter-chip active" data-kind="type" onclick="setAllProjTypeFilter(this, \'\')">Tous</button>';
+      '<button class="filter-chip active" data-kind="type" data-action="setAllProjTypeFilter" data-arg="">Tous</button>';
     Object.keys(AGENT_TYPE_LABELS).forEach(function (type) {
       html +=
-        '<button class="filter-chip" data-kind="type" onclick="setAllProjTypeFilter(this, \'' +
+        '<button class="filter-chip" data-kind="type" data-action="setAllProjTypeFilter" data-arg="' +
         type +
-        "')\">" +
+        '">' +
         AGENT_TYPE_LABELS[type] +
         "</button>";
     });
     html +=
-      '<button class="filter-chip filter-chip--toggle" onclick="toggleNoWorkflowFilter(this)">Sans workflow</button>';
+      '<button class="filter-chip filter-chip--toggle" data-action="toggleNoWorkflowFilter">Sans workflow</button>';
     html += "</div>";
     html += '<div id="mgmtProjList">';
     nonOrchProjs.forEach(function (p) {
@@ -415,9 +415,9 @@ function showAllProjectsModal() {
         '" data-noworkflow="' +
         (inWfs.length === 0 ? "1" : "0") +
         '">' +
-        '<label class="mgmt-p-checkbox"><input type="checkbox" onchange="toggleProjectSelection(\'' +
+        '<label class="mgmt-p-checkbox"><input type="checkbox" data-action="toggleProjectSelection" data-arg="' +
         p.id +
-        "')\" /></label>" +
+        '" /></label>' +
         '<div class="mgmt-p-icon" style="background:var(--accent-subtle);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>' +
         '<div class="mgmt-p-info"><div class="mgmt-p-name">' +
         escapeHtml(p.name) +
@@ -433,18 +433,18 @@ function showAllProjectsModal() {
         })
       ) {
         html +=
-          '<span class="mgmt-p-add" onclick="linkProjectToWf(\'' +
+          '<span class="mgmt-p-add" data-action="linkProjectToWfAndClose" data-arg="' +
           mgmtSelectedWfId +
-          "','" +
+          '" data-arg2="' +
           p.id +
-          "');closeModal('modal-all-projects')\">+ Lier</span>";
+          '">+ Lier</span>';
       } else if (mgmtSelectedWfId) {
         html += '<span class="mgmt-p-already">✓ Lié</span>';
       }
       html +=
-        '<span class="mgmt-p-dup" title="Dupliquer" onclick="duplicateProjectFromModal(\'' +
+        '<span class="mgmt-p-dup" title="Dupliquer" data-action="duplicateProjectFromModal" data-arg="' +
         p.id +
-        '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>';
+        '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>';
       html += "</div>";
     });
     html += "</div>";

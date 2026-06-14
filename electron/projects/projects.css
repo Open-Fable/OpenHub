@@ -6,94 +6,7 @@
   padding: 0;
 }
 
-:root {
-  --bg-deepest: #0a0a0a;
-  --bg-panel: #141414;
-  --bg-surface: #1e1e1e;
-  --bg-elevated: #282828;
-  --bg-overlay: #111111;
-  --border-subtle: #1f1f1f;
-  --border-default: #2a2a2a;
-  --border-strong: #3a3a3a;
-  --text-primary: #ececec;
-  --text-secondary: #999999;
-  --text-muted: #666666;
-  --text-disabled: #444444;
-  --accent-primary: #14b8a6;
-  --accent-hover: #2dd4bf;
-  --accent-active: #0d9488;
-  --accent-subtle: rgba(20, 184, 166, 0.1);
-  --accent-subtle-hover: rgba(20, 184, 166, 0.16);
-  --success: #22c55e;
-  --success-subtle: rgba(34, 197, 94, 0.1);
-  --warning: #f59e0b;
-  --warning-subtle: rgba(245, 158, 11, 0.1);
-  --error: #ef4444;
-  --error-subtle: rgba(239, 68, 68, 0.1);
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --overlay-modal: rgba(0, 0, 0, 0.4);
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-full: 9999px;
-  --space-0: 0;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --font-sans:
-    "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
-    sans-serif;
-  --font-display:
-    "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-  --font-mono: "SF Mono", Menlo, ui-monospace, monospace;
-  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --duration-75: 75ms;
-  --duration-150: 150ms;
-  --duration-200: 200ms;
-  --duration-250: 250ms;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg-deepest: #ffffff;
-    --bg-panel: #f7f7f7;
-    --bg-surface: #efefef;
-    --bg-elevated: #ffffff;
-    --bg-overlay: #f2f2f2;
-    --border-subtle: #e8e8e8;
-    --border-default: #e0e0e0;
-    --border-strong: #cccccc;
-    --text-primary: #111111;
-    --text-secondary: #555555;
-    --text-muted: #888888;
-    --text-disabled: #bbbbbb;
-    --accent-primary: #0d9488;
-    --accent-hover: #0f766e;
-    --accent-active: #115e59;
-    --accent-subtle: rgba(13, 148, 136, 0.06);
-    --accent-subtle-hover: rgba(13, 148, 136, 0.1);
-    --success: #16a34a;
-    --success-subtle: rgba(22, 163, 74, 0.08);
-    --warning: #d97706;
-    --warning-subtle: rgba(217, 119, 6, 0.08);
-    --error: #dc2626;
-    --error-subtle: rgba(220, 38, 38, 0.08);
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
-    --overlay-modal: rgba(0, 0, 0, 0.1);
-  }
-}
+/* Tokens : source unique → shared/oh-tokens.css (chargé par projects.html avant ce fichier) */
 
 html,
 body {
@@ -141,6 +54,8 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -198,7 +113,7 @@ select:focus-visible {
 .wf-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   flex-shrink: 0;
   background: var(--accent-primary);
 }
@@ -244,7 +159,7 @@ select:focus-visible {
 .wfd-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   flex-shrink: 0;
 }
 .wf-dropdown-divider {
@@ -446,10 +361,10 @@ select:focus-visible {
 .chat-send-btn {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   border: none;
   background: var(--accent-primary);
-  color: var(--bg-deepest);
+  color: var(--oh-color-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -915,7 +830,7 @@ select:focus-visible {
   height: 8px;
   background: var(--bg-surface);
   border: 1.5px solid var(--text-muted);
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   cursor: crosshair;
   z-index: 10;
   opacity: 0;
@@ -1161,7 +1076,7 @@ select:focus-visible {
 }
 .btn--primary {
   background: var(--accent-primary);
-  color: var(--bg-deepest);
+  color: var(--oh-color-on-accent);
 }
 .btn--primary:hover {
   background: var(--accent-hover);
@@ -1241,7 +1156,7 @@ select:focus-visible {
 }
 .zen-mode-active-btn {
   background: var(--accent-primary) !important;
-  color: white !important;
+  color: var(--oh-color-on-accent) !important;
 }
 
 /* ── Welcome / Empty state ── */
@@ -1791,7 +1706,7 @@ select:focus-visible {
   left: 2px;
   bottom: 2px;
   background: white;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   transition: left var(--duration-150) var(--ease-default);
 }
 .switch input:checked + .switch-slider {
@@ -1912,7 +1827,7 @@ select:focus-visible {
 .confirm-icon {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   background: var(--error-subtle);
   display: flex;
   align-items: center;
@@ -2041,7 +1956,7 @@ select:focus-visible {
 }
 .mgmt-overlay .topbar-btn.primary {
   background: var(--accent-primary);
-  color: var(--bg-deepest);
+  color: var(--oh-color-on-accent);
   border-color: var(--accent-primary);
 }
 .mgmt-overlay .topbar-btn.primary:hover {
@@ -2111,7 +2026,7 @@ select:focus-visible {
 .mgmt-wf-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   flex-shrink: 0;
 }
 .mgmt-wf-info {
@@ -2216,7 +2131,7 @@ select:focus-visible {
 }
 .mgmt-btn-primary {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--oh-color-on-accent);
 }
 .mgmt-btn-primary:hover {
   background: var(--accent-hover);
@@ -2602,7 +2517,7 @@ select:focus-visible {
 }
 .chat-actions-card .action-btn.confirm {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--oh-color-on-accent);
 }
 .chat-actions-card .action-btn.confirm:hover {
   background: var(--accent-hover);
@@ -2683,7 +2598,7 @@ select:focus-visible {
 }
 .cm.user .bub {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--oh-color-on-accent);
   border-bottom-right-radius: var(--radius-sm);
 }
 .cm.assistant .bub {
@@ -2938,7 +2853,7 @@ select:focus-visible {
 .conv-dropdown-item .conv-dot {
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   background: currentColor;
   flex-shrink: 0;
 }
@@ -3047,7 +2962,7 @@ select:focus-visible {
   border-radius: var(--radius-md);
   border: 0.5px solid var(--accent-primary);
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--oh-color-on-accent);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -3061,7 +2976,7 @@ select:focus-visible {
   border-color: var(--accent-hover, #0f766e);
 }
 .question-confirm-btn:disabled {
-  opacity: 0.45;
+  opacity: var(--oh-opacity-disabled);
   cursor: not-allowed;
   background: var(--bg-surface);
   border-color: var(--border-default);
@@ -3257,7 +3172,7 @@ select:focus-visible {
 .history-status {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: var(--oh-radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
