@@ -73,6 +73,8 @@ async function editProject(id) {
       !!p.orchSettings.checkCoherence;
     document.getElementById("chkRelaunchOnError").checked =
       !!p.orchSettings.relaunchOnError;
+    document.getElementById("chkAdaptToWeakModel").checked =
+      !!p.orchSettings.adaptToWeakModel;
   }
   document.getElementById("btnSaveProjectConfirm").dataset.editId = id;
   onProjectTypeChange();
@@ -192,7 +194,12 @@ async function importDemoTemplate() {
       color: "#0d9488",
       type: "orchestrator",
       linked: [p1.id, p2.id, p3.id, p5.id, p6.id],
-      orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
+      orchSettings: {
+        autoDistribute: true,
+        checkCoherence: true,
+        relaunchOnError: true,
+        adaptToWeakModel: false,
+      },
       x: 100,
       y: 280,
       task: "Coordonner la refonte complète de l'onboarding.",
@@ -248,7 +255,12 @@ async function importWebsiteTemplate() {
       color: "#0d9488",
       type: "orchestrator",
       linked: [p1.id, p2.id, p3.id],
-      orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
+      orchSettings: {
+        autoDistribute: true,
+        checkCoherence: true,
+        relaunchOnError: true,
+        adaptToWeakModel: false,
+      },
       x: 100,
       y: 240,
       task: "Créer un site web vitrine responsive.",
@@ -304,7 +316,12 @@ async function importSEOContentTemplate() {
       color: "#0d9488",
       type: "orchestrator",
       linked: [p1.id, p2.id, p3.id],
-      orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
+      orchSettings: {
+        autoDistribute: true,
+        checkCoherence: true,
+        relaunchOnError: true,
+        adaptToWeakModel: false,
+      },
       x: 100,
       y: 240,
       task: "Rédiger un article de blog complet et optimisé SEO.",
@@ -327,7 +344,12 @@ async function importSimpleOrchestrator() {
       color: "#0d9488",
       type: "orchestrator",
       linked: [],
-      orchSettings: { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
+      orchSettings: {
+        autoDistribute: true,
+        checkCoherence: true,
+        relaunchOnError: true,
+        adaptToWeakModel: false,
+      },
       x: 100,
       y: 240,
       task: "Définis ici l'objectif global du workflow...",
@@ -389,6 +411,7 @@ function resetProjectModal() {
   document.getElementById("chkAutoDistribute").checked = true;
   document.getElementById("chkCheckCoherence").checked = true;
   document.getElementById("chkRelaunchOnError").checked = true;
+  document.getElementById("chkAdaptToWeakModel").checked = false;
   delete document.getElementById("btnSaveProjectConfirm").dataset.editId;
   onProjectTypeChange();
 }
@@ -492,6 +515,7 @@ function initModals() {
         autoDistribute: document.getElementById("chkAutoDistribute").checked,
         checkCoherence: document.getElementById("chkCheckCoherence").checked,
         relaunchOnError: document.getElementById("chkRelaunchOnError").checked,
+        adaptToWeakModel: document.getElementById("chkAdaptToWeakModel").checked,
       };
     } else {
       var checkedDeps = [];
