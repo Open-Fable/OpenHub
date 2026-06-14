@@ -1,13 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { homedir } from "os";
-import {
-  getProjects,
-  saveProject,
-  setActiveProject,
-  type Project,
-  type OrchRun,
-} from "./project-store.js";
+import { getProjects, saveProject, type Project, type OrchRun } from "./project-store.js";
 import { getActiveWorkspaceDir } from "./proxy/index.js";
 import {
   buildWorkspaceContext,
@@ -72,6 +66,7 @@ import {
   findCsvColumnProblems,
   findPlaceholderDeliverables,
   findUnreferencedModules,
+  findModuleGraphProblems,
   findConsolidationShrinkage,
   findUnstyledClasses,
   findDivergentDuplicates,
@@ -88,6 +83,12 @@ import {
   MAX_AUTO_QUALITY_LOOPS,
 } from "./orchestrator-quality.js";
 import { findRenderProblems } from "./orchestrator-render.js";
+
+// Parallel execution: how many pure-LLM nodes can run concurrently within a
+// wave. Set to 1 = strictly sequential (identical to the legacy behavior).
+// Backend nodes always run in a separate serial lane (size 1).
+const MAX_PARALLEL_NODES = 1;
+
 const MAX_SUBSTEPS = 8;
 const MAX_PLANNING_ITERATIONS = 20;
 
@@ -102,6 +103,71 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_NODE_RETRIES = 5;
 const clampRetries = (n: number | undefined): number =>
   Math.min(Math.max(n ?? 3, 1), MAX_NODE_RETRIES);
+
+// ── Concurrency helper ──────────────────────────────────────────────────────
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function worker(): Promise<void> {
+    while (next < items.length) {
+      const idx = next++;
+      results[idx] = await fn(items[idx]);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+// ── Extraction des fichiers depuis la sortie LLM ─────────────────────────────
+/**
+ * Parse les blocs ```lang filepath: chemin … ``` d'une réponse d'agent.
+ *
+ * Robuste aux fences imbriquées de même longueur : un fichier dont le CONTENU
+ * contient ses propres ``` (un README avec des exemples de code, un JSDoc
+ * `@example`) ne doit pas être tronqué. La regex naïve `([\s\S]*?)```` se ferme
+ * sur la PREMIÈRE fence interne et coupe le fichier en plein milieu. Ici, le
+ * contenu d'un bloc va jusqu'à la DERNIÈRE fence de fermeture (longueur ≥ celle
+ * de l'ouverture) avant le prochain marqueur `filepath:` ou la fin du texte —
+ * les fences internes sont donc préservées comme contenu.
+ *
+ * Parsing ligne par ligne (pas de méga-regex) → linéaire, sans backtracking
+ * catastrophique sur une sortie LLM adverse dans le process principal.
+ */
+export function parseFilepathBlocks(
+  text: string,
+): ReadonlyArray<{ path: string; content: string }> {
+  const lines = text.split("\n");
+  const openerRe = /^(`{3,})[\w-]*[ \t]+filepath:[ \t]*(.+?)[ \t]*$/;
+  const openers: Array<{ line: number; filePath: string; fence: number }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = openerRe.exec(lines[i]);
+    if (m) openers.push({ line: i, filePath: m[2].trim(), fence: m[1].length });
+  }
+
+  const blocks: Array<{ path: string; content: string }> = [];
+  for (let k = 0; k < openers.length; k++) {
+    const { line: openLine, filePath, fence } = openers[k];
+    const start = openLine + 1;
+    const boundary = k + 1 < openers.length ? openers[k + 1].line : lines.length;
+    const closeRe = new RegExp("^`{" + fence + ",}[ \\t]*$");
+    let end = boundary;
+    for (let j = boundary - 1; j >= start; j--) {
+      if (closeRe.test(lines[j])) {
+        end = j;
+        break;
+      }
+    }
+    blocks.push({ path: filePath, content: lines.slice(start, end).join("\n") });
+  }
+  return blocks;
+}
 
 // ── Tier « modèle léger » ────────────────────────────────────────────────────
 // Profil d'exécution sélectionné par le toggle `orchSettings.adaptToWeakModel`.
@@ -385,6 +451,9 @@ export class OrchestratorRunner {
   private isRunning = false;
   private currentOrchestratorId: string | null = null;
   private abortController: AbortController | null = null;
+  // Serializes updateWorkspaceIndex calls so concurrent nodes don't clobber
+  // WORKSPACE_INDEX.md (read-modify-write with an LLM call in the middle).
+  private indexWriteLock: Promise<unknown> = Promise.resolve();
   // Files written on disk by a backend's tools, keyed by node id. Used so a node
   // that produced files but returned a short chat summary isn't judged "trivial".
   private readonly backendFilesWritten = new Map<string, number>();
@@ -603,8 +672,12 @@ export class OrchestratorRunner {
         executionOrder.map((n) => n.name),
       );
 
-      // Step 5: Execute each node in order
-      const executionStatuses = await this.executeNodesSequence(
+      // Step 5: Execute each node
+      const executeNodes =
+        MAX_PARALLEL_NODES > 1
+          ? this.executeNodesWaves.bind(this)
+          : this.executeNodesSequence.bind(this);
+      const executionStatuses = await executeNodes(
         orchestrator,
         executionOrder,
         allProjects,
@@ -772,201 +845,298 @@ export class OrchestratorRunner {
         continue;
       }
 
-      console.warn(
-        `[orchestrator] ▶ Executing node "${node.name}" (type=${node.type}, model=${node.model || "fallback"})`,
+      await this.runOneNode(
+        node,
+        orchestrator,
+        allProjects,
+        executionResults,
+        executionStatuses,
+        workspaceContext,
+        plannedSteps,
+        workspaceDir,
+        expectedFilesMap,
+        checksMap,
       );
-      console.warn(`[orchestrator]   Task: "${(node.task || "").substring(0, 120)}"`);
-      this.sendStatus({ projectId: node.id, status: "running" });
-      // Content contract for this node: declared checks for its files + a
-      // deterministic prose floor. Drives both the multi-turn volume gate (A2)
-      // and the per-node enforcement retries (A1).
-      const nodeExpectedFiles = expectedFilesMap[node.id] ?? [];
-      const declaredNodeChecks: Record<string, FileChecks> = {};
-      for (const f of nodeExpectedFiles) {
-        if (checksMap[f]) declaredNodeChecks[f] = checksMap[f];
+    }
+
+    return executionStatuses;
+  }
+
+  /**
+   * Execute nodes by wave (Kahn levels). Within each wave, pure-LLM nodes run
+   * with bounded concurrency (MAX_PARALLEL_NODES) while backend nodes run in a
+   * serial lane. Each node writes only its own key in executionStatuses /
+   * executionResults — safe under concurrency.
+   */
+  private async executeNodesWaves(
+    orchestrator: Project,
+    executionOrder: readonly Project[],
+    allProjects: readonly Project[],
+    executionResults: Map<string, string>,
+    workspaceContext: string,
+    plannedSteps: Record<string, SubStep[]>,
+    workspaceDir: string,
+    expectedFilesMap: Record<string, readonly string[]> = {},
+    checksMap: ChecksMap = {},
+  ): Promise<Record<string, "done" | "error" | "skipped">> {
+    const executionStatuses: Record<string, "done" | "error" | "skipped"> = {};
+    const waves = this.resolveDAGWaves(executionOrder);
+    console.warn(
+      `[orchestrator] DAG resolved into ${waves.length} wave(s): ${waves.map((w, i) => `W${i}[${w.map((n) => n.name).join(", ")}]`).join(" → ")}`,
+    );
+
+    for (const wave of waves) {
+      if (this.abortController?.signal.aborted) {
+        throw new Error("Orchestration annulée par l'utilisateur.");
       }
-      const nodeChecks = deriveFloorChecks(nodeExpectedFiles, declaredNodeChecks);
-      const targetWords = Math.max(
-        0,
-        ...Object.values(nodeChecks).map((c) => c.minWords ?? 0),
-      );
-      try {
-        let resultText = await this.executeNode(
+
+      // Split wave: skip nodes whose deps failed, then partition by lane.
+      const runnable: Project[] = [];
+      for (const node of wave) {
+        const deps = node.dependencies || [];
+        const failedDep = deps.find(
+          (depId) =>
+            executionStatuses[depId] === "error" ||
+            executionStatuses[depId] === "skipped",
+        );
+        if (failedDep) {
+          console.warn(
+            `[orchestrator] Skipping "${node.name}" — dependency "${failedDep}" is ${executionStatuses[failedDep]}`,
+          );
+          executionStatuses[node.id] = "skipped";
+          this.sendStatus({ projectId: node.id, status: "skipped" });
+        } else {
+          runnable.push(node);
+        }
+      }
+
+      // Two lanes: backend nodes run serially (lane size 1), LLM nodes
+      // run with bounded concurrency (MAX_PARALLEL_NODES).
+      const backendNodes = runnable.filter((n) => selectBackend(n.type) !== null);
+      const llmNodes = runnable.filter((n) => selectBackend(n.type) === null);
+
+      const runNode = (node: Project) =>
+        this.runOneNode(
           node,
+          orchestrator,
           allProjects,
           executionResults,
+          executionStatuses,
           workspaceContext,
-          plannedSteps[node.id],
+          plannedSteps,
           workspaceDir,
-          expectedFilesMap[node.id],
-          targetWords,
           expectedFilesMap,
+          checksMap,
         );
+
+      // Run both lanes concurrently; each lane internally bounded.
+      await Promise.all([
+        mapWithConcurrency(backendNodes, 1, runNode),
+        mapWithConcurrency(llmNodes, MAX_PARALLEL_NODES, runNode),
+      ]);
+    }
+
+    return executionStatuses;
+  }
+
+  private async runOneNode(
+    node: Project,
+    orchestrator: Project,
+    allProjects: readonly Project[],
+    executionResults: Map<string, string>,
+    executionStatuses: Record<string, "done" | "error" | "skipped">,
+    workspaceContext: string,
+    plannedSteps: Record<string, SubStep[]>,
+    workspaceDir: string,
+    expectedFilesMap: Record<string, readonly string[]>,
+    checksMap: ChecksMap,
+  ): Promise<void> {
+    console.warn(
+      `[orchestrator] ▶ Executing node "${node.name}" (type=${node.type}, model=${node.model || "fallback"})`,
+    );
+    console.warn(`[orchestrator]   Task: "${(node.task || "").substring(0, 120)}"`);
+    this.sendStatus({ projectId: node.id, status: "running" });
+
+    const nodeExpectedFiles = expectedFilesMap[node.id] ?? [];
+    const declaredNodeChecks: Record<string, FileChecks> = {};
+    for (const f of nodeExpectedFiles) {
+      if (checksMap[f]) declaredNodeChecks[f] = checksMap[f];
+    }
+    const nodeChecks = deriveFloorChecks(nodeExpectedFiles, declaredNodeChecks);
+    const targetWords = Math.max(
+      0,
+      ...Object.values(nodeChecks).map((c) => c.minWords ?? 0),
+    );
+    try {
+      let resultText = await this.executeNode(
+        node,
+        allProjects,
+        executionResults,
+        workspaceContext,
+        plannedSteps[node.id],
+        workspaceDir,
+        expectedFilesMap[node.id],
+        targetWords,
+        expectedFilesMap,
+      );
+      console.warn(
+        `[orchestrator] ✓ Node "${node.name}" executed — result length: ${resultText.length} chars`,
+      );
+      const initialResultText = resultText;
+
+      // Verifier nodes default to writing audit reports only — never let an audit
+      // verifier clobber source by quoting it back with a filepath: marker. But a
+      // verifier whose declared deliverables include code (e.g. a test-writing
+      // "verifier" producing tests/*.test.ts) must be allowed to emit exactly
+      // those files; the triage routes such fixes here during corrective cycles.
+      const verifierPathFilter =
+        node.type === "verifier"
+          ? (p: string) => p.startsWith("reports/") || nodeExpectedFiles.includes(p)
+          : undefined;
+      const writtenFiles = await this.extractAndWriteFiles(
+        resultText,
+        workspaceDir,
+        verifierPathFilter,
+      );
+      if (writtenFiles.length > 0) {
         console.warn(
-          `[orchestrator] ✓ Node "${node.name}" executed — result length: ${resultText.length} chars`,
+          `[orchestrator] Wrote ${writtenFiles.length} files for "${node.name}": ${writtenFiles.join(", ")}`,
         );
-        const initialResultText = resultText;
+      }
 
-        // Verifiers AUDIT — they must never overwrite the deliverables produced
-        // by work/code/design agents. Restrict their writes to reports/ so a
-        // verifier emitting "corrected" full files can't clobber the real ones.
-        const verifierPathFilter =
-          node.type === "verifier" ? (p: string) => p.startsWith("reports/") : undefined;
-        const writtenFiles = await this.extractAndWriteFiles(
-          resultText,
-          workspaceDir,
-          verifierPathFilter,
-        );
-        if (writtenFiles.length > 0) {
-          console.warn(
-            `[orchestrator] Wrote ${writtenFiles.length} files for "${node.name}": ${writtenFiles.join(", ")}`,
+      await this.postExecuteProcessing(node, workspaceDir, resultText);
+
+      const expectedFiles = expectedFilesMap[node.id] ?? [];
+      const isProducerType =
+        node.type === "work" || node.type === "code" || node.type === "design";
+      const backendFilesWritten = this.backendFilesWritten.get(node.id) ?? 0;
+      const looksTrivial =
+        isProducerType && isTrivialResult(resultText) && backendFilesWritten === 0;
+      if (expectedFiles.length > 0 || looksTrivial) {
+        const nodeSystemPrompt = buildNodeSystemPrompt(node, {
+          compact: this.tierProfile.compactPrompts,
+        });
+        try {
+          const enforceResult = await enforceDeliverables(
+            node,
+            expectedFiles,
+            workspaceDir,
+            resultText,
+            {
+              relaunch: (prompt) =>
+                callLLMStreaming(
+                  node,
+                  prompt,
+                  120000,
+                  this.abortSignal,
+                  nodeSystemPrompt,
+                  this.fallbackModel,
+                  this.fallbackReasoningEffort,
+                ),
+              writeFiles: (text) =>
+                this.extractAndWriteFiles(text, workspaceDir, verifierPathFilter),
+              onStatus: (msg) =>
+                this.sendStatus({ projectId: node.id, status: "running", task: msg }),
+            },
+            nodeChecks,
           );
-        }
-
-        await this.postExecuteProcessing(node, workspaceDir, resultText);
-
-        const expectedFiles = expectedFilesMap[node.id] ?? [];
-        const isProducerType =
-          node.type === "work" || node.type === "code" || node.type === "design";
-        // A backend that wrote real files on disk is never "trivial" even if its
-        // chat text is short — relaunching via the LLM would clobber those files.
-        const backendFilesWritten = this.backendFilesWritten.get(node.id) ?? 0;
-        const looksTrivial =
-          isProducerType && isTrivialResult(resultText) && backendFilesWritten === 0;
-        // nodeChecks (declared + prose floor) was computed before executeNode.
-        if (expectedFiles.length > 0 || looksTrivial) {
-          const nodeSystemPrompt = buildNodeSystemPrompt(node, {
-            compact: this.tierProfile.compactPrompts,
-          });
-          try {
-            const enforceResult = await enforceDeliverables(
-              node,
-              expectedFiles,
-              workspaceDir,
-              resultText,
-              {
-                relaunch: (prompt) =>
-                  callLLMStreaming(
-                    node,
-                    prompt,
-                    120000,
-                    this.abortSignal,
-                    nodeSystemPrompt,
-                    this.fallbackModel,
-                    this.fallbackReasoningEffort,
-                  ),
-                writeFiles: (text) =>
-                  this.extractAndWriteFiles(text, workspaceDir, verifierPathFilter),
-                onStatus: (msg) =>
-                  this.sendStatus({ projectId: node.id, status: "running", task: msg }),
-              },
-              nodeChecks,
-            );
-            resultText = enforceResult.resultText;
-            if (enforceResult.missing.length > 0 || enforceResult.trivial) {
-              const details =
-                enforceResult.missing.length > 0
-                  ? `Fichiers manquants après relances : ${enforceResult.missing.join(", ")}`
-                  : `Résultat insuffisant (< ${MIN_RESULT_CHARS} caractères)`;
-              if (isTrivialResult(initialResultText)) {
-                throw new Error(details);
-              }
-              console.warn(
-                `[orchestrator] Deliverable enforcement failed for "${node.name}" (non-blocking — result is ${initialResultText.length} chars): ${details}`,
-              );
-              this.sendStatus({
-                projectId: node.id,
-                status: "warning",
-                error: details.substring(0, 200),
-              });
-            } else if (enforceResult.unmetChecks.length > 0) {
-              // Content still below target after retries → keep the best content,
-              // surface a warning (per product decision: never block a usable doc).
-              const detail = `Contenu sous la cible après relances : ${enforceResult.unmetChecks.slice(0, 3).join(" ; ")}`;
-              console.warn(
-                `[orchestrator] Content depth below target for "${node.name}" (non-blocking): ${detail}`,
-              );
-              this.sendStatus({
-                projectId: node.id,
-                status: "warning",
-                error: detail.substring(0, 200),
-              });
+          resultText = enforceResult.resultText;
+          if (enforceResult.missing.length > 0 || enforceResult.trivial) {
+            const details =
+              enforceResult.missing.length > 0
+                ? `Fichiers manquants après relances : ${enforceResult.missing.join(", ")}`
+                : `Résultat insuffisant (< ${MIN_RESULT_CHARS} caractères)`;
+            if (isTrivialResult(initialResultText)) {
+              throw new Error(details);
             }
-          } catch (enforceErr: unknown) {
-            if (this.abortSignal?.aborted) throw enforceErr;
-            if (isTrivialResult(initialResultText)) throw enforceErr;
-            const enforceMsg =
-              enforceErr instanceof Error ? enforceErr.message : String(enforceErr);
             console.warn(
-              `[orchestrator] Deliverable enforcement crashed for "${node.name}" (non-blocking — result is ${initialResultText.length} chars): ${enforceMsg}`,
+              `[orchestrator] Deliverable enforcement failed for "${node.name}" (non-blocking — result is ${initialResultText.length} chars): ${details}`,
             );
             this.sendStatus({
               projectId: node.id,
               status: "warning",
-              error: `Vérification livrables échouée — ${enforceMsg.substring(0, 160)}`,
+              error: details.substring(0, 200),
+            });
+          } else if (enforceResult.unmetChecks.length > 0) {
+            const detail = `Contenu sous la cible après relances : ${enforceResult.unmetChecks.slice(0, 3).join(" ; ")}`;
+            console.warn(
+              `[orchestrator] Content depth below target for "${node.name}" (non-blocking): ${detail}`,
+            );
+            this.sendStatus({
+              projectId: node.id,
+              status: "warning",
+              error: detail.substring(0, 200),
             });
           }
+        } catch (enforceErr: unknown) {
+          if (this.abortSignal?.aborted) throw enforceErr;
+          if (isTrivialResult(initialResultText)) throw enforceErr;
+          const enforceMsg =
+            enforceErr instanceof Error ? enforceErr.message : String(enforceErr);
+          console.warn(
+            `[orchestrator] Deliverable enforcement crashed for "${node.name}" (non-blocking — result is ${initialResultText.length} chars): ${enforceMsg}`,
+          );
+          this.sendStatus({
+            projectId: node.id,
+            status: "warning",
+            error: `Vérification livrables échouée — ${enforceMsg.substring(0, 160)}`,
+          });
         }
+      }
 
-        if (orchestrator.orchSettings?.checkCoherence) {
-          const verifier = this.metaVerifier(allProjects);
-          if (verifier) {
-            console.warn(
-              `[orchestrator] Running output verification for "${node.name}"...`,
+      if (orchestrator.orchSettings?.checkCoherence) {
+        const verifier = this.metaVerifier(allProjects);
+        if (verifier) {
+          console.warn(
+            `[orchestrator] Running output verification for "${node.name}"...`,
+          );
+          try {
+            const verdict = await this.verifyOutput(
+              verifier,
+              node,
+              resultText,
+              expectedFilesMap[node.id] ?? [],
+              workspaceDir,
             );
-            try {
-              const verdict = await this.verifyOutput(
-                verifier,
-                node,
-                resultText,
-                expectedFilesMap[node.id] ?? [],
-                workspaceDir,
-              );
-              if (!verdict.valid) {
-                const detail = verdict.reason
-                  ? verdict.reason.substring(0, 200)
-                  : "le vérificateur a signalé des problèmes";
-                console.warn(
-                  `[orchestrator] Output verification flagged issues for "${node.name}" — continuing anyway: ${detail}`,
-                );
-                this.sendStatus({
-                  projectId: node.id,
-                  status: "warning",
-                  error: detail,
-                });
-              }
-            } catch (verifyErr: unknown) {
-              // Verification is advisory — an infra/auth failure here (e.g. a
-              // mid-run token expiry) must NOT discard a node that already
-              // produced its deliverables. Surface a warning and move on.
-              if (this.abortSignal?.aborted) throw verifyErr;
-              const vMsg =
-                verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+            if (!verdict.valid) {
+              const detail = verdict.reason
+                ? verdict.reason.substring(0, 200)
+                : "le vérificateur a signalé des problèmes";
               console.warn(
-                `[orchestrator] Output verification crashed for "${node.name}" (non-blocking): ${vMsg}`,
+                `[orchestrator] Output verification flagged issues for "${node.name}" — continuing anyway: ${detail}`,
               );
               this.sendStatus({
                 projectId: node.id,
                 status: "warning",
-                error: `Vérification ignorée — ${vMsg.substring(0, 160)}`,
+                error: detail,
               });
             }
+          } catch (verifyErr: unknown) {
+            if (this.abortSignal?.aborted) throw verifyErr;
+            const vMsg =
+              verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+            console.warn(
+              `[orchestrator] Output verification crashed for "${node.name}" (non-blocking): ${vMsg}`,
+            );
+            this.sendStatus({
+              projectId: node.id,
+              status: "warning",
+              error: `Vérification ignorée — ${vMsg.substring(0, 160)}`,
+            });
           }
         }
-
-        executionStatuses[node.id] = "done";
-        executionResults.set(node.id, resultText);
-        this.sendStatus({ projectId: node.id, status: "done", result: resultText });
-        await this.updateWorkspaceIndex(node, resultText, workspaceDir);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[orchestrator] Node "${node.name}" failed:`, msg);
-        executionStatuses[node.id] = "error";
-        this.sendStatus({ projectId: node.id, status: "error", error: msg });
       }
-    }
 
-    return executionStatuses;
+      executionStatuses[node.id] = "done";
+      executionResults.set(node.id, resultText);
+      this.sendStatus({ projectId: node.id, status: "done", result: resultText });
+      await this.updateWorkspaceIndex(node, resultText, workspaceDir);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[orchestrator] Node "${node.name}" failed:`, msg);
+      executionStatuses[node.id] = "error";
+      this.sendStatus({ projectId: node.id, status: "error", error: msg });
+    }
   }
 
   /**
@@ -1108,7 +1278,11 @@ export class OrchestratorRunner {
     const subset = refreshedLinked.filter((p) => fixes[p.id]);
     const executionOrder = this.resolveDAG(subset);
 
-    const statuses = await this.executeNodesSequence(
+    const executeNodes =
+      MAX_PARALLEL_NODES > 1
+        ? this.executeNodesWaves.bind(this)
+        : this.executeNodesSequence.bind(this);
+    const statuses = await executeNodes(
       orchestrator,
       executionOrder,
       allProjects,
@@ -1170,6 +1344,11 @@ export class OrchestratorRunner {
       // HTML pages whose classes have no CSS rule → unstyled/broken site (B2).
       ...(await findUnstyledClasses(workspaceDir)),
     ];
+    // Cross-agent API mismatches (import of a symbol a sibling module doesn't
+    // export) + unintegrated orphan modules — the #1 multi-file code failure.
+    // Attributed to the file's OWNING agent (not front-end integration), so the
+    // corrective cycle routes the fix to whoever produced the broken file.
+    const moduleGraphProblems = await findModuleGraphProblems(workspaceDir);
     // Machine-checkable contract declared by the planner (Couche 1) — attributed
     // to the owning agent so the corrective cycle routes the fix correctly.
     const declaredCheckProblems = await validateDeclaredChecks(workspaceDir, checksMap);
@@ -1194,7 +1373,11 @@ export class OrchestratorRunner {
     const brokenAssetsReport = [
       buildBrokenAssetsReport(brokenAssets),
       buildPageCoverageReport(uncodedMockups),
-      buildServedSiteReport([...servedProblems, ...declaredCheckProblems]),
+      buildServedSiteReport([
+        ...servedProblems,
+        ...declaredCheckProblems,
+        ...moduleGraphProblems,
+      ]),
     ]
       .filter((s) => s.trim())
       .join("\n\n");
@@ -1250,6 +1433,11 @@ export class OrchestratorRunner {
         agent: agentOwning(p.sourceFile),
         issue: `Contrainte non respectée : ${p.sourceFile} → ${p.problem}`,
         fix: `Corriger ${p.sourceFile} pour satisfaire : ${p.problem}`,
+      })),
+      ...moduleGraphProblems.map((p) => ({
+        agent: agentOwning(p.sourceFile),
+        issue: `${p.sourceFile} → ${p.problem}`,
+        fix: `Corriger ${p.sourceFile} : aligner les noms importés/exportés sur les modules réellement produits (vérifie le contexte de dépendances), ou intégrer/supprimer le module.`,
       })),
     ].slice(0, 30);
 
@@ -1450,6 +1638,60 @@ export class OrchestratorRunner {
     }
 
     return order;
+  }
+
+  /**
+   * Kahn-based topological sort that groups nodes into execution waves.
+   * Wave N contains only nodes whose dependencies all completed in waves < N.
+   * Stable intra-wave order (insertion order preserved).
+   */
+  resolveDAGWaves(nodes: readonly Project[]): Project[][] {
+    const nodeMap = new Map<string, Project>();
+    for (const n of nodes) nodeMap.set(n.id, n);
+
+    const inDegree = new Map<string, number>();
+    for (const n of nodes) {
+      if (!inDegree.has(n.id)) inDegree.set(n.id, 0);
+      for (const depId of n.dependencies ?? []) {
+        if (!nodeMap.has(depId)) continue;
+        inDegree.set(n.id, (inDegree.get(n.id) ?? 0) + 1);
+      }
+    }
+
+    const waves: Project[][] = [];
+    const remaining = new Set(nodes.map((n) => n.id));
+
+    while (remaining.size > 0) {
+      const wave: Project[] = [];
+      for (const id of remaining) {
+        if ((inDegree.get(id) ?? 0) === 0) {
+          wave.push(nodeMap.get(id)!);
+        }
+      }
+
+      if (wave.length === 0) {
+        const stuck = [...remaining].map((id) => {
+          const n = nodeMap.get(id);
+          return n ? `"${n.name}" (${id})` : id;
+        });
+        console.error(
+          `[orchestrator] Circular dependency detected among: ${stuck.join(", ")}`,
+        );
+        throw new Error("Dépendance circulaire détectée dans le graphe de projets.");
+      }
+
+      waves.push(wave);
+      for (const n of wave) {
+        remaining.delete(n.id);
+        for (const other of nodes) {
+          if ((other.dependencies ?? []).includes(n.id)) {
+            inDegree.set(other.id, (inDegree.get(other.id) ?? 1) - 1);
+          }
+        }
+      }
+    }
+
+    return waves;
   }
 
   private resolveDepRef(
@@ -2103,9 +2345,6 @@ export class OrchestratorRunner {
       `[orchestrator] Executing node: ${node.name} (${node.type}), task="${(node.task || "").substring(0, 100)}"`,
     );
 
-    // Temporarily switch active project in store so proxy intercepts with this node's instructions
-    await setActiveProject(node.id);
-
     const systemPrompt = buildNodeSystemPrompt(node, {
       compact: this.tierProfile.compactPrompts,
     });
@@ -2151,116 +2390,132 @@ export class OrchestratorRunner {
       userPrompt,
     });
 
-    try {
-      // ── Real-app backend dispatch ───────────────────────────────────────────
-      if (workspaceDir && selectBackend(node.type)) {
-        const backendLabel = node.type === "design" ? "Open Design" : "OpenCode";
-        console.warn(
-          `[orchestrator] 🔌 Backend dispatch: "${node.name}" (${node.type}) → ${backendLabel}`,
+    // ── Real-app backend dispatch ───────────────────────────────────────────
+    if (workspaceDir && selectBackend(node.type)) {
+      const backendLabel = node.type === "design" ? "Open Design" : "OpenCode";
+      console.warn(
+        `[orchestrator] 🔌 Backend dispatch: "${node.name}" (${node.type}) → ${backendLabel}`,
+      );
+      try {
+        this.sendStatus({
+          projectId: node.id,
+          status: "running",
+          task: `Exécution via ${backendLabel}…`,
+        });
+
+        const appSystemPrompt = buildNodeSystemPrompt(node, {
+          codeFenceFormat: false,
+          compact: this.tierProfile.compactPrompts,
+        });
+
+        let appUserPrompt = userPrompt;
+        if (plannedSteps && plannedSteps.length >= 2) {
+          const checklist = plannedSteps
+            .map((s, i) => `${i + 1}. ${s.title} — ${s.focus}`)
+            .join("\n");
+          appUserPrompt = `${userPrompt}\n\nÉTAPES À SUIVRE :\n${checklist}`;
+        }
+        // Backend = un seul execute() : l'Axe C (itérations) ne s'y applique
+        // pas. En tier weak, on guide le rythme via le prompt utilisateur.
+        if (this.tierProfile.tier === "weak") {
+          appUserPrompt = `${appUserPrompt}\n\n${WEAK_BACKEND_DIRECTIVE}`;
+        }
+
+        const pm = this.getProcessManager?.();
+        const result = await executeWithBackend(
+          {
+            node,
+            workspaceDir,
+            systemPrompt: appSystemPrompt,
+            userPrompt: appUserPrompt,
+            fallbackModel: this.fallbackModel,
+            signal: this.abortSignal,
+            onProgress: (label) =>
+              this.sendStatus({
+                projectId: node.id,
+                status: "running",
+                task: label,
+              }),
+          },
+          (slot) => (pm ? pm.ensureRunning(slot) : Promise.resolve(null)),
         );
-        try {
+
+        console.warn(
+          `[orchestrator] ✓ Backend SUCCESS for "${node.name}" — ${result.backend}, ${result.resultText.length} chars, ${result.filesWritten} fichier(s)`,
+        );
+        // Record real files written by the backend's tools so the trivial-result
+        // gate never relaunches (and clobbers) a node that produced files but
+        // returned only a short chat summary.
+        this.backendFilesWritten.set(node.id, result.filesWritten);
+        return result.resultText;
+      } catch (err: unknown) {
+        if (this.abortSignal?.aborted) {
+          console.warn(
+            `[orchestrator] ✗ Backend ABORTED for "${node.name}" — user cancelled`,
+          );
+          throw err;
+        }
+        if (err instanceof BackendUnavailableError) {
+          console.warn(
+            `[orchestrator] ⚠ Backend UNAVAILABLE for "${node.name}" → falling back to LLM:`,
+            err.message,
+            err.cause instanceof Error ? `(cause: ${err.cause.message})` : "",
+          );
           this.sendStatus({
             projectId: node.id,
             status: "running",
-            task: `Exécution via ${backendLabel}…`,
+            task: "App indisponible — repli sur LLM direct.",
           });
-
-          const appSystemPrompt = buildNodeSystemPrompt(node, {
-            codeFenceFormat: false,
-            compact: this.tierProfile.compactPrompts,
-          });
-
-          let appUserPrompt = userPrompt;
-          if (plannedSteps && plannedSteps.length >= 2) {
-            const checklist = plannedSteps
-              .map((s, i) => `${i + 1}. ${s.title} — ${s.focus}`)
-              .join("\n");
-            appUserPrompt = `${userPrompt}\n\nÉTAPES À SUIVRE :\n${checklist}`;
-          }
-          // Backend = un seul execute() : l'Axe C (itérations) ne s'y applique
-          // pas. En tier weak, on guide le rythme via le prompt utilisateur.
-          if (this.tierProfile.tier === "weak") {
-            appUserPrompt = `${appUserPrompt}\n\n${WEAK_BACKEND_DIRECTIVE}`;
-          }
-
-          const pm = this.getProcessManager?.();
-          const result = await executeWithBackend(
-            {
-              node,
-              workspaceDir,
-              systemPrompt: appSystemPrompt,
-              userPrompt: appUserPrompt,
-              fallbackModel: this.fallbackModel,
-              signal: this.abortSignal,
-              onProgress: (label) =>
-                this.sendStatus({
-                  projectId: node.id,
-                  status: "running",
-                  task: label,
-                }),
-            },
-            (slot) => (pm ? pm.ensureRunning(slot) : Promise.resolve(null)),
-          );
-
+        } else {
           console.warn(
-            `[orchestrator] ✓ Backend SUCCESS for "${node.name}" — ${result.backend}, ${result.resultText.length} chars, ${result.filesWritten} fichier(s)`,
+            `[orchestrator] ⚠ Backend ERROR for "${node.name}" → falling back to LLM:`,
+            err instanceof Error ? err.message : err,
           );
-          // Record real files written by the backend's tools so the trivial-result
-          // gate never relaunches (and clobbers) a node that produced files but
-          // returned only a short chat summary.
-          this.backendFilesWritten.set(node.id, result.filesWritten);
-          return result.resultText;
-        } catch (err: unknown) {
-          if (this.abortSignal?.aborted) {
-            console.warn(
-              `[orchestrator] ✗ Backend ABORTED for "${node.name}" — user cancelled`,
-            );
-            throw err;
-          }
-          if (err instanceof BackendUnavailableError) {
-            console.warn(
-              `[orchestrator] ⚠ Backend UNAVAILABLE for "${node.name}" → falling back to LLM:`,
-              err.message,
-              err.cause instanceof Error ? `(cause: ${err.cause.message})` : "",
-            );
-            this.sendStatus({
-              projectId: node.id,
-              status: "running",
-              task: "App indisponible — repli sur LLM direct.",
-            });
-          } else {
-            console.warn(
-              `[orchestrator] ⚠ Backend ERROR for "${node.name}" → falling back to LLM:`,
-              err instanceof Error ? err.message : err,
-            );
-            this.sendStatus({
-              projectId: node.id,
-              status: "warning",
-              task: "Erreur backend — repli sur LLM direct.",
-            });
-          }
+          this.sendStatus({
+            projectId: node.id,
+            status: "warning",
+            task: "Erreur backend — repli sur LLM direct.",
+          });
         }
-      } else if (workspaceDir) {
-        console.warn(
-          `[orchestrator] No backend for type="${node.type}" — using LLM direct`,
-        );
       }
+    } else if (workspaceDir) {
+      console.warn(
+        `[orchestrator] No backend for type="${node.type}" — using LLM direct`,
+      );
+    }
 
-      // ── LLM fallback (original path) ────────────────────────────────────────
-      // Pre-planned steps from the agentic planning loop (≥2 steps)
-      if (plannedSteps && plannedSteps.length >= 2) {
-        return await this.executeNodeWithSteps(
-          node,
-          workspaceContext,
-          depContext,
-          systemPrompt,
-          plannedSteps,
-          workspaceDir,
-        );
-      }
+    // ── LLM fallback (original path) ────────────────────────────────────────
+    // Pre-planned steps from the agentic planning loop (≥2 steps)
+    if (plannedSteps && plannedSteps.length >= 2) {
+      return await this.executeNodeWithSteps(
+        node,
+        workspaceContext,
+        depContext,
+        systemPrompt,
+        plannedSteps,
+        workspaceDir,
+      );
+    }
 
-      // Agent-level autoSteps: decompose via LLM at runtime
-      if (node.autoSteps) {
+    // Agent-level autoSteps: decompose via LLM at runtime
+    if (node.autoSteps) {
+      return await this.executeNodeWithSteps(
+        node,
+        workspaceContext,
+        depContext,
+        systemPrompt,
+        undefined,
+        workspaceDir,
+      );
+    }
+
+    // Weak tier (LLM path): make the iteration cap actually reach this node.
+    // - Large task → force step decomposition (skip trivial one-liners).
+    // - recherche/design (not multi-turn types) → route through the multi-turn
+    //   loop so the raised maxIterations + completeness checks apply.
+    if (this.tierProfile.forceDecomposition && workspaceDir) {
+      const isMultiTurnType = OrchestratorRunner.MULTI_TURN_TYPES.has(node.type ?? "");
+      if ((node.task?.length ?? 0) > WEAK_DECOMPOSE_MIN_TASK_CHARS) {
         return await this.executeNodeWithSteps(
           node,
           workspaceContext,
@@ -2270,37 +2525,7 @@ export class OrchestratorRunner {
           workspaceDir,
         );
       }
-
-      // Weak tier (LLM path): make the iteration cap actually reach this node.
-      // - Large task → force step decomposition (skip trivial one-liners).
-      // - recherche/design (not multi-turn types) → route through the multi-turn
-      //   loop so the raised maxIterations + completeness checks apply.
-      if (this.tierProfile.forceDecomposition && workspaceDir) {
-        const isMultiTurnType = OrchestratorRunner.MULTI_TURN_TYPES.has(node.type ?? "");
-        if ((node.task?.length ?? 0) > WEAK_DECOMPOSE_MIN_TASK_CHARS) {
-          return await this.executeNodeWithSteps(
-            node,
-            workspaceContext,
-            depContext,
-            systemPrompt,
-            undefined,
-            workspaceDir,
-          );
-        }
-        if (!isMultiTurnType) {
-          return await this.executeMultiTurn(
-            node,
-            workspaceContext,
-            depContext,
-            systemPrompt,
-            workspaceDir,
-            targetWords,
-          );
-        }
-      }
-
-      // work/code without steps: free-form multi-turn iteration
-      if (OrchestratorRunner.MULTI_TURN_TYPES.has(node.type ?? "") && workspaceDir) {
+      if (!isMultiTurnType) {
         return await this.executeMultiTurn(
           node,
           workspaceContext,
@@ -2310,19 +2535,21 @@ export class OrchestratorRunner {
           targetWords,
         );
       }
+    }
 
-      return await this.executeSingleCall(
+    // work/code without steps: free-form multi-turn iteration
+    if (OrchestratorRunner.MULTI_TURN_TYPES.has(node.type ?? "") && workspaceDir) {
+      return await this.executeMultiTurn(
         node,
         workspaceContext,
         depContext,
         systemPrompt,
+        workspaceDir,
+        targetWords,
       );
-    } finally {
-      // Revert active project to the orchestrator
-      if (this.currentOrchestratorId) {
-        await setActiveProject(this.currentOrchestratorId);
-      }
     }
+
+    return await this.executeSingleCall(node, workspaceContext, depContext, systemPrompt);
   }
 
   /**
@@ -2947,13 +3174,12 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
     const accept = (p: string): boolean =>
       OrchestratorRunner.isValidFilePath(p) && (!pathFilter || pathFilter(p));
 
-    // Primary: match ```lang filepath: path/to/file blocks (filepath: is REQUIRED)
-    const blockRe = /```[\w]*\s+filepath:\s*([^\n]+)\n([\s\S]*?)```/gi;
-
-    let match: RegExpExecArray | null;
-    while ((match = blockRe.exec(resultText)) !== null) {
-      const filePath = match[1].trim();
-      const content = match[2];
+    // Primary: ```lang filepath: path blocks (filepath: REQUIRED). Nested-fence
+    // safe — see parseFilepathBlocks (a naive non-greedy regex truncates a file
+    // at the first ``` inside its own content).
+    for (const block of parseFilepathBlocks(resultText)) {
+      const filePath = block.path;
+      const content = block.content;
       if (!content || !accept(filePath)) {
         if (filePath)
           console.warn(
@@ -2969,6 +3195,7 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
     // unconditionally (deduped via `seen`) so mixed-format output isn't dropped.
     const headerRe =
       /(?:\*{1,2})?(?:Fichier|File)\s*:\s*`?([^`\n*]+?)`?\*{0,2}\s*\n\s*```[\w]*\n([\s\S]*?)```/gi;
+    let match: RegExpExecArray | null;
     while ((match = headerRe.exec(resultText)) !== null) {
       const filePath = match[1].trim();
       const content = match[2];
@@ -3054,14 +3281,27 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
     resultText: string,
     workspaceDir: string,
   ): Promise<void> {
+    const run = this.indexWriteLock.then(() =>
+      this.updateWorkspaceIndexUnsafe(node, resultText, workspaceDir),
+    );
+    this.indexWriteLock = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  private async updateWorkspaceIndexUnsafe(
+    node: Project,
+    resultText: string,
+    workspaceDir: string,
+  ): Promise<void> {
     const indexPath = path.join(workspaceDir, "WORKSPACE_INDEX.md");
     try {
       console.warn(`[orchestrator] Updating WORKSPACE_INDEX.md for: ${node.name}`);
 
-      // 1. Read existing index content
       let content = await fs.readFile(indexPath, "utf-8");
 
-      // 2. Ask LLM to generate the file map updates and changelog line based on the agent's work
       const indexerProj = {
         id: "sys-indexer",
         name: "Indexeur de Fichiers",
@@ -3088,7 +3328,6 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
         .trim();
       const parsed = JSON.parse(cleaned) as { newFiles?: string; changelogLine?: string };
 
-      // Append files mapping to Section 1
       if (parsed.newFiles && parsed.newFiles.trim().length > 0) {
         const marker = "## 2. Journal des Modifications";
         const idx = content.indexOf(marker);
@@ -3098,7 +3337,6 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
         }
       }
 
-      // Append changelog line to Section 2
       if (parsed.changelogLine) {
         content = content.trim() + "\n" + parsed.changelogLine.trim() + "\n";
       }
