@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /presentation/
+Disallow: /data/
+Disallow: /research/
+
+Sitemap: https://ev-vision-2026.internal/sitemap.xml
