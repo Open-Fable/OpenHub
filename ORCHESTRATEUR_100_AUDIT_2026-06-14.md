@@ -116,7 +116,7 @@ Tous compilés (`dist/`), 174 tests verts, 0 erreur lint.
 - Branché dans le quality gate **et** dans le chemin sans-verifier (`warnOnBrokenAssets`).
 - Tests unitaires ajoutés.
 
-### ✅ Rank 7 — QUALITY_RULES.code : add-on non-web _(était : SEO/panier imposés à une librairie)_
+### ✅ Rank 7 — QUALITY*RULES.code : add-on non-web *(était : SEO/panier imposés à une librairie)\_
 
 - **Fichier :** `electron/orchestrator-prompts.ts`
 - Ajout d'un bloc conditionnel « SI TU PRODUIS UNE LIBRAIRIE / CLI / API / DES DONNÉES
@@ -249,3 +249,85 @@ somme(durées). Le watchdog tolère maintenant les modèles lents au démarrage.
 | `electron/process-manager.ts`                                               | health-gate daemon design (10)                                                                             |
 | `electron/orchestrator-backends/{types,opencode-backend,design-backend}.ts` | `filesWritten` (8)                                                                                         |
 | `electron/orchestrator-quality.test.ts`                                     | tests `findInvalidJsonFiles`                                                                               |
+
+---
+
+## 8. Couche qualité DÉTERMINISTE — « le LLM remplit le contrat, le système l'impose »
+
+Ajout d'une couche pour **réduire la dépendance au LLM** : avec un petit modèle (gemini-flash,
+deepseek-flash) qui hallucine, le jugement LLM ne suffit pas. Désormais le contrat est
+**machine-vérifiable** — le LLM le _remplit_, le système le _vérifie_ sans LLM.
+
+### Couche 1 — contrat déclaré par le planificateur
+
+Nouveau paramètre `checks` sur `assign_task` (par fichier) : `minWords`, `minItems` (tableau JSON),
+`minSections` (titres `##/###`), `requiredSubstrings`, `format` (json/csv/md). Le planificateur les
+**dérive des critères chiffrés de la demande** (« 12 produits » → `minItems:12`, « 8 chapitres » →
+`minSections:8`). `validateDeclaredChecks` les **vérifie déterministiquement** et **force-fail** →
+correction auto, attribuée à l'agent propriétaire du fichier. Sécurisé par `sanitizeChecks`
+(mêmes gardes de chemin que `expected_files`, clamps durs).
+
+### Couche 2 — socle TOUJOURS actif (filet pour modèles faibles, sans aucune déclaration)
+
+- `findCsvColumnProblems` → **bloquant** : colonnes CSV incohérentes (respecte les guillemets).
+- `findPlaceholderDeliverables` → **bloquant avec garde-fous** : livrable texte (.md/.txt/.csv/.json/.rst)
+  quasi-vide ou avec placeholder (Lorem ipsum, [à compléter]…). Jamais sur du code (`// TODO` ignoré),
+  garde de densité (un long document citant « lorem ipsum » une fois n'est pas bloqué).
+- `findUnreferencedModules` → **avertissement seulement** : module .js/.ts jamais référencé (backend
+  mort). Exclut points d'entrée/tests/dist. Risque de faux positifs trop élevé pour bloquer.
+
+### Garantie clé
+
+Le **fallback JSON** (modèle sans tool-calling) renvoie `checks:{}` → la Couche 2 prend le relais
+intégralement. Donc **même sans contrat déclaré et même avec un modèle faible**, les CSV cassés, les
+fichiers vides et les placeholders sont gatés déterministiquement. `MAX_AUTO_QUALITY_LOOPS` reste 2.
+
+### Validation
+
+188 tests passent (14 nouveaux : `sanitizeChecks`, `validateDeclaredChecks`, `findCsvColumnProblems`,
+`findPlaceholderDeliverables` dont anti-faux-positifs `.js`/densité, `findUnreferencedModules`).
+Typecheck + build + lint OK.
+
+| Fichier                                 | Changement                                                                                                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `electron/orchestrator-quality.ts`      | types `FileChecks`/`ChecksMap`, `sanitizeChecks`, `validateDeclaredChecks`, `findCsvColumnProblems`, `findPlaceholderDeliverables`, `findUnreferencedModules`, helpers `collectFiles`/`countCsvColumns` |
+| `electron/orchestrator-runner.ts`       | schéma `checks` (PLANNING_TOOLS), `checksMap` (plomberie), branchement force-fail + warning, `agentOwning`                                                                                              |
+| `electron/orchestrator-prompts.ts`      | bloc « CONTRAT DE VÉRIFICATION (checks) » dans le prompt de planification                                                                                                                               |
+| `electron/orchestrator-quality.test.ts` | 14 tests unitaires                                                                                                                                                                                      |
+
+---
+
+## 9. v2 — Profondeur du contenu & qualité du site (enforcement, pas avertissement)
+
+Tests réels (`/sport`, `/teste`, captures `/sport-screen`) : le système **détectait** les défauts
+(« 2000/4000 mots », « final = squelette », « CSS incohérent ») mais ne faisait que des **warnings**.
+La v2 transforme la détection en **enforcement**.
+
+### Contenu (le « trop court »)
+
+- **A1** — `enforceDeliverables` relance maintenant l'agent quand le **volume cible** (minWords/
+  minSections/minItems) n'est pas atteint, pas seulement sur fichier manquant (`buildContentShortfallPrompt`).
+- **A2** — `executeMultiTurn` **continue tant que le nombre de mots cible n'est pas atteint** (ne
+  s'arrête plus dès que le LLM dit « complet »). `targetWords` threadé jusqu'au multi-tour.
+- **A3** — `deriveFloorChecks` : **plancher de ~400 mots** auto pour les livrables prose (.md/.txt,
+  hors reports/audit) même si le planificateur ne déclare rien. Après relances non abouties →
+  **avertir en gardant le meilleur** (anti-boucle sur petits modèles).
+- **A4** — prompt : **un sous-agent par chapitre** (chacun avec son `minWords`) + consolidation qui
+  INCLUT le contenu intégral. Nouveau check **`findConsolidationShrinkage`** (final < 80% de la
+  somme des sources → force-fail). Vérifié : `/sport` final 1049 mots vs ~4892 → flaggé.
+
+### Site (moche/buggé)
+
+- **B1** — les checks web tournent désormais sur **tout dossier contenant du HTML** (helper
+  `discoverServedRoots`), plus seulement `public/`/`dist/`. Vérifié : `/teste/presentation/`
+  (qui échappait à tout) est maintenant scanné.
+- **B2** — nouveau check **`findUnstyledClasses`** : classes HTML sans règle CSS (symptôme « CSS pas
+  lié/non stylé »), avec garde-fous (utilitaires/états JS ignorés ; force-fail seulement si ≥3 classes
+  et ≥30% orphelines et aucune feuille framework).
+- Décision : **pas de Playwright** (devDep élaguée au packaging) → checks 100% statiques.
+
+### Validation v2
+
+218 tests (0 échec), 0 erreur lint, build OK. Détecteurs confirmés sur `/sport` (consolidation) et
+`/teste` (presentation/). Limite honnête : sans rendu réel, une page blanche causée par du JS reste
+invisible — mais B1+B2 attrapent le CSS non lié/non appliqué.
