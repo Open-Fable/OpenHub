@@ -16,6 +16,20 @@ import {
   findBrokenAssetRefs,
   buildBrokenAssetsReport,
   findInvalidJsonFiles,
+  sanitizeChecks,
+  validateDeclaredChecks,
+  findCsvColumnProblems,
+  findPlaceholderDeliverables,
+  findUnreferencedModules,
+  deriveFloorChecks,
+  PROSE_FLOOR_WORDS,
+  findConsolidationShrinkage,
+  findUnstyledClasses,
+  findDivergentDuplicates,
+  findScatteredDuplicates,
+  findUnwantedWebScaffolding,
+  findUselessDesignArtifacts,
+  findCssConsistencyProblems,
   MIN_RESULT_CHARS,
   MIN_FILE_BYTES,
 } from "./orchestrator-quality.js";
@@ -178,6 +192,443 @@ describe("findInvalidJsonFiles", () => {
     await realFs.writeFile(path.join(tmpDir, "design/broken.json"), "{ nope");
     const problems = await findInvalidJsonFiles(tmpDir);
     expect(problems).toEqual([]);
+  });
+});
+
+describe("sanitizeChecks", () => {
+  it("returns {} for non-object / array / null", () => {
+    expect(sanitizeChecks(null)).toEqual({});
+    expect(sanitizeChecks([1, 2])).toEqual({});
+    expect(sanitizeChecks("x")).toEqual({});
+  });
+
+  it("rejects path-traversal / absolute / hidden keys", () => {
+    const out = sanitizeChecks({
+      "../escape.md": { minWords: 5 },
+      "/abs.json": { minItems: 2 },
+      ".hidden": { minWords: 1 },
+    });
+    expect(out).toEqual({});
+  });
+
+  it("clamps invalid numbers and drops empty entries", () => {
+    const out = sanitizeChecks({
+      "a.md": { minWords: -3 },
+      "b.md": { minWords: 1e9 },
+      "c.md": { format: "xml" },
+      "d.md": { minSections: 4 },
+    });
+    expect(out["a.md"]).toBeUndefined();
+    expect(out["b.md"]?.minWords).toBe(100000);
+    expect(out["c.md"]).toBeUndefined();
+    expect(out["d.md"]?.minSections).toBe(4);
+  });
+
+  it("caps requiredSubstrings and ignores bad format", () => {
+    const out = sanitizeChecks({
+      "a.md": { requiredSubstrings: ["x", 2, "", "y"], format: "md" },
+    });
+    expect(out["a.md"]?.requiredSubstrings).toEqual(["x", "y"]);
+    expect(out["a.md"]?.format).toBe("md");
+  });
+});
+
+describe("validateDeclaredChecks", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "checks-"));
+  });
+
+  it("flags minWords below threshold and passes when met", async () => {
+    await realFs.writeFile(path.join(tmpDir, "short.md"), "one two three four five");
+    await realFs.writeFile(path.join(tmpDir, "long.md"), "w ".repeat(120));
+    const out = await validateDeclaredChecks(tmpDir, {
+      "short.md": { minWords: 50 },
+      "long.md": { minWords: 50 },
+    });
+    expect(out.map((p) => p.sourceFile)).toContain("short.md");
+    expect(out.map((p) => p.sourceFile)).not.toContain("long.md");
+  });
+
+  it("flags minSections and minItems", async () => {
+    await realFs.writeFile(path.join(tmpDir, "doc.md"), "## Only one\n\ntext");
+    await realFs.writeFile(path.join(tmpDir, "arr.json"), "[1,2]");
+    await realFs.writeFile(path.join(tmpDir, "obj.json"), '{"items":[1,2,3,4,5]}');
+    const out = await validateDeclaredChecks(tmpDir, {
+      "doc.md": { minSections: 3 },
+      "arr.json": { minItems: 5 },
+      "obj.json": { minItems: 5 },
+    });
+    const files = out.map((p) => p.sourceFile);
+    expect(files).toContain("doc.md");
+    expect(files).toContain("arr.json");
+    expect(files).not.toContain("obj.json");
+  });
+
+  it("flags missing requiredSubstrings (case-insensitive) and absent files are skipped", async () => {
+    await realFs.writeFile(path.join(tmpDir, "x.md"), "Bonjour le Monde");
+    const out = await validateDeclaredChecks(tmpDir, {
+      "x.md": { requiredSubstrings: ["bonjour", "introuvable"] },
+      "absent.md": { minWords: 10 },
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0].sourceFile).toBe("x.md");
+    expect(out[0].problem).toContain("introuvable");
+  });
+});
+
+describe("findCsvColumnProblems", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "csv-"));
+  });
+
+  it("flags inconsistent column counts and passes a regular CSV", async () => {
+    await realFs.writeFile(path.join(tmpDir, "bad.csv"), "a,b,c\n1,2\n3,4,5");
+    await realFs.writeFile(path.join(tmpDir, "ok.csv"), "a,b\n1,2\n3,4");
+    const out = await findCsvColumnProblems(tmpDir);
+    expect(out.map((p) => p.sourceFile)).toContain("bad.csv");
+    expect(out.map((p) => p.sourceFile)).not.toContain("ok.csv");
+  });
+
+  it("respects quoted commas (no false positive)", async () => {
+    await realFs.writeFile(path.join(tmpDir, "q.csv"), 'name,note\n"a,b",c\n"d,e",f');
+    const out = await findCsvColumnProblems(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findPlaceholderDeliverables", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "ph-"));
+  });
+
+  it("flags a short markdown with lorem ipsum", async () => {
+    await realFs.writeFile(path.join(tmpDir, "notes.md"), "lorem ipsum dolor sit amet");
+    const out = await findPlaceholderDeliverables(tmpDir);
+    expect(out.map((p) => p.sourceFile)).toContain("notes.md");
+  });
+
+  it("does NOT flag a // TODO inside code (.js excluded)", async () => {
+    await realFs.writeFile(
+      path.join(tmpDir, "app.js"),
+      "// TODO: refactor\n" + "x".repeat(300),
+    );
+    const out = await findPlaceholderDeliverables(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("does NOT flag a long document with a single isolated marker (density guard)", async () => {
+    const body =
+      "Contenu réel et substantiel. ".repeat(40) + " lorem ipsum est une locution.";
+    await realFs.writeFile(path.join(tmpDir, "article.md"), body);
+    const out = await findPlaceholderDeliverables(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("flags a near-empty text deliverable", async () => {
+    await realFs.writeFile(path.join(tmpDir, "vide.txt"), "ok");
+    const out = await findPlaceholderDeliverables(tmpDir);
+    expect(out.map((p) => p.sourceFile)).toContain("vide.txt");
+  });
+});
+
+describe("findUnreferencedModules", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "mod-"));
+  });
+
+  it("flags an orphan module but not entry points, tests, or referenced modules", async () => {
+    await realFs.writeFile(path.join(tmpDir, "orphan.ts"), "export const a = 1;");
+    await realFs.writeFile(path.join(tmpDir, "index.ts"), "export const b = 2;");
+    await realFs.writeFile(path.join(tmpDir, "util.ts"), "export const c = 3;");
+    await realFs.writeFile(path.join(tmpDir, "main.ts"), "import { c } from './util';");
+    await realFs.writeFile(path.join(tmpDir, "foo.test.ts"), "test('x', () => {});");
+    const out = await findUnreferencedModules(tmpDir);
+    const files = out.map((p) => p.sourceFile);
+    expect(files).toContain("orphan.ts");
+    expect(files).not.toContain("index.ts");
+    expect(files).not.toContain("util.ts");
+    expect(files).not.toContain("foo.test.ts");
+  });
+});
+
+describe("deriveFloorChecks", () => {
+  it("adds a prose minWords floor to .md/.txt content files", () => {
+    const out = deriveFloorChecks(["content/ch1.md", "notes.txt"], {});
+    expect(out["content/ch1.md"]?.minWords).toBe(PROSE_FLOOR_WORDS);
+    expect(out["notes.txt"]?.minWords).toBe(PROSE_FLOOR_WORDS);
+  });
+
+  it("never overrides a declared minWords", () => {
+    const out = deriveFloorChecks(["g.md"], { "g.md": { minWords: 5000 } });
+    expect(out["g.md"]?.minWords).toBe(5000);
+  });
+
+  it("skips reports/audits and non-prose files", () => {
+    const out = deriveFloorChecks(["reports/qa.md", "data.json", "app.js"], {});
+    expect(out["reports/qa.md"]).toBeUndefined();
+    expect(out["data.json"]).toBeUndefined();
+    expect(out["app.js"]).toBeUndefined();
+  });
+});
+
+describe("findConsolidationShrinkage", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "consol-"));
+  });
+
+  it("flags a final file far shorter than the content sources", async () => {
+    await realFs.mkdir(path.join(tmpDir, "content"), { recursive: true });
+    await realFs.mkdir(path.join(tmpDir, "final"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "content/ch1.md"), "mot ".repeat(2000));
+    await realFs.writeFile(path.join(tmpDir, "content/ch2.md"), "mot ".repeat(2000));
+    await realFs.writeFile(
+      path.join(tmpDir, "final/guide_complet.md"),
+      "mot ".repeat(500),
+    );
+    const out = await findConsolidationShrinkage(tmpDir);
+    expect(out.map((p) => p.sourceFile)).toContain("final/guide_complet.md");
+  });
+
+  it("passes when the final includes the full content", async () => {
+    await realFs.mkdir(path.join(tmpDir, "content"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "content/ch1.md"), "mot ".repeat(1000));
+    await realFs.writeFile(path.join(tmpDir, "content/ch2.md"), "mot ".repeat(1000));
+    await realFs.writeFile(path.join(tmpDir, "guide_complet.md"), "mot ".repeat(2000));
+    const out = await findConsolidationShrinkage(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findUnstyledClasses", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "css-"));
+  });
+
+  it("flags a page whose classes have no CSS rule", async () => {
+    await realFs.mkdir(path.join(tmpDir, "public"), { recursive: true });
+    await realFs.writeFile(
+      path.join(tmpDir, "public/index.html"),
+      '<link rel="stylesheet" href="styles.css"><div class="hero card feature alpha beta"></div>',
+    );
+    await realFs.writeFile(
+      path.join(tmpDir, "public/styles.css"),
+      "body { color: red; }",
+    );
+    const out = await findUnstyledClasses(tmpDir);
+    expect(out.map((p) => p.sourceFile)).toContain("public/index.html");
+  });
+
+  it("passes when classes are defined (incl. via @import)", async () => {
+    await realFs.mkdir(path.join(tmpDir, "public"), { recursive: true });
+    await realFs.writeFile(
+      path.join(tmpDir, "public/index.html"),
+      '<link rel="stylesheet" href="styles.css"><div class="hero card feature"></div>',
+    );
+    await realFs.writeFile(path.join(tmpDir, "public/styles.css"), "@import 'comp.css';");
+    await realFs.writeFile(
+      path.join(tmpDir, "public/comp.css"),
+      ".hero{} .card{} .feature{}",
+    );
+    const out = await findUnstyledClasses(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findDivergentDuplicates", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "dup-"));
+  });
+
+  it("flags same-basename content files with divergent content", async () => {
+    await realFs.mkdir(path.join(tmpDir, "legal"), { recursive: true });
+    await realFs.writeFile(
+      path.join(tmpDir, "regulations.md"),
+      "# Reg\nVersion A content here.",
+    );
+    await realFs.writeFile(
+      path.join(tmpDir, "legal/regulations.md"),
+      "# Reg\nVersion B is completely different.",
+    );
+    const out = await findDivergentDuplicates(tmpDir);
+    expect(out.length).toBe(1);
+    expect(out[0].problem).toContain("contenus divergents");
+    expect(out[0].problem).toContain("regulations.md");
+  });
+
+  it("does NOT flag identical copies (only whitespace differs)", async () => {
+    await realFs.mkdir(path.join(tmpDir, "reports"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "figures.md"), "# Figures\nSame body.\n");
+    await realFs.writeFile(
+      path.join(tmpDir, "reports/figures.md"),
+      "# Figures\r\nSame body.   \r\n",
+    );
+    const out = await findDivergentDuplicates(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("excludes legitimately-recurring basenames (package.json) even when divergent", async () => {
+    await realFs.mkdir(path.join(tmpDir, "sub"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "package.json"), '{"name":"root"}');
+    await realFs.writeFile(path.join(tmpDir, "sub/package.json"), '{"name":"sub"}');
+    const out = await findDivergentDuplicates(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("ignores single occurrences", async () => {
+    await realFs.writeFile(path.join(tmpDir, "unique.md"), "only one copy of this file");
+    const out = await findDivergentDuplicates(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findScatteredDuplicates", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "scatter-"));
+  });
+
+  it("flags identical content copied across 3+ locations", async () => {
+    const body = "# Market figures\nAll the same data everywhere.";
+    await realFs.mkdir(path.join(tmpDir, "research"), { recursive: true });
+    await realFs.mkdir(path.join(tmpDir, "reports"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "figures.md"), body);
+    await realFs.writeFile(path.join(tmpDir, "research/figures.md"), body);
+    await realFs.writeFile(path.join(tmpDir, "reports/figures.md"), body);
+    const out = await findScatteredDuplicates(tmpDir);
+    expect(out.length).toBe(1);
+    expect(out[0].problem).toContain("éparpillé dans 3 emplacements");
+  });
+
+  it("does NOT flag only 2 identical copies (under threshold)", async () => {
+    const body = "# Figures\nSame in two places.";
+    await realFs.mkdir(path.join(tmpDir, "reports"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "figures.md"), body);
+    await realFs.writeFile(path.join(tmpDir, "reports/figures.md"), body);
+    const out = await findScatteredDuplicates(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("does NOT flag 3 copies that diverge (that's Problème 1's job)", async () => {
+    await realFs.mkdir(path.join(tmpDir, "a"), { recursive: true });
+    await realFs.mkdir(path.join(tmpDir, "b"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "note.md"), "version one of the note");
+    await realFs.writeFile(path.join(tmpDir, "a/note.md"), "version two differs");
+    await realFs.writeFile(path.join(tmpDir, "b/note.md"), "version three differs again");
+    const out = await findScatteredDuplicates(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findUnwantedWebScaffolding", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "scaffold-"));
+  });
+
+  it("flags sitemap/robots/seo when the deliverable is .md-only", async () => {
+    await realFs.writeFile(path.join(tmpDir, "study.md"), "x".repeat(600));
+    await realFs.writeFile(path.join(tmpDir, "sitemap.xml"), "<urlset></urlset>");
+    await realFs.writeFile(path.join(tmpDir, "robots.txt"), "User-agent: *");
+    await realFs.mkdir(path.join(tmpDir, "seo"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "seo/robots.txt"), "User-agent: *");
+    const out = await findUnwantedWebScaffolding(tmpDir);
+    const flagged = out.map((p) => p.sourceFile);
+    expect(flagged).toContain("sitemap.xml");
+    expect(flagged).toContain("robots.txt");
+    expect(flagged).toContain(path.join("seo", "robots.txt"));
+  });
+
+  it("does NOT flag when a substantial served HTML page exists", async () => {
+    await realFs.mkdir(path.join(tmpDir, "public"), { recursive: true });
+    await realFs.writeFile(
+      path.join(tmpDir, "public/index.html"),
+      `<!doctype html><html><head><title>Real site</title></head><body>${"<p>content</p>".repeat(50)}</body></html>`,
+    );
+    await realFs.writeFile(path.join(tmpDir, "public/sitemap.xml"), "<urlset></urlset>");
+    await realFs.writeFile(path.join(tmpDir, "public/robots.txt"), "User-agent: *");
+    const out = await findUnwantedWebScaffolding(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("does NOT flag package.json (legit for code deliverables)", async () => {
+    await realFs.writeFile(path.join(tmpDir, "report.md"), "y".repeat(600));
+    await realFs.writeFile(path.join(tmpDir, "package.json"), '{"name":"x"}');
+    const out = await findUnwantedWebScaffolding(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findUselessDesignArtifacts", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "design-"));
+  });
+
+  it("flags a mockup HTML when the deliverable is documentary", async () => {
+    await realFs.writeFile(path.join(tmpDir, "guide.md"), "z".repeat(600));
+    await realFs.writeFile(
+      path.join(tmpDir, "maquette_page_type.html"),
+      "<div>mock</div>",
+    );
+    await realFs.writeFile(path.join(tmpDir, "style_guide.css"), ".x{}");
+    const out = await findUselessDesignArtifacts(tmpDir);
+    const flagged = out.map((p) => p.sourceFile);
+    expect(flagged).toContain("maquette_page_type.html");
+    expect(flagged).toContain("style_guide.css");
+  });
+
+  it("does NOT flag when a substantial served site exists", async () => {
+    await realFs.mkdir(path.join(tmpDir, "public"), { recursive: true });
+    await realFs.writeFile(
+      path.join(tmpDir, "public/index.html"),
+      `<!doctype html><html><body>${"<p>real</p>".repeat(60)}</body></html>`,
+    );
+    await realFs.mkdir(path.join(tmpDir, "mockups"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "mockups/home.html"), "<div></div>");
+    const out = await findUselessDesignArtifacts(tmpDir);
+    expect(out).toEqual([]);
+  });
+
+  it("spares a plain styles.css (not design-named) in a documentary workspace", async () => {
+    await realFs.writeFile(path.join(tmpDir, "doc.md"), "w".repeat(600));
+    await realFs.writeFile(path.join(tmpDir, "styles.css"), "body{}");
+    const out = await findUselessDesignArtifacts(tmpDir);
+    expect(out).toEqual([]);
+  });
+});
+
+describe("findCssConsistencyProblems — served roots beyond allowlist (B1)", () => {
+  let tmpDir: string;
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "b1-"));
+  });
+
+  it("now scans an ad-hoc 'presentation/' folder containing HTML", async () => {
+    await realFs.mkdir(path.join(tmpDir, "presentation"), { recursive: true });
+    await realFs.writeFile(
+      path.join(tmpDir, "presentation/a.html"),
+      '<link rel="stylesheet" href="x.css">',
+    );
+    await realFs.writeFile(
+      path.join(tmpDir, "presentation/b.html"),
+      '<link rel="stylesheet" href="y.css">',
+    );
+    const out = await findCssConsistencyProblems(tmpDir);
+    expect(out.some((p) => p.sourceFile === "presentation/")).toBe(true);
+  });
+
+  it("ignores a folder with no HTML", async () => {
+    await realFs.mkdir(path.join(tmpDir, "content"), { recursive: true });
+    await realFs.writeFile(path.join(tmpDir, "content/ch1.md"), "# x");
+    const out = await findCssConsistencyProblems(tmpDir);
+    expect(out).toEqual([]);
   });
 });
 
