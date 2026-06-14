@@ -60,10 +60,9 @@
         --transition: var(--duration-150) var(--ease-default);
         --font:
           -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
-        --radius: 8px;
-        --radius-sm: 6px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
         --radius-lg: 12px;
-        --radius-xl: 16px;
         --radius-full: 9999px;
 
         --space-1: 4px;
@@ -224,7 +223,7 @@
         position: absolute;
         height: 32px;
         background: var(--oh-color-bg-active);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         z-index: -1;
         pointer-events: none;
         opacity: 0;
@@ -255,7 +254,7 @@
         height: 32px;
         padding: 0 14px;
         border: none;
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         background: transparent;
         cursor: pointer;
         color: var(--oh-color-text-secondary);
@@ -340,7 +339,7 @@
         width: 32px;
         height: 32px;
         border: none;
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         background: transparent;
         cursor: pointer;
         color: var(--oh-color-text-secondary);
@@ -582,7 +581,7 @@
         z-index: 100;
         background: var(--oh-color-bg-elevated);
         border: 1px solid var(--oh-color-border-default);
-        border-radius: var(--radius-xl);
+        border-radius: var(--radius-lg);
         width: 780px;
         max-width: calc(100vw - 48px);
         height: min(620px, calc(100vh - 48px));
@@ -621,7 +620,7 @@
         padding: 7px 10px;
         border: none;
         background: transparent;
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         font: 500 13px/1.2 var(--font);
         color: var(--oh-color-text-secondary);
         cursor: pointer;
@@ -701,7 +700,7 @@
         width: 28px;
         height: 28px;
         border: 1px solid var(--oh-color-border-subtle);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         background: transparent;
         color: var(--oh-color-text-secondary);
         cursor: pointer;
@@ -810,7 +809,7 @@
         inset: 0;
         background: var(--oh-color-border-default);
         border: 1px solid var(--oh-color-border-default);
-        border-radius: 12px;
+        border-radius: var(--radius-full);
         transition: background var(--duration-200) var(--ease-default),
                     border-color var(--duration-200) var(--ease-default);
       }
@@ -843,7 +842,7 @@
         width: 100%;
         height: 32px;
         padding: 0 var(--space-3);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         border: 1px solid var(--oh-color-border-default);
         background: var(--oh-color-bg-elevated);
         color: var(--oh-color-text-primary);
@@ -868,7 +867,7 @@
       .form-select {
         height: 32px;
         padding: 0 var(--space-3);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         border: 1px solid var(--oh-color-border-default);
         background: var(--oh-color-bg-elevated);
         color: var(--oh-color-text-primary);
@@ -1020,7 +1019,7 @@
         padding: 7px 10px;
         background: var(--oh-color-bg-elevated);
         border: 1px solid var(--oh-color-border-subtle);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         font-size: 12px;
         color: var(--oh-color-text-primary);
       }
@@ -1056,7 +1055,7 @@
       .btn-add-fact {
         background: var(--oh-color-accent-subtle);
         border: 1px solid var(--oh-color-accent-subtle-hover);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         color: var(--oh-color-accent-primary);
         font-size: 12px;
         font-weight: 600;
@@ -1086,7 +1085,7 @@
       .update-item-icon {
         width: 28px;
         height: 28px;
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1115,7 +1114,7 @@
       .btn-update {
         padding: 6px 14px;
         border: 1px solid var(--oh-color-border-subtle);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         background: var(--oh-color-bg-elevated);
         color: var(--oh-color-text-primary);
         font-size: 12px;
@@ -1165,7 +1164,7 @@
       .ollama-progress-container {
         height: 6px;
         background: var(--oh-color-bg-deepest);
-        border-radius: 3px;
+        border-radius: var(--radius-full);
         overflow: hidden;
         margin-bottom: var(--space-2);
       }
@@ -1234,14 +1233,14 @@
       .cache-stat-bar-container {
         height: 6px;
         background: var(--oh-color-bg-deepest);
-        border-radius: 3px;
+        border-radius: var(--radius-full);
         margin-top: var(--space-3);
         overflow: hidden;
       }
       .cache-stat-bar {
         height: 100%;
         background: var(--oh-color-accent-primary);
-        border-radius: 3px;
+        border-radius: var(--radius-full);
       }
       .cache-table-wrapper {
         background: var(--oh-color-bg-surface);
@@ -1274,7 +1273,7 @@
       .btn-danger-ghost {
         background: transparent;
         border: 1px solid var(--oh-color-border-default);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         color: var(--oh-color-text-secondary);
         font-size: 12px;
         font-weight: 500;
@@ -1296,7 +1295,7 @@
       .btn-confirm-yes {
         background: var(--oh-color-error);
         border: none;
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         color: #fff;
         font-size: 12px;
         font-weight: 500;
@@ -1307,7 +1306,7 @@
       .btn-confirm-no {
         background: transparent;
         border: 1px solid var(--oh-color-border-default);
-        border-radius: var(--radius);
+        border-radius: var(--radius-md);
         color: var(--oh-color-text-secondary);
         font-size: 12px;
         padding: 5px 12px;
@@ -1918,6 +1917,19 @@
     <div id="config-backdrop"></div>
 
     <script>
+      // ── Proxy auth — per-session token from main (no static token) ──
+      var __proxyTokenPromise = null;
+      function getProxyToken() {
+        if (!__proxyTokenPromise) {
+          __proxyTokenPromise = (window.openhub && window.openhub.getChatConfig
+            ? window.openhub.getChatConfig()
+            : Promise.resolve(null)
+          ).then(function (c) { return (c && c.token) || ""; })
+            .catch(function () { return ""; });
+        }
+        return __proxyTokenPromise;
+      }
+
       var buttons = document.querySelectorAll(".slot-btn[data-slot]");
       var indicator = document.getElementById("tab-indicator");
       var configPanel = document.getElementById("config-panel");
@@ -2405,8 +2417,9 @@
         var currentVisionModel = await (window.openhub.getVisionModel ? window.openhub.getVisionModel() : Promise.resolve(''));
 
         try {
+          const __token = await getProxyToken();
           const res = await fetch("http://127.0.0.1:9999/v1/models/full", {
-            headers: { Authorization: "Bearer openhub-local" },
+            headers: { Authorization: "Bearer " + __token },
           });
           const data = await res.json();
           const allModels = data.data || [];
@@ -2795,11 +2808,13 @@
           // Sync to localStorage for OpenCode indicator
           try { localStorage.setItem("openhub-default-reasoning-effort", val); } catch (e) {}
           // Also sync to proxy for OpenCode indicator
-          fetch("http://127.0.0.1:9999/v1/reasoning/default", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: "Bearer openhub-local" },
-            body: JSON.stringify({ effort: val }),
-          }).catch(function () {});
+          getProxyToken().then(function (__token) {
+            fetch("http://127.0.0.1:9999/v1/reasoning/default", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + __token },
+              body: JSON.stringify({ effort: val }),
+            }).catch(function () {});
+          });
         });
       }
 
@@ -2996,7 +3011,17 @@
             statusEl.textContent = "Erreur : " + (progress.error || "échec");
             statusEl.style.color = "var(--oh-color-error)";
             if (actionsEl) {
-              actionsEl.innerHTML = `<button class="btn-ollama" onclick="window.openhub.ollamaPullModel('${progress.model}'); showOllamaProgress('${progress.model}')">Réessayer</button>`;
+              // Build via DOM (not innerHTML/onclick) so the model id can never
+              // break out of a string into executable markup.
+              const model = progress.model;
+              const retryBtn = document.createElement("button");
+              retryBtn.className = "btn-ollama";
+              retryBtn.textContent = "Réessayer";
+              retryBtn.addEventListener("click", () => {
+                window.openhub.ollamaPullModel(model);
+                showOllamaProgress(model);
+              });
+              actionsEl.replaceChildren(retryBtn);
             }
           } else if (progress.status === "canceled") {
             hideOllamaProgress(progress.model);
