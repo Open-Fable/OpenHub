@@ -23,7 +23,10 @@
         --active-bg: rgba(20, 184, 166, 0.1);
         --hover-bg: rgba(255, 255, 255, 0.05);
         --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-        --radius: 10px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-full: 9999px;
       }
 
       @media (prefers-color-scheme: light) {
@@ -52,7 +55,7 @@
       .card {
         background: var(--bg);
         border: 1px solid var(--border);
-        border-radius: var(--radius);
+        border-radius: var(--radius-lg);
         padding: 4px;
         overflow: hidden;
       }
@@ -64,7 +67,7 @@
         width: 100%;
         padding: 8px 12px;
         border: none;
-        border-radius: 8px;
+        border-radius: var(--radius-md);
         background: transparent;
         cursor: pointer;
         color: var(--text-sec);
