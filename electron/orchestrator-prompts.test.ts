@@ -109,6 +109,35 @@ describe("buildDependencyContext", () => {
     expect(out).toContain("y".repeat(24_000));
     expect(out).not.toContain("y".repeat(24_001));
   });
+
+  it("appends a fidelity mandate when a code node depends on a design agent", () => {
+    const dep = makeProject({ id: "dep1", type: "design" });
+    const node = makeProject({ id: "p1", type: "code", dependencies: ["dep1"] });
+    const out = buildDependencyContext(node, [dep], new Map([["dep1", "maquette"]]));
+    expect(out).toContain("MANDAT DE FIDÉLITÉ");
+    expect(out).toContain("REPRODUIRE À L'IDENTIQUE");
+  });
+
+  it("appends a fidelity mandate when a code node depends on a work agent", () => {
+    const dep = makeProject({ id: "dep1", type: "work" });
+    const node = makeProject({ id: "p1", type: "code", dependencies: ["dep1"] });
+    const out = buildDependencyContext(node, [dep], new Map([["dep1", "charte"]]));
+    expect(out).toContain("MANDAT DE FIDÉLITÉ");
+  });
+
+  it("does NOT append a fidelity mandate when only a code agent is a dependency", () => {
+    const dep = makeProject({ id: "dep1", type: "code" });
+    const node = makeProject({ id: "p1", type: "code", dependencies: ["dep1"] });
+    const out = buildDependencyContext(node, [dep], new Map([["dep1", "code"]]));
+    expect(out).not.toContain("MANDAT DE FIDÉLITÉ");
+  });
+
+  it("does NOT append a fidelity mandate for a verifier node even with design deps", () => {
+    const dep = makeProject({ id: "dep1", type: "design" });
+    const node = makeProject({ id: "p1", type: "verifier", dependencies: ["dep1"] });
+    const out = buildDependencyContext(node, [dep], new Map([["dep1", "maquette"]]));
+    expect(out).not.toContain("MANDAT DE FIDÉLITÉ");
+  });
 });
 
 // ── buildPlanningSystemPrompt / UserPrompt ─────────────────────────────────
@@ -319,6 +348,24 @@ describe("buildVerifyOutputUserPrompt", () => {
       "x",
     );
     expect(out).toContain("CRITÈRES SPÉCIFIQUES (code)");
+  });
+
+  it("treats disk evidence as the source of truth when provided", () => {
+    const out = buildVerifyOutputUserPrompt(
+      makeProject({ type: "code" }),
+      "agent prose summary",
+      "✓ src/app.js (1200 octets) :\nconsole.log('hi')",
+    );
+    expect(out).toContain("SOURCE DE VÉRITÉ");
+    expect(out).toContain("src/app.js");
+    expect(out).toContain("ne le déclare JAMAIS");
+    // the agent message is demoted to non-authoritative context
+    expect(out).toContain("NON autoritatif");
+  });
+
+  it("does not add a disk section when no evidence is provided", () => {
+    const out = buildVerifyOutputUserPrompt(makeProject({ type: "code" }), "x");
+    expect(out).not.toContain("SOURCE DE VÉRITÉ");
   });
 });
 
