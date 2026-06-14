@@ -46,12 +46,9 @@
         --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
         --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
         --overlay-modal: rgba(0, 0, 0, 0.1);
-        --radius-xs: 4px;
-        --radius-sm: 6px;
+        --radius-sm: 4px;
         --radius-md: 8px;
         --radius-lg: 12px;
-        --radius-xl: 16px;
-        --radius-2xl: 20px;
         --radius-full: 9999px;
         --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -142,7 +139,7 @@
       :focus-visible {
         outline: 2px solid var(--accent-primary);
         outline-offset: 2px;
-        border-radius: var(--radius-xs);
+        border-radius: var(--radius-sm);
       }
       ::-webkit-scrollbar {
         width: 6px;
@@ -177,22 +174,33 @@
         animation: fadeIn var(--duration-250) var(--ease-out);
       }
 
+      /* ── Accessibility ── */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0,0,0,0);
+        white-space: nowrap;
+        border: 0;
+      }
+
       /* ── Projects Hub ── */
       .projects-hub-toprow {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 28px 24px 8px;
+        padding: 20px 24px 12px;
         flex-shrink: 0;
       }
       .projects-hub-heading {
-        font-size: 22px;
-        font-weight: 700;
+        font-size: 20px;
+        font-weight: 500;
         color: var(--text-primary);
         margin: 0;
-        letter-spacing: -0.02em;
       }
-      /* keep .projects-hub-header/project-details-header for detail view */
       .project-details-header {
         padding: 10px 16px;
         display: flex;
@@ -248,82 +256,463 @@
       .projects-hub-search input::placeholder {
         color: var(--text-muted);
       }
-      .projects-grid {
-        flex: 1;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-        gap: 8px;
-        padding: 16px 20px;
-        overflow-y: auto;
-        align-content: start;
+      .projects-hub-search .hub-search-kbd {
+        font-size: 10px;
+        color: var(--text-disabled);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        padding: 1px 5px;
+        font-family: var(--font-sans);
+        line-height: 1.4;
       }
-      .project-card {
+      .projects-hub-sort {
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: var(--radius-full);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-family: inherit;
+        transition: border-color var(--duration-150) var(--ease-default);
+      }
+      .projects-hub-sort:hover { border-color: var(--border-default); }
+      .projects-hub-btn-new {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border-radius: var(--radius-full);
+        background: var(--accent-subtle);
+        color: var(--accent-primary);
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        font-family: inherit;
+        transition: background var(--duration-150) var(--ease-default);
+      }
+      .projects-hub-btn-new:hover { background: var(--accent-subtle-hover); }
+      .projects-hub-filters {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 24px 12px;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+      }
+      .hub-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: var(--radius-full);
+        font-size: 12px;
+        border: 1px solid var(--border-subtle);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-family: inherit;
+        transition: all var(--duration-150) var(--ease-default);
+      }
+      .hub-chip:hover { background: var(--bg-surface); border-color: var(--border-default); }
+      .hub-chip-active { background: var(--bg-surface); border-color: var(--border-default); color: var(--text-primary); font-weight: 500; }
+      .hub-chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+      .projects-hub-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 24px 24px;
+      }
+      .hub-section-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .hub-section-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .hub-section-count {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+      .hub-section-icon {
+        width: 14px;
+        height: 14px;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+      .hub-section-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        padding: 4px 0;
+        margin-bottom: 10px;
+      }
+      .hub-section-chevron {
+        width: 14px;
+        height: 14px;
+        color: var(--text-muted);
+        transition: transform var(--duration-150) var(--ease-default);
+      }
+      .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+        gap: 8px;
+      }
+      .p-card {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        padding: 16px;
+        gap: 0;
+        padding: 14px;
         border-radius: var(--radius-lg);
         border: 1px solid var(--border-subtle);
         cursor: pointer;
         transition: background var(--duration-150) var(--ease-default), border-color var(--duration-150) var(--ease-default);
-        min-height: 130px;
+        min-height: 110px;
+        position: relative;
       }
-      .project-card:hover {
+      .p-card:hover {
         background: var(--bg-surface);
         border-color: var(--border-default);
       }
-      .project-card-icon {
-        width: 40px;
-        height: 40px;
+      .p-card:focus-visible {
+        outline: 2px solid var(--accent-primary);
+        outline-offset: 2px;
+      }
+      .hub-chip:focus-visible,
+      .projects-hub-sort:focus-visible,
+      .projects-hub-btn-new:focus-visible,
+      .hub-btn-ghost:focus-visible,
+      .hub-btn-danger:focus-visible,
+      .hub-section-toggle:focus-visible,
+      .hub-folder-btn:focus-visible,
+      .hub-ctx-item:focus-visible,
+      .p-card-menu:focus-visible,
+      .p-card-checkbox:focus-visible {
+        outline: 2px solid var(--accent-primary);
+        outline-offset: 2px;
+      }
+      .p-card-menu:focus-visible { opacity: 1; }
+      .p-card-pinned { border-color: var(--border-default); }
+      .p-card-muted { min-height: 60px; opacity: 0.65; }
+      .p-card-muted:hover { opacity: 1; }
+      .p-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      .p-card-icon {
+        width: 36px;
+        height: 36px;
         border-radius: var(--radius-md);
-        background: var(--bg-surface);
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
-      .project-card:hover .project-card-icon {
-        background: var(--bg-elevated);
+      .p-card-icon svg {
+        width: 16px;
+        height: 16px;
       }
-      .project-card-icon svg {
-        width: 18px;
-        height: 18px;
-        opacity: 0.7;
+      .p-card-menu {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        opacity: 0;
+        transition: opacity var(--duration-150) var(--ease-default);
       }
-      .project-card-body {
+      .p-card:hover .p-card-menu { opacity: 1; }
+      .p-card-menu:hover { background: var(--bg-elevated); color: var(--text-primary); }
+      .p-card-menu svg { width: 14px; height: 14px; }
+      .p-card-body {
+        margin-top: auto;
         display: flex;
         flex-direction: column;
         gap: 4px;
-        min-width: 0;
-        margin-top: auto;
       }
-      .project-card-name {
+      .p-card-name {
         font-weight: 500;
         font-size: 13px;
         color: var(--text-primary);
-        white-space: nowrap;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.3;
       }
-      .project-card-meta {
+      .p-card-meta {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
+        flex-wrap: wrap;
       }
-      .project-card-type {
-        font-size: 10px;
+      .p-card-type { font-size: 11px; font-weight: 500; }
+      .p-card-date { font-size: 11px; color: var(--text-muted); }
+      .p-card-chats {
+        font-size: 11px;
         color: var(--text-muted);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
       }
-      .project-card-date {
-        font-size: 10px;
-        color: var(--text-disabled);
+      .p-card-chats svg { width: 11px; height: 11px; }
+      .hub-ctx-menu {
+        display: none;
+        position: absolute;
+        z-index: 100;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 4px;
+        min-width: 160px;
+        box-shadow: var(--shadow-md);
+      }
+      .hub-ctx-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        font-size: 13px;
+        color: var(--text-primary);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        border: none;
+        background: none;
+        width: 100%;
+        font-family: inherit;
+      }
+      .hub-ctx-item:hover { background: var(--bg-surface); }
+      .hub-ctx-item svg { width: 15px; height: 15px; color: var(--text-secondary); flex-shrink: 0; }
+      .hub-ctx-item-danger { color: var(--error); }
+      .hub-ctx-item-danger svg { color: var(--error); }
+      .hub-ctx-sep { border-top: 1px solid var(--border-subtle); margin: 4px 0; }
+      .hub-ctx-item-active { color: var(--accent-primary); }
+      .hub-ctx-item-active svg { color: var(--accent-primary); }
+      .hub-ctx-sub { position: relative; }
+      .hub-ctx-submenu {
+        display: none;
+        position: absolute;
+        left: 100%;
+        top: 0;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 4px;
+        min-width: 150px;
+        box-shadow: var(--shadow-md);
+        z-index: 101;
+      }
+      .hub-ctx-sub:hover .hub-ctx-submenu,
+      .hub-ctx-submenu.open { display: block; }
+      .hub-folder-actions {
+        display: flex;
+        gap: 2px;
+        margin-left: auto;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .hub-section-toggle:hover .hub-folder-actions { opacity: 1; }
+      .hub-folder-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        color: var(--text-secondary);
+      }
+      .hub-folder-btn:hover { background: var(--bg-surface); color: var(--text-primary); }
+      .hub-folder-btn-danger:hover { color: var(--error); }
+      .hub-folder-btn svg { width: 13px; height: 13px; }
+      .hub-gen-separator {
+        margin-top: 20px;
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 16px;
+      }
+      .hub-view-btns { display: flex; align-items: center; gap: 4px; }
+      .hub-view-btn {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: all var(--duration-150) var(--ease-default);
+      }
+      .hub-view-btn:hover { color: var(--text-primary); background: var(--bg-surface); }
+      .hub-view-btn-active { color: var(--text-primary); background: var(--bg-surface); border-color: var(--border-subtle); }
+      .hub-view-btn svg { width: 14px; height: 14px; }
+
+      /* ── Hub List View ── */
+      .projects-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .projects-list .p-card {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        min-height: 0;
+        padding: 10px 14px;
+      }
+      .projects-list .p-card-top {
         flex-shrink: 0;
       }
-      .project-card-chevron { display: none; }
+      .projects-list .p-card-icon {
+        width: 30px;
+        height: 30px;
+      }
+      .projects-list .p-card-icon svg {
+        width: 14px;
+        height: 14px;
+      }
+      .projects-list .p-card-body {
+        margin-top: 0;
+        flex: 1;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .projects-list .p-card-name {
+        flex: 1;
+        min-width: 0;
+        -webkit-line-clamp: 1;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        display: block;
+      }
+      .projects-list .p-card-meta {
+        flex-shrink: 0;
+        gap: 8px;
+      }
+      .projects-list .p-card-menu {
+        flex-shrink: 0;
+      }
+
+      /* ── Hub Select Mode ── */
+      .hub-select-bar {
+        display: none;
+        align-items: center;
+        gap: 12px;
+      }
+      .hub-select-bar.active { display: flex; }
+      .hub-select-count {
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+      .hub-btn-ghost {
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        border: 1px solid var(--border-subtle);
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all var(--duration-150) var(--ease-default);
+      }
+      .hub-btn-ghost:hover { border-color: var(--border-default); color: var(--text-primary); }
+      .hub-btn-danger {
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        border: 1px solid var(--error);
+        background: var(--error-subtle);
+        color: var(--error);
+        font-size: 13px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--duration-150) var(--ease-default);
+      }
+      .hub-btn-danger:hover { background: var(--error); color: #fff; }
+      .p-card-checkbox {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 20px;
+        height: 20px;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--border-default);
+        background: var(--bg-surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--duration-150) var(--ease-default);
+      }
+      .p-card-checkbox.checked {
+        background: var(--accent-primary);
+        border-color: var(--accent-primary);
+      }
+      .p-card-checkbox svg { width: 12px; height: 12px; }
+      .p-card.p-card-selected { border-color: var(--accent-primary); background: var(--accent-subtle); }
+
+      /* ── Toast ── */
+      .oh-toast-wrap {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .oh-toast {
+        padding: 10px 20px;
+        border-radius: var(--radius-full);
+        font-size: 13px;
+        font-family: var(--font-sans);
+        color: #fff;
+        background: var(--text-primary);
+        box-shadow: var(--shadow-md);
+        pointer-events: auto;
+        animation: ohToastIn var(--duration-250) var(--ease-out);
+        white-space: nowrap;
+      }
+      .oh-toast-success { background: var(--success); }
+      .oh-toast-error { background: var(--error); }
+      .oh-toast-out { animation: ohToastOut var(--duration-200) var(--ease-in) forwards; }
+      @keyframes ohToastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes ohToastOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(12px); } }
+
+      /* ── Detail Danger Zone ── */
+      .project-detail-danger {
+        margin-top: 40px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .project-detail-danger-label {
+        font-size: 13px;
+        color: var(--text-muted);
+      }
 
       /* ── Project Details ── */
       .project-details-body {
@@ -806,7 +1195,7 @@
       }
       .msg-bubble {
         padding: 12px 16px;
-        border-radius: var(--radius-xl);
+        border-radius: var(--radius-lg);
         font-size: 14px;
         line-height: 1.55;
         color: var(--text-primary);
@@ -826,7 +1215,7 @@
         font-size: 0.9em;
         background: var(--bg-panel);
         padding: 1px 5px;
-        border-radius: var(--radius-xs);
+        border-radius: var(--radius-sm);
       }
       .msg-bubble pre {
         margin: 8px 0;
@@ -943,7 +1332,7 @@
       .btn-copy-msg {
         width: 24px;
         height: 24px;
-        border-radius: var(--radius-xs);
+        border-radius: var(--radius-sm);
         border: none;
         background: transparent;
         color: var(--text-muted);
@@ -974,7 +1363,7 @@
       /* Artifact card */
       .artifact-card {
         border: 1px solid var(--border-default);
-        border-radius: var(--radius-xl);
+        border-radius: var(--radius-lg);
         overflow: hidden;
         background: var(--bg-elevated);
         box-shadow: var(--shadow-sm);
@@ -993,7 +1382,7 @@
         text-transform: uppercase;
         letter-spacing: 0.04em;
         padding: 1px 8px;
-        border-radius: var(--radius-xs);
+        border-radius: var(--radius-sm);
       }
       .artifact-label--html {
         background: var(--error-subtle);
@@ -1108,7 +1497,7 @@
       .empty-state-icon {
         width: 64px;
         height: 64px;
-        border-radius: var(--radius-xl);
+        border-radius: var(--radius-lg);
         background: var(--accent-subtle);
         display: flex;
         align-items: center;
@@ -1164,7 +1553,7 @@
         margin: 0 auto;
         background: var(--bg-surface);
         border: 1px solid var(--border-subtle);
-        border-radius: 32px;
+        border-radius: var(--radius-full);
         padding: 8px 16px;
       }
       .input-bar:focus-within {
@@ -1339,7 +1728,7 @@
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        border-radius: 20px;
+        border-radius: var(--radius-full);
         font-size: 13px;
         font-weight: 500;
         color: var(--text-muted);
@@ -1455,7 +1844,7 @@
       .modal {
         background: var(--bg-elevated);
         border: 1px solid var(--border-default);
-        border-radius: var(--radius-xl);
+        border-radius: var(--radius-lg);
         box-shadow: var(--shadow-lg);
         max-width: 480px;
         width: 90%;
@@ -1990,14 +2379,14 @@
         );
         background-size: 300% 100%;
         animation: oh-shimmer 1.5s infinite linear;
-        border-radius: var(--radius-xs, 3px);
+        border-radius: var(--radius-sm);
       }
       .oh-skel-list { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; }
       .oh-skel-row { display: flex; align-items: center; gap: 12px; padding: 8px 20px; }
       .oh-skel-row--compact { padding: 8px 12px; }
       .oh-skel-line { height: 12px; }
-      .oh-skel-box { width: 18px; height: 18px; border-radius: var(--radius-xs, 3px); flex-shrink: 0; }
-      .oh-skel-badge { width: 52px; height: 18px; border-radius: var(--radius-xs, 3px); flex-shrink: 0; margin-left: auto; }
+      .oh-skel-box { width: 18px; height: 18px; border-radius: var(--radius-sm); flex-shrink: 0; }
+      .oh-skel-badge { width: 52px; height: 18px; border-radius: var(--radius-sm); flex-shrink: 0; margin-left: auto; }
       .oh-skel-fill { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 
       .hidden {
@@ -2091,7 +2480,7 @@
         width: 26px;
         height: 26px;
         border: none;
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         background: transparent;
         color: var(--text-muted);
         font-size: 18px;
@@ -2685,32 +3074,45 @@
       </div>
 
       <!-- Projects Hub View -->
-      <div class="projects-hub-layout hidden" id="projectsHubView">
+      <div class="projects-hub-layout hidden" id="projectsHubView" role="region" aria-label="Gestionnaire de projets">
         <div class="projects-hub-toprow">
-          <h2 class="projects-hub-heading">Projets</h2>
+          <h2 class="projects-hub-heading" id="hubHeading">Projets</h2>
           <div class="projects-hub-actions">
-            <div class="projects-hub-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-              <input type="text" id="projectSearchInput" placeholder="Rechercher..." />
+            <div class="projects-hub-search" role="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" id="projectSearchInput" placeholder="Rechercher..." aria-label="Rechercher un projet" />
+              <span class="hub-search-kbd" aria-hidden="true">&#8984;K</span>
             </div>
-            <button class="btn-icon" id="btnNewProjectHub" title="Nouveau projet">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
+            <select class="projects-hub-sort" id="hubSortSelect" aria-label="Trier les projets">
+              <option value="recent">R&#233;cents</option>
+              <option value="az">A &#8594; Z</option>
+              <option value="type">Type</option>
+            </select>
+            <button class="hub-btn-ghost" id="btnSelectMode">Sélectionner</button>
+            <button class="projects-hub-btn-new" id="btnNewProjectHub" aria-label="Créer un nouveau projet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nouveau
             </button>
-            <button class="btn-icon" id="btnCloseHub" title="Fermer">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
+            <button class="btn-icon" id="btnCloseHub" aria-label="Fermer le gestionnaire de projets">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
+          <div class="hub-select-bar" id="hubSelectBar" role="toolbar" aria-label="Actions de sélection">
+            <span class="hub-select-count" id="hubSelectCount" aria-live="polite">0 sélectionné</span>
+            <button class="hub-btn-ghost" id="btnCancelSelect">Annuler</button>
+            <button class="hub-btn-danger" id="btnDeleteSelected" aria-live="polite">Supprimer (0)</button>
+          </div>
         </div>
-        <div class="projects-grid" id="projectsGrid">
-          <!-- Project cards injected here -->
+        <div class="projects-hub-filters" id="hubFilters" role="radiogroup" aria-label="Filtrer par type"></div>
+        <div aria-live="polite" aria-atomic="true" class="sr-only" id="hubAnnouncer"></div>
+        <div class="projects-hub-scroll" id="projectsHubScroll">
+          <div id="hubPinnedSection" role="region" aria-label="Projets épinglés"></div>
+          <div id="hubFoldersSection" role="region" aria-label="Dossiers"></div>
+          <div id="hubAllSection" role="region" aria-label="Tous les projets"></div>
+          <div id="hubArchivedSection" role="region" aria-label="Projets archivés"></div>
+          <div id="hubGeneratedSection" role="region" aria-label="Agents générés"></div>
         </div>
+        <div class="hub-ctx-menu" id="hubCtxMenu" role="menu" aria-label="Actions du projet"></div>
       </div>
 
       <!-- Project Details View -->
@@ -2767,6 +3169,10 @@
                     </div>
                   </div>
                 </div>
+              </div>
+              <div class="project-detail-danger" id="projectDangerZone">
+                <span class="project-detail-danger-label">Supprimer définitivement ce projet et toutes ses conversations.</span>
+                <button class="hub-btn-danger" id="btnDeleteProjectDetail">Supprimer</button>
               </div>
             </div>
           </main>
@@ -3421,7 +3827,8 @@
         // ═══ IMMEDIATE DEFAULTS — UI responsive instantly ═══
         state.initReady = true;
         state.proxyUrl = "http://127.0.0.1:9999";
-        state.token = "openhub-local";
+        // Real per-session token is loaded from getChatConfig() below; no static fallback.
+        state.token = "";
         console.log("[chat] init start — UI unblocked, loading data...");
 
         // ═══ LOAD CONVERSATIONS (sync from localStorage first) ═══
@@ -3488,13 +3895,11 @@
 
       /* ── Projects ── */
       function loadProjects() {
-        console.log("[chat] loadProjects called");
         return Promise.all([
           window.openhub.getProjects(),
           window.openhub.getActiveProject(),
         ])
           .then(function (res) {
-            console.log("[chat] loadProjects success, projects:", res[0] ? res[0].length : 0);
             projState.projects = res[0] || [];
             projState.active = res[1] || null;
             renderProjectUI();
@@ -3512,7 +3917,6 @@
               JSON.stringify(np) !== JSON.stringify(projState.projects) ||
               (na ? na.id : null) !== (projState.active ? projState.active.id : null)
             ) {
-              console.log("[chat] syncProjects: data changed, updating UI");
               projState.projects = np;
               projState.active = na;
               renderProjectUI();
@@ -3539,7 +3943,6 @@
         return window.openhub.deleteProject(id).then(loadProjects);
       }
       function renderProjectUI() {
-        console.log("[chat] renderProjectUI, projects count:", projState.projects.length);
         if (window.renderProjectsHub) {
           window.renderProjectsHub();
         }
@@ -3733,13 +4136,13 @@
 
         function getSourceBadge(source) {
           if (source === "openrouter") {
-            return '<span class="oh-catalog-source-badge" style="background:var(--warning-subtle);color:var(--warning);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">OpenRouter</span>';
+            return '<span class="oh-catalog-source-badge" style="background:var(--warning-subtle);color:var(--warning);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">OpenRouter</span>';
           } else if (source === "local") {
-            return '<span class="oh-catalog-source-badge" style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Local</span>';
+            return '<span class="oh-catalog-source-badge" style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Local</span>';
           } else if (source === "workflow") {
-            return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Workflow</span>';
+            return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Workflow</span>';
           } else {
-            return '<span class="oh-catalog-source-badge" style="background:var(--bg-surface);color:var(--text-muted);border-radius:var(--radius-xs);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Direct</span>';
+            return '<span class="oh-catalog-source-badge" style="background:var(--bg-surface);color:var(--text-muted);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Direct</span>';
           }
         }
 
@@ -4086,16 +4489,16 @@
             var badge = "";
             if (m.source === "openrouter") {
               badge =
-                '<span style="background:var(--warning-subtle);color:var(--warning);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">OpenRouter</span>';
+                '<span style="background:var(--warning-subtle);color:var(--warning);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">OpenRouter</span>';
             } else if (m.source === "local") {
               badge =
-                '<span style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Local</span>';
+                '<span style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Local</span>';
             } else if (m.source === "workflow") {
               badge =
-                '<span style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Workflow</span>';
+                '<span style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Workflow</span>';
             } else {
               badge =
-                '<span style="background:var(--bg-surface);color:var(--text-muted);border-radius:var(--radius-xs);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Direct</span>';
+                '<span style="background:var(--bg-surface);color:var(--text-muted);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Direct</span>';
             }
             
             var showReasoning = modelSupportsReasoningEffort(m.id);
@@ -4797,16 +5200,23 @@
             } catch (_) {
               domain = r.url;
             }
-            html +=
-              '<a class="search-result-item" href="' +
-              escapeHtml(r.url) +
-              '" target="_blank" rel="noopener"><div class="search-result-header"><span class="search-result-title">' +
+            var safe = safeUrl(r.url);
+            var inner =
+              '<div class="search-result-header"><span class="search-result-title">' +
               escapeHtml(r.title) +
               '</span><span class="search-result-url">(' +
               escapeHtml(domain) +
               ')</span></div><div class="search-result-snippet">' +
               escapeHtml(r.snippet) +
-              "</div></a>";
+              "</div>";
+            // Only render a clickable link for safe schemes (untrusted search data).
+            html += safe
+              ? '<a class="search-result-item" href="' +
+                escapeHtml(safe) +
+                '" target="_blank" rel="noopener noreferrer">' +
+                inner +
+                "</a>"
+              : '<div class="search-result-item">' + inner + "</div>";
           }
           contentDiv.innerHTML = html;
         }
@@ -5454,7 +5864,13 @@
         html = html.replace(/_([^_\n]+)_/g, "<em>$1</em>");
         html = html.replace(
           /\[([^\]]+)\]\(([^)]+)\)/g,
-          '<a href="$2" target="_blank" rel="noopener">$1</a>',
+          function (_m, text, url) {
+            // Only emit a live link for safe schemes; javascript:/data: become text.
+            if (!safeUrl(url)) return text;
+            return (
+              '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + text + "</a>"
+            );
+          },
         );
         html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
         html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
@@ -5513,6 +5929,17 @@
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;");
+      }
+      // Returns the URL only if it uses a safe scheme; null otherwise. Blocks
+      // javascript:/data:/etc. injected via LLM output or web-search results.
+      function safeUrl(url) {
+        try {
+          var u = new URL(String(url), location.href);
+          if (u.protocol === "http:" || u.protocol === "https:" || u.protocol === "mailto:") {
+            return u.href;
+          }
+        } catch (e) {}
+        return null;
       }
 
       /* ── Textarea ── */
@@ -5648,54 +6075,746 @@
         }
       };
 
-      window.renderProjectsHub = function() {
-        console.log("[chat] renderProjectsHub forced refresh");
-        window.openhub.getProjects().then(function(allProjects) {
-          var projects = allProjects || [];
-          console.log("[chat] Hub rendering with latest data from bridge:", projects.length);
-          
-          var grid = document.getElementById("projectsGrid");
-          if (!grid) return;
-          grid.innerHTML = "";
-          
-          if (projects.length === 0) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">Aucun projet trouvé. Créez-en un pour commencer.</div>';
+      /* ── Toast ── */
+      (function() {
+        var wrap = document.createElement("div");
+        wrap.className = "oh-toast-wrap";
+        document.body.appendChild(wrap);
+        window.showToast = function(msg, type) {
+          var t = document.createElement("div");
+          t.className = "oh-toast" + (type === "success" ? " oh-toast-success" : type === "error" ? " oh-toast-error" : "");
+          t.textContent = msg;
+          wrap.appendChild(t);
+          setTimeout(function() {
+            t.classList.add("oh-toast-out");
+            setTimeout(function() { t.remove(); }, 200);
+          }, 2500);
+        };
+      })();
+
+      /* ── Hub state ── */
+      var hubFilter = "all";
+      var hubSort = "recent";
+      var hubSearchQuery = "";
+      var hubSearchTimer = null;
+      var hubGenOpen = false;
+      var hubArchivedOpen = false;
+      var hubFolderOpen = {};
+      var hubFolders = [];
+      var hubCtxTarget = null;
+      var hubCtxAnchor = null;
+      var hubSelectMode = false;
+      var hubSelectedIds = new Set();
+      var hubViewMode = "grid";
+
+      var HUB_TYPE_LABELS = {
+        assistant: "Assistant",
+        code: "Code",
+        design: "Design",
+        work: "Work",
+        orchestrator: "Orchestrateur",
+        verifier: "Vérificateur",
+        recherche: "Recherche"
+      };
+      var HUB_TYPE_COLORS = {
+        assistant: "#85B7EB",
+        code: "#639922",
+        design: "#D4537E",
+        work: "#D85A30",
+        orchestrator: "#1D9E75",
+        verifier: "#BA7517",
+        recherche: "#7F77DD"
+      };
+      var HUB_TYPE_ICONS = {
+        assistant: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        code: '<path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/>',
+        design: '<path d="M12 2a10 10 0 0 0 0 20c.59 0 1.07-.48 1.07-1.07V17.93A1.07 1.07 0 0 1 14.14 17h3A1.07 1.07 0 0 0 18.2 16a10 10 0 0 0-6.2-14Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="11.5" r="1"/>',
+        work: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',
+        orchestrator: '<path d="m3 6 9 6 9-6"/><path d="M3 10v6l9 6 9-6v-6"/><path d="m3 10 9 6 9-6"/>',
+        verifier: '<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/>',
+        recherche: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>'
+      };
+      var HUB_FILTER_TYPES = [
+        { key: "all", label: "Tous" },
+        { key: "assistant", label: "Assistant", dot: "#85B7EB" },
+        { key: "orchestrator", label: "Orchestrateur", dot: "#5DCAA5" },
+        { key: "code", label: "Code", dot: "#97C459" },
+        { key: "design", label: "Design", dot: "#ED93B1" },
+        { key: "work", label: "Work", dot: "#F0997B" },
+        { key: "recherche", label: "Recherche", dot: "#AFA9EC" },
+        { key: "verifier", label: "Vérificateur", dot: "#FAC775" }
+      ];
+
+      function hubRelativeDate(ts) {
+        if (!ts) return "";
+        var now = Date.now();
+        var d = new Date(ts);
+        var today = new Date(now);
+        today.setHours(0,0,0,0);
+        var yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+        if (d >= today) return "Aujourd'hui";
+        if (d >= yesterday) return "Hier";
+        return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+      }
+
+      function hubGetProjectType(p) {
+        return p.type || "assistant";
+      }
+
+      function hubIsGenerated(p) {
+        return p.generated === true;
+      }
+
+      function hubMatchesFilter(p, filter) {
+        if (filter === "all") return true;
+        var t = hubGetProjectType(p);
+        if (filter === "assistant") return !t || t === "assistant";
+        return t === filter;
+      }
+
+      function hubMatchesSearch(p, q) {
+        if (!q) return true;
+        var low = q.toLowerCase();
+        var name = (p.name || "").toLowerCase();
+        var type = (HUB_TYPE_LABELS[hubGetProjectType(p)] || "Assistant").toLowerCase();
+        return name.indexOf(low) !== -1 || type.indexOf(low) !== -1;
+      }
+
+      function hubSortProjects(list, mode) {
+        var sorted = list.slice();
+        sorted.sort(function(a, b) {
+          var aIsAssistant = hubGetProjectType(a) === "assistant" ? 0 : 1;
+          var bIsAssistant = hubGetProjectType(b) === "assistant" ? 0 : 1;
+          if (aIsAssistant !== bIsAssistant) return aIsAssistant - bIsAssistant;
+          if (mode === "az") return (a.name || "").localeCompare(b.name || "");
+          if (mode === "type") {
+            var ta = hubGetProjectType(a), tb = hubGetProjectType(b);
+            var cmp = ta.localeCompare(tb);
+            return cmp !== 0 ? cmp : (b.updatedAt || 0) - (a.updatedAt || 0);
+          }
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
+        });
+        return sorted;
+      }
+
+      function hubCountChats(projectId) {
+        if (!conversations || !conversations.length) return 0;
+        var count = 0;
+        for (var i = 0; i < conversations.length; i++) {
+          if (conversations[i].projectId === projectId) count++;
+        }
+        return count;
+      }
+
+      function hubBuildCard(p, opts) {
+        opts = opts || {};
+        var type = hubGetProjectType(p);
+        var typeLabel = HUB_TYPE_LABELS[type] || "Assistant";
+        var typeColor = HUB_TYPE_COLORS[type] || "var(--text-muted)";
+        var iconSvg = HUB_TYPE_ICONS[type] || HUB_TYPE_ICONS.recherche;
+        var bgAlpha = (p.color || typeColor).replace("#", "");
+        var iconBg = "rgba(" + parseInt(bgAlpha.substring(0,2),16) + "," + parseInt(bgAlpha.substring(2,4),16) + "," + parseInt(bgAlpha.substring(4,6),16) + ",0.12)";
+        var chatCount = hubCountChats(p.id);
+        var dateStr = hubRelativeDate(p.updatedAt);
+        var isSelected = hubSelectedIds.has(p.id);
+
+        var card = document.createElement("div");
+        card.className = "p-card" + (p.pinned ? " p-card-pinned" : "") + (opts.muted ? " p-card-muted" : "") + (isSelected ? " p-card-selected" : "");
+        card.tabIndex = 0;
+        if (hubSelectMode) {
+          card.setAttribute("role", "checkbox");
+          card.setAttribute("aria-checked", isSelected ? "true" : "false");
+          card.setAttribute("aria-label", (p.name || "") + (isSelected ? " (sélectionné)" : ""));
+        } else {
+          card.setAttribute("role", "button");
+        }
+        card.setAttribute("aria-label", "Projet " + (p.name || "") + ", " + typeLabel + ", modifié " + dateStr);
+        card.dataset.projectId = p.id;
+
+        var checkboxHtml = hubSelectMode
+          ? '<div class="p-card-checkbox' + (isSelected ? " checked" : "") + '" aria-hidden="true">' +
+              (isSelected ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
+            '</div>'
+          : '';
+
+        if (opts.muted) {
+          card.innerHTML = checkboxHtml +
+            '<div class="p-card-body" style="margin-top:0;">' +
+              '<div class="p-card-name" style="color:var(--text-secondary);">' + escapeHtml(p.name) + '</div>' +
+              '<div class="p-card-meta"><span class="p-card-date">' + dateStr + '</span></div>' +
+            '</div>';
+        } else {
+          card.innerHTML = checkboxHtml +
+            '<div class="p-card-top">' +
+              '<div class="p-card-icon" style="background:' + iconBg + ';color:' + (p.color || typeColor) + ';" aria-hidden="true">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + iconSvg + '</svg>' +
+              '</div>' +
+              (!hubSelectMode ? '<button class="p-card-menu" aria-label="Actions pour ' + escapeHtml(p.name) + '" aria-haspopup="menu" data-pid="' + p.id + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>' +
+              '</button>' : '') +
+            '</div>' +
+            '<div class="p-card-body">' +
+              '<div class="p-card-name">' + escapeHtml(p.name) + '</div>' +
+              '<div class="p-card-meta">' +
+                '<span class="p-card-type" style="color:' + typeColor + ';">' + typeLabel + '</span>' +
+                '<span class="p-card-date">' + dateStr + '</span>' +
+                (chatCount > 0 ? '<span class="p-card-chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="sr-only">' + chatCount + ' conversations</span>' + chatCount + '</span>' : '') +
+              '</div>' +
+            '</div>';
+        }
+
+        card.addEventListener("click", function(e) {
+          if (e.target.closest(".p-card-menu")) return;
+          if (hubSelectMode) {
+            hubToggleSelect(p.id);
             return;
           }
+          openProjectDetails(p.id);
+        });
+        card.addEventListener("keydown", function(e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (hubSelectMode) { hubToggleSelect(p.id); return; }
+            openProjectDetails(p.id);
+          }
+        });
 
-          projects.forEach(function(p) {
-            var isOrch = p.type === "orchestrator";
-            var iconPath = isOrch
-              ? 'M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5'
-              : 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z';
-
-            var typeLabel = p.type || 'Assistant';
-            var dateStr = new Date(p.updatedAt || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-            var card = document.createElement("div");
-            card.className = "project-card";
-            card.innerHTML =
-              '<div class="project-card-icon" style="color:' + (p.color || 'var(--text-muted)') + '">' +
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
-                  '<path d="' + iconPath + '" />' +
-                '</svg>' +
-              '</div>' +
-              '<div class="project-card-body">' +
-                '<span class="project-card-name">' + escapeHtml(p.name) + '</span>' +
-                '<div class="project-card-meta">' +
-                  '<span class="project-card-type">' + typeLabel + '</span>' +
-                  '<span class="project-card-date">' + dateStr + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<span class="project-card-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>';
-
-            card.onclick = function() { openProjectDetails(p.id); };
-            grid.appendChild(card);
+        var menuBtn = card.querySelector(".p-card-menu");
+        if (menuBtn) {
+          menuBtn.addEventListener("click", function(e) {
+            e.stopPropagation();
+            hubShowCtxMenu(p, menuBtn);
           });
+        }
+
+        return card;
+      }
+
+      function hubShowCtxMenu(project, anchorEl) {
+        var menu = document.getElementById("hubCtxMenu");
+        if (!menu) return;
+        hubCtxTarget = project;
+
+        var isPinned = project.pinned;
+        var isArchived = project.archived;
+
+        var folderItems = '';
+        hubFolders.forEach(function(f) {
+          var active = project.folder === f.name;
+          folderItems += '<button class="hub-ctx-item' + (active ? ' hub-ctx-item-active' : '') + '" data-action="move-folder" data-folder="' + escapeHtml(f.name) + '">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-7.93a2 2 0 01-1.66-.9l-.82-1.2A2 2 0 007.93 3H4a2 2 0 00-2 2v13c0 1.1.9 2 2 2Z"/></svg>' +
+            escapeHtml(f.name) + (active ? ' ✓' : '') + '</button>';
+        });
+        if (project.folder) {
+          folderItems += '<button class="hub-ctx-item" data-action="remove-folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6l-.75 3h-4.5z"/><path d="M4 6h16"/><path d="M6 6v12a2 2 0 002 2h8a2 2 0 002-2V6"/></svg>Retirer du dossier</button>';
+        }
+        folderItems += '<div class="hub-ctx-sep"></div>' +
+          '<button class="hub-ctx-item" data-action="new-folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Nouveau dossier…</button>';
+
+        menu.innerHTML =
+          '<button class="hub-ctx-item" data-action="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Ouvrir</button>' +
+          '<button class="hub-ctx-item" data-action="rename"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4Z"/></svg>Renommer</button>' +
+          '<button class="hub-ctx-item" data-action="pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5"/><path d="M9 2h6l-1.5 5h-3z"/><path d="M6.5 7h11l-1 5H7.5z"/></svg>' + (isPinned ? "Désépingler" : "Épingler") + '</button>' +
+          '<div class="hub-ctx-sep"></div>' +
+          '<div class="hub-ctx-sub"><button class="hub-ctx-item" data-action="toggle-move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-7.93a2 2 0 01-1.66-.9l-.82-1.2A2 2 0 007.93 3H4a2 2 0 00-2 2v13c0 1.1.9 2 2 2Z"/></svg>Déplacer dans… <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-left:auto;"><polyline points="9 6 15 12 9 18"/></svg></button>' +
+          '<div class="hub-ctx-submenu" id="hubCtxSubmenuMove">' + folderItems + '</div></div>' +
+          '<button class="hub-ctx-item" data-action="archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg>' + (isArchived ? "Désarchiver" : "Archiver") + '</button>' +
+          '<button class="hub-ctx-item" data-action="duplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Dupliquer</button>' +
+          '<div class="hub-ctx-sep"></div>' +
+          '<button class="hub-ctx-item hub-ctx-item-danger" data-action="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Supprimer</button>';
+
+        menu.querySelectorAll(".hub-ctx-item").forEach(function(item) {
+          item.setAttribute("role", "menuitem");
+        });
+        menu.querySelectorAll("svg").forEach(function(svg) {
+          svg.setAttribute("aria-hidden", "true");
+        });
+        var submenu = document.getElementById("hubCtxSubmenuMove");
+        if (submenu) submenu.setAttribute("role", "menu");
+
+        hubCtxAnchor = anchorEl;
+        var rect = anchorEl.getBoundingClientRect();
+        var hubEl = document.getElementById("projectsHubView");
+        var hubRect = hubEl ? hubEl.getBoundingClientRect() : { left: 0, top: 0, width: 800 };
+        var left = Math.min(rect.left - hubRect.left, hubRect.width - 180);
+        var top = rect.bottom - hubRect.top + 4;
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        menu.style.display = "block";
+
+        var firstItem = menu.querySelector(".hub-ctx-item");
+        if (firstItem) requestAnimationFrame(function() { firstItem.focus(); });
+
+        menu.onkeydown = function(e) {
+          var items = Array.from(menu.querySelectorAll('.hub-ctx-item:not([style*="display:none"])'));
+          var idx = items.indexOf(document.activeElement);
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            var next = idx < items.length - 1 ? idx + 1 : 0;
+            items[next].focus();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            var prev = idx > 0 ? idx - 1 : items.length - 1;
+            items[prev].focus();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            hubHideCtxMenu();
+          } else if (e.key === "Home") {
+            e.preventDefault();
+            items[0].focus();
+          } else if (e.key === "End") {
+            e.preventDefault();
+            items[items.length - 1].focus();
+          }
+        };
+      }
+
+      function hubHideCtxMenu() {
+        var menu = document.getElementById("hubCtxMenu");
+        if (menu) {
+          menu.style.display = "none";
+          menu.onkeydown = null;
+        }
+        var anchor = hubCtxAnchor;
+        hubCtxTarget = null;
+        hubCtxAnchor = null;
+        if (anchor && anchor.isConnected) {
+          requestAnimationFrame(function() { anchor.focus(); });
+        }
+      }
+
+      function hubHandleCtxAction(action) {
+        var p = hubCtxTarget;
+        hubHideCtxMenu();
+        if (!p) return;
+
+        if (action === "open") {
+          openProjectDetails(p.id);
+        } else if (action === "rename") {
+          var newName = prompt("Nouveau nom :", p.name);
+          if (newName && newName.trim()) {
+            window.openhub.saveProject({ id: p.id, name: newName.trim() }).then(function() {
+              showToast("Projet renommé", "success");
+              loadProjects();
+            });
+          }
+        } else if (action === "pin") {
+          var wasPinned = p.pinned;
+          window.openhub.saveProject({ id: p.id, name: p.name, pinned: !wasPinned }).then(function() {
+            showToast(wasPinned ? "Projet désépinglé" : "Projet épinglé", "success");
+            loadProjects();
+          });
+        } else if (action === "duplicate") {
+          window.openhub.saveProject({
+            name: p.name + " (copie)",
+            instructions: p.instructions || "",
+            color: p.color || "",
+            type: p.type
+          }).then(function() {
+            showToast("Projet dupliqué", "success");
+            loadProjects();
+          });
+        } else if (action === "archive") {
+          var wasArchived = p.archived;
+          window.openhub.saveProject({ id: p.id, name: p.name, archived: !wasArchived, pinned: wasArchived ? p.pinned : false }).then(function() {
+            showToast(wasArchived ? "Projet désarchivé" : "Projet archivé", "success");
+            loadProjects().then(function() { window.renderProjectsHub(); });
+          });
+        } else if (action === "move-folder") {
+          return;
+        } else if (action === "remove-folder") {
+          window.openhub.saveProject({ id: p.id, name: p.name, folder: "" }).then(function() {
+            showToast("Retiré du dossier", "success");
+            loadProjects().then(function() { window.renderProjectsHub(); });
+          });
+        } else if (action === "new-folder") {
+          var folderName = prompt("Nom du nouveau dossier :");
+          if (folderName && folderName.trim()) {
+            window.openhub.createFolder(folderName.trim()).then(function() {
+              return window.openhub.saveProject({ id: p.id, name: p.name, folder: folderName.trim() });
+            }).then(function() {
+              showToast('Déplacé dans "' + folderName.trim() + '"', "success");
+              loadProjects().then(function() { window.renderProjectsHub(); });
+            });
+          }
+        } else if (action === "delete") {
+          if (confirm('Supprimer définitivement le projet "' + p.name + '" ?')) {
+            removeProject(p.id).then(function() {
+              showToast("Projet supprimé", "success");
+            });
+          }
+        }
+      }
+
+      function hubHandleMoveToFolder(folderName) {
+        var p = hubCtxTarget;
+        hubHideCtxMenu();
+        if (!p) return;
+        window.openhub.saveProject({ id: p.id, name: p.name, folder: folderName }).then(function() {
+          showToast('Déplacé dans "' + folderName + '"', "success");
+          loadProjects().then(function() { window.renderProjectsHub(); });
+        });
+      }
+
+      /* ── Select Mode ── */
+      function hubEnterSelectMode() {
+        hubSelectMode = true;
+        hubSelectedIds.clear();
+        document.getElementById("hubSelectBar").classList.add("active");
+        document.querySelector(".projects-hub-actions").style.display = "none";
+        hubUpdateSelectCount();
+        hubRenderContent();
+      }
+
+      function hubExitSelectMode() {
+        hubSelectMode = false;
+        hubSelectedIds.clear();
+        document.getElementById("hubSelectBar").classList.remove("active");
+        document.querySelector(".projects-hub-actions").style.display = "flex";
+        hubRenderContent();
+      }
+
+      function hubToggleSelect(id) {
+        if (hubSelectedIds.has(id)) {
+          hubSelectedIds.delete(id);
+        } else {
+          hubSelectedIds.add(id);
+        }
+        hubUpdateSelectCount();
+        hubRenderContent();
+      }
+
+      function hubUpdateSelectCount() {
+        var n = hubSelectedIds.size;
+        var countEl = document.getElementById("hubSelectCount");
+        var delBtn = document.getElementById("btnDeleteSelected");
+        if (countEl) countEl.textContent = n + " sélectionné" + (n > 1 ? "s" : "");
+        if (delBtn) {
+          delBtn.textContent = "Supprimer (" + n + ")";
+          delBtn.disabled = n === 0;
+        }
+      }
+
+      function hubDeleteSelected() {
+        var n = hubSelectedIds.size;
+        if (n === 0) return;
+        if (!confirm("Supprimer " + n + " projet" + (n > 1 ? "s" : "") + " définitivement ?")) return;
+        var ids = Array.from(hubSelectedIds);
+        var chain = Promise.resolve();
+        ids.forEach(function(id) {
+          chain = chain.then(function() { return window.openhub.deleteProject(id); });
+        });
+        chain.then(function() {
+          showToast(n + " projet" + (n > 1 ? "s" : "") + " supprimé" + (n > 1 ? "s" : ""), "success");
+          hubExitSelectMode();
+          loadProjects();
+        });
+      }
+
+      function hubAnnounce(msg) {
+        var el = document.getElementById("hubAnnouncer");
+        if (el) {
+          el.textContent = "";
+          requestAnimationFrame(function() { el.textContent = msg; });
+        }
+      }
+
+      function hubRenderFilters() {
+        var bar = document.getElementById("hubFilters");
+        if (!bar) return;
+        bar.innerHTML = "";
+        HUB_FILTER_TYPES.forEach(function(f) {
+          var btn = document.createElement("button");
+          btn.className = "hub-chip" + (hubFilter === f.key ? " hub-chip-active" : "");
+          btn.setAttribute("role", "radio");
+          btn.setAttribute("aria-checked", hubFilter === f.key ? "true" : "false");
+          btn.innerHTML = (f.dot ? '<span class="hub-chip-dot" style="background:' + f.dot + ';" aria-hidden="true"></span>' : '') + f.label;
+          btn.addEventListener("click", function() {
+            hubFilter = f.key;
+            hubRenderFilters();
+            hubRenderContent();
+            hubAnnounce("Filtre : " + f.label);
+          });
+          bar.appendChild(btn);
+        });
+      }
+
+      function hubRenderSection(container, label, iconSvg, projects, opts) {
+        opts = opts || {};
+        container.innerHTML = "";
+        if (projects.length === 0 && !opts.showEmpty) return;
+
+        var header = document.createElement("div");
+        header.className = "hub-section-header";
+        header.innerHTML =
+          (iconSvg ? '<svg class="hub-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + iconSvg + '</svg>' : '') +
+          '<span class="hub-section-label">' + label + '</span>' +
+          '<span class="hub-section-count">' + projects.length + '</span>';
+        container.appendChild(header);
+
+        var grid = document.createElement("div");
+        grid.className = "projects-grid";
+        projects.forEach(function(p) {
+          grid.appendChild(hubBuildCard(p, { muted: opts.muted }));
+        });
+        container.appendChild(grid);
+        container.style.marginBottom = "20px";
+      }
+
+      function hubRenderContent() {
+        var all = projState.projects || [];
+
+        var filtered = all.filter(function(p) {
+          return hubMatchesFilter(p, hubFilter) && hubMatchesSearch(p, hubSearchQuery);
+        });
+        var archived = filtered.filter(function(p) { return p.archived; });
+        var active = filtered.filter(function(p) { return !p.archived; });
+        var generated = active.filter(hubIsGenerated);
+        var userProjects = active.filter(function(p) { return !hubIsGenerated(p); });
+
+        var sorted = hubSortProjects(userProjects, hubSort);
+        var pinned = sorted.filter(function(p) { return p.pinned; });
+        var unpinned = sorted.filter(function(p) { return !p.pinned; });
+
+        var folders = {};
+        var noFolder = [];
+        unpinned.forEach(function(p) {
+          if (p.folder) {
+            if (!folders[p.folder]) folders[p.folder] = [];
+            folders[p.folder].push(p);
+          } else {
+            noFolder.push(p);
+          }
+        });
+
+        var pinnedEl = document.getElementById("hubPinnedSection");
+        var foldersEl = document.getElementById("hubFoldersSection");
+        var allEl = document.getElementById("hubAllSection");
+        var archivedEl = document.getElementById("hubArchivedSection");
+        var genEl = document.getElementById("hubGeneratedSection");
+
+        if (pinnedEl) {
+          if (pinned.length > 0) {
+            hubRenderSection(pinnedEl, "Épinglés",
+              '<path d="M12 17v5"/><path d="M9 2h6l-1.5 5h-3z"/><path d="M6.5 7h11l-1 5H7.5z"/>',
+              pinned);
+          } else {
+            pinnedEl.innerHTML = "";
+          }
+        }
+
+        if (foldersEl) {
+          foldersEl.innerHTML = "";
+          var folderNames = Object.keys(folders).sort();
+          folderNames.forEach(function(fname) {
+            var section = document.createElement("div");
+            section.style.marginBottom = "20px";
+            var isOpen = hubFolderOpen[fname] !== false;
+
+            var toggle = document.createElement("div");
+            toggle.className = "hub-section-toggle";
+            toggle.tabIndex = 0;
+            toggle.setAttribute("role", "button");
+            toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            toggle.setAttribute("aria-label", "Dossier " + fname);
+            var folderId = hubFolders.find(function(f) { return f.name === fname; });
+            toggle.innerHTML =
+              '<svg class="hub-section-chevron" style="transform:rotate(' + (isOpen ? "0" : "-90") + 'deg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>' +
+              '<svg class="hub-section-icon" style="color:var(--accent-primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-7.93a2 2 0 01-1.66-.9l-.82-1.2A2 2 0 007.93 3H4a2 2 0 00-2 2v13c0 1.1.9 2 2 2Z"/></svg>' +
+              '<span class="hub-section-label">' + escapeHtml(fname) + '</span>' +
+              '<span class="hub-section-count">' + folders[fname].length + '</span>' +
+              '<span class="hub-folder-actions">' +
+                '<button class="hub-folder-btn" data-folder-action="rename" title="Renommer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4Z"/></svg></button>' +
+                '<button class="hub-folder-btn hub-folder-btn-danger" data-folder-action="delete" title="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>' +
+              '</span>';
+            toggle.addEventListener("click", function(e) {
+              if (e.target.closest(".hub-folder-btn")) return;
+              hubFolderOpen[fname] = !isOpen;
+              hubRenderContent();
+            });
+            toggle.addEventListener("keydown", function(e) {
+              if (e.target.closest(".hub-folder-btn")) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                hubFolderOpen[fname] = !isOpen;
+                hubRenderContent();
+              }
+            });
+            toggle.querySelectorAll(".hub-folder-btn").forEach(function(btn) {
+              btn.addEventListener("click", function(e) {
+                e.stopPropagation();
+                var act = btn.dataset.folderAction;
+                if (act === "rename" && folderId) {
+                  var newName = prompt("Renommer le dossier :", fname);
+                  if (newName && newName.trim() && newName.trim() !== fname) {
+                    window.openhub.renameFolder(folderId.id, newName.trim()).then(function() {
+                      showToast("Dossier renommé", "success");
+                      loadProjects().then(function() { window.renderProjectsHub(); });
+                    });
+                  }
+                } else if (act === "delete" && folderId) {
+                  if (confirm('Supprimer le dossier "' + fname + '" ? Les projets seront conservés.')) {
+                    window.openhub.deleteFolder(folderId.id).then(function() {
+                      showToast("Dossier supprimé", "success");
+                      loadProjects().then(function() { window.renderProjectsHub(); });
+                    });
+                  }
+                }
+              });
+            });
+            section.appendChild(toggle);
+
+            if (isOpen) {
+              var grid = document.createElement("div");
+              grid.className = "projects-grid";
+              folders[fname].forEach(function(p) {
+                grid.appendChild(hubBuildCard(p));
+              });
+              section.appendChild(grid);
+            }
+            foldersEl.appendChild(section);
+          });
+        }
+
+        if (allEl) {
+          allEl.innerHTML = "";
+          if (noFolder.length > 0 || (pinned.length === 0 && Object.keys(folders).length === 0 && generated.length === 0)) {
+            var header = document.createElement("div");
+            header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;";
+            var gridActive = hubViewMode === "grid" ? " hub-view-btn-active" : "";
+            var listActive = hubViewMode === "list" ? " hub-view-btn-active" : "";
+            header.innerHTML =
+              '<div style="display:flex;align-items:center;gap:6px;">' +
+                '<span class="hub-section-label">Tous les projets</span>' +
+                '<span class="hub-section-count">' + noFolder.length + '</span>' +
+              '</div>' +
+              '<div class="hub-view-btns">' +
+                '<button class="hub-view-btn' + gridActive + '" data-view="grid" aria-label="Affichage grille" title="Grille">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>' +
+                '</button>' +
+                '<button class="hub-view-btn' + listActive + '" data-view="list" aria-label="Affichage liste" title="Liste">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' +
+                '</button>' +
+              '</div>';
+            header.querySelectorAll(".hub-view-btn").forEach(function(btn) {
+              btn.addEventListener("click", function() {
+                hubViewMode = btn.dataset.view;
+                hubRenderContent();
+              });
+            });
+            allEl.appendChild(header);
+
+            if (noFolder.length === 0) {
+              var empty = document.createElement("div");
+              empty.style.cssText = "text-align:center;padding:48px;color:var(--text-muted);";
+              empty.innerHTML = 'Aucun projet trouvé. <button style="background:none;border:none;color:var(--accent-primary);cursor:pointer;font-family:inherit;font-size:inherit;text-decoration:underline;" id="hubEmptyCreate">Créer un projet</button>';
+              allEl.appendChild(empty);
+            } else {
+              var grid = document.createElement("div");
+              grid.className = hubViewMode === "list" ? "projects-list" : "projects-grid";
+              noFolder.forEach(function(p) { grid.appendChild(hubBuildCard(p)); });
+              allEl.appendChild(grid);
+            }
+            allEl.style.marginBottom = "0";
+          }
+        }
+
+        if (archivedEl) {
+          archivedEl.innerHTML = "";
+          if (archived.length > 0) {
+            var archWrap = document.createElement("div");
+            archWrap.className = "hub-gen-separator";
+
+            var archToggle = document.createElement("div");
+            archToggle.className = "hub-section-toggle";
+            archToggle.tabIndex = 0;
+            archToggle.setAttribute("role", "button");
+            archToggle.setAttribute("aria-expanded", hubArchivedOpen ? "true" : "false");
+            archToggle.setAttribute("aria-label", "Projets archivés");
+            archToggle.innerHTML =
+              '<svg class="hub-section-chevron" style="transform:rotate(' + (hubArchivedOpen ? "0" : "-90") + 'deg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>' +
+              '<svg class="hub-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg>' +
+              '<span class="hub-section-label">Archivés</span>' +
+              '<span class="hub-section-count">' + archived.length + '</span>';
+            archToggle.addEventListener("click", function() {
+              hubArchivedOpen = !hubArchivedOpen;
+              hubRenderContent();
+            });
+            archToggle.addEventListener("keydown", function(e) {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                hubArchivedOpen = !hubArchivedOpen;
+                hubRenderContent();
+              }
+            });
+            archWrap.appendChild(archToggle);
+
+            if (hubArchivedOpen) {
+              var archGrid = document.createElement("div");
+              archGrid.className = "projects-grid";
+              archived.forEach(function(p) { archGrid.appendChild(hubBuildCard(p, { muted: true })); });
+              archWrap.appendChild(archGrid);
+            }
+            archivedEl.appendChild(archWrap);
+          }
+        }
+
+        if (genEl) {
+          genEl.innerHTML = "";
+          if (generated.length > 0) {
+            var wrap = document.createElement("div");
+            wrap.className = "hub-gen-separator";
+
+            var toggle = document.createElement("div");
+            toggle.className = "hub-section-toggle";
+            toggle.tabIndex = 0;
+            toggle.setAttribute("role", "button");
+            toggle.setAttribute("aria-expanded", hubGenOpen ? "true" : "false");
+            toggle.setAttribute("aria-label", "Agents générés");
+            toggle.innerHTML =
+              '<svg class="hub-section-chevron" style="transform:rotate(' + (hubGenOpen ? "0" : "-90") + 'deg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>' +
+              '<svg class="hub-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="m2 14 6-6 6 6"/></svg>' +
+              '<span class="hub-section-label">Agents générés</span>' +
+              '<span class="hub-section-count">' + generated.length + '</span>';
+            toggle.addEventListener("click", function() {
+              hubGenOpen = !hubGenOpen;
+              hubRenderContent();
+            });
+            toggle.addEventListener("keydown", function(e) {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                hubGenOpen = !hubGenOpen;
+                hubRenderContent();
+              }
+            });
+            wrap.appendChild(toggle);
+
+            if (hubGenOpen) {
+              var grid = document.createElement("div");
+              grid.className = "projects-grid";
+              generated.forEach(function(p) { grid.appendChild(hubBuildCard(p, { muted: true })); });
+              wrap.appendChild(grid);
+            }
+            genEl.appendChild(wrap);
+          }
+        }
+      }
+
+      window.renderProjectsHub = function() {
+        window.openhub.reloadProjectStore().then(function() {
+          return Promise.all([
+            window.openhub.getProjects(),
+            window.openhub.getFolders()
+          ]);
+        }).then(function(results) {
+          projState.projects = results[0] || [];
+          hubFolders = results[1] || [];
+          hubRenderFilters();
+          hubRenderContent();
         });
       };
 
-      async function openProjectDetails(projectId) {
+      function openProjectDetails(projectId) {
         window.openhub.getProjects().then(function(allProjects) {
           var p = allProjects.find(function(x) { return x.id === projectId; });
           if (!p) return;
@@ -5713,11 +6832,11 @@
         var list = document.getElementById("projectConvList");
         if (!list) return;
         list.innerHTML = "";
-        
+
         var filtered = conversations.filter(function(c) { return c.projectId === projectId; });
-        
+
         if (filtered.length === 0) {
-          list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">Aucun chat dans ce projet.</div>';
+          list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Aucun chat dans ce projet.</div>';
           return;
         }
 
@@ -5734,8 +6853,6 @@
       }
 
       function initProjectsLogic() {
-        console.log("[chat] initProjectsLogic starting...");
-        
         var btnHub = document.getElementById("btnNavProjects");
         if (btnHub) {
           btnHub.addEventListener("click", function(e) {
@@ -5743,7 +6860,6 @@
             e.stopPropagation();
             if (els.btnNavNewChat) els.btnNavNewChat.classList.remove("active");
             btnHub.classList.add("active");
-            console.log("[chat] Folder icon clicked! Reloading projects...");
             loadProjects().then(function() {
               window.switchMainView("projectsHubView");
               window.renderProjectsHub();
@@ -5753,13 +6869,13 @@
 
         var btnClose = document.getElementById("btnCloseHub");
         if (btnClose) {
-          btnClose.onclick = function() { 
+          btnClose.onclick = function() {
             if (document.getElementById("btnNavProjects")) document.getElementById("btnNavProjects").classList.remove("active");
             if (els.btnNavNewChat) els.btnNavNewChat.classList.add("active");
-            window.switchMainView("chatView"); 
+            window.switchMainView("chatView");
           };
         }
-        
+
         var btnBack = document.getElementById("btnBackToHub");
         if (btnBack) {
           btnBack.onclick = function() {
@@ -5771,8 +6887,7 @@
         var btnNew = document.getElementById("btnNewProjectHub");
         if (btnNew) {
           btnNew.onclick = function() {
-            showModal("modalProject");
-            renderProjectModal();
+            openProjModal(null);
           };
         }
 
@@ -5783,10 +6898,9 @@
             var instructions = document.getElementById("projectInstructions").value;
             var p = projState.projects.find(function(x) { return x.id === id; });
             if (p) {
-              p.instructions = instructions;
-              await window.openhub.saveProject(p);
-              if (window.showToast) showToast("Instructions enregistrées", "success");
-              else console.log("Instructions enregistrées");
+              await window.openhub.saveProject({ id: p.id, name: p.name, instructions: instructions });
+              showToast("Instructions enregistrées", "success");
+              loadProjects();
             }
           };
         }
@@ -5801,7 +6915,136 @@
           };
         }
 
-        // Generic listener removed as it's not supported by the bridge
+        var btnSelect = document.getElementById("btnSelectMode");
+        if (btnSelect) {
+          btnSelect.onclick = function() { hubEnterSelectMode(); };
+        }
+        var btnCancelSelect = document.getElementById("btnCancelSelect");
+        if (btnCancelSelect) {
+          btnCancelSelect.onclick = function() { hubExitSelectMode(); };
+        }
+        var btnDeleteSelected = document.getElementById("btnDeleteSelected");
+        if (btnDeleteSelected) {
+          btnDeleteSelected.onclick = function() { hubDeleteSelected(); };
+        }
+
+        var btnDeleteDetail = document.getElementById("btnDeleteProjectDetail");
+        if (btnDeleteDetail) {
+          btnDeleteDetail.onclick = function() {
+            var id = document.getElementById("projectDetailsView").dataset.activeProjectId;
+            var p = projState.projects.find(function(x) { return x.id === id; });
+            if (p && confirm('Supprimer définitivement le projet "' + p.name + '" ?')) {
+              removeProject(p.id).then(function() {
+                showToast("Projet supprimé", "success");
+                window.switchMainView("projectsHubView");
+                window.renderProjectsHub();
+              });
+            }
+          };
+        }
+
+        var searchInput = document.getElementById("projectSearchInput");
+        if (searchInput) {
+          searchInput.addEventListener("input", function() {
+            clearTimeout(hubSearchTimer);
+            hubSearchTimer = setTimeout(function() {
+              hubSearchQuery = searchInput.value.trim();
+              hubRenderContent();
+              var all = projState.projects || [];
+              var visible = all.filter(function(p) {
+                return !p.archived && hubMatchesFilter(p, hubFilter) && hubMatchesSearch(p, hubSearchQuery) && !hubIsGenerated(p);
+              });
+              hubAnnounce(visible.length + " projet" + (visible.length > 1 ? "s" : "") + " trouvé" + (visible.length > 1 ? "s" : ""));
+            }, 150);
+          });
+          searchInput.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") {
+              searchInput.value = "";
+              hubSearchQuery = "";
+              hubRenderContent();
+              searchInput.blur();
+            }
+          });
+        }
+
+        var sortSelect = document.getElementById("hubSortSelect");
+        if (sortSelect) {
+          sortSelect.addEventListener("change", function() {
+            hubSort = sortSelect.value;
+            hubRenderContent();
+            var labels = { recent: "Récents", az: "A à Z", type: "Type" };
+            hubAnnounce("Tri : " + (labels[hubSort] || hubSort));
+          });
+        }
+
+        document.addEventListener("keydown", function(e) {
+          if (e.key === "Escape" && hubSelectMode) {
+            hubExitSelectMode();
+            return;
+          }
+          if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+            var hubView = document.getElementById("projectsHubView");
+            if (hubView && !hubView.classList.contains("hidden") && searchInput) {
+              e.preventDefault();
+              searchInput.focus();
+              searchInput.select();
+            }
+          }
+
+          var hubView = document.getElementById("projectsHubView");
+          if (!hubView || hubView.classList.contains("hidden")) return;
+          if (!document.activeElement || !document.activeElement.classList.contains("p-card")) return;
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+          var grid = document.activeElement.closest(".projects-grid");
+          if (!grid) return;
+          var cards = Array.from(grid.querySelectorAll(".p-card"));
+          var idx = cards.indexOf(document.activeElement);
+          if (idx === -1) return;
+
+          var style = getComputedStyle(grid);
+          var cols = style.getPropertyValue("grid-template-columns").split(" ").length;
+          var next = -1;
+
+          if (e.key === "ArrowRight") next = Math.min(idx + 1, cards.length - 1);
+          else if (e.key === "ArrowLeft") next = Math.max(idx - 1, 0);
+          else if (e.key === "ArrowDown") next = Math.min(idx + cols, cards.length - 1);
+          else if (e.key === "ArrowUp") next = Math.max(idx - cols, 0);
+
+          if (next !== -1 && next !== idx) {
+            e.preventDefault();
+            cards[next].focus();
+          }
+        });
+
+        document.addEventListener("click", function(e) {
+          var menu = document.getElementById("hubCtxMenu");
+          if (menu && menu.style.display === "block") {
+            var actionBtn = e.target.closest(".hub-ctx-item");
+            if (actionBtn) {
+              var act = actionBtn.dataset.action;
+              if (act === "toggle-move") {
+                var sub = document.getElementById("hubCtxSubmenuMove");
+                if (sub) sub.classList.toggle("open");
+                return;
+              }
+              e.stopPropagation();
+              if (act === "move-folder" && actionBtn.dataset.folder) {
+                hubHandleMoveToFolder(actionBtn.dataset.folder);
+              } else {
+                hubHandleCtxAction(act);
+              }
+              return;
+            }
+            if (!e.target.closest(".hub-ctx-menu")) {
+              hubHideCtxMenu();
+            }
+          }
+
+          if (e.target.id === "hubEmptyCreate") {
+            openProjModal(null);
+          }
+        });
       }
 
       /* ── Start ── */
