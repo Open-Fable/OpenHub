@@ -37,7 +37,7 @@
 ```typescript
 const GEMINI_CLIENT_ID =
   "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com";
-const GEMINI_CLIENT_SECRET = "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";
+const GEMINI_CLIENT_SECRET = "GOCSPX-***REDACTED***";
 ```
 
 Ce client_secret provient d'opencode upstream. Pour les apps OAuth2 de type "installed/desktop", Google considère le client_secret comme **public** ([documentation Google](https://developers.google.com/identity/protocols/oauth2/native-app)). Il n'y a pas de risque de sécurité réel, car la protection repose sur le code d'autorisation et le PKCE, pas sur le secret client.
