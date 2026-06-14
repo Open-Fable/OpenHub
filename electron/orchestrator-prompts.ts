@@ -19,6 +19,11 @@ export function buildDependencyContext(
   node: Project,
   allProjects: readonly Project[],
   executionResults: ReadonlyMap<string, string>,
+  // Optional per-dependency disk evidence (depId → real file content snippet).
+  // Injected for the pure-LLM path, which has no disk access of its own. Backend
+  // nodes (OpenCode) already read the workspace via their tools, so the caller
+  // passes nothing for them.
+  depDiskEvidence?: ReadonlyMap<string, string>,
 ): string {
   const deps = node.dependencies ?? [];
   if (deps.length === 0) return "";
@@ -51,8 +56,14 @@ export function buildDependencyContext(
     const maxLen = depProject.type === "design" ? 60_000 : 24_000;
     const resultSummary = result ? result.substring(0, maxLen) : "(pas encore exécuté)";
 
+    const evidence = depDiskEvidence?.get(depId);
+    const evidenceBlock =
+      evidence !== undefined && evidence.trim().length > 0
+        ? `\nFICHIERS PRODUITS (contenu réel sur disque — fait AUTORITÉ) :\n${evidence}`
+        : "";
+
     blocks.push(
-      `--- Agent "${depProject.name}" (${depProject.type ?? "inconnu"}) ---\nTâche : ${depProject.task ?? "non définie"}\nRésultat :\n${resultSummary}`,
+      `--- Agent "${depProject.name}" (${depProject.type ?? "inconnu"}) ---\nTâche : ${depProject.task ?? "non définie"}\nRésultat :\n${resultSummary}${evidenceBlock}`,
     );
   }
 
@@ -101,6 +112,9 @@ const ASSET_POLICY = `RÈGLES CSS & IMAGES (CAUSE N°1 DES RENDUS CASSÉS — ST
 - IMAGES — INTERDIT ABSOLU d'utiliser une URL d'image externe (unsplash.com, images.unsplash.com, picsum.photos, placeholder.com, loremflickr, source.unsplash…). Ces identifiants sont INVENTÉS, renvoient 404, et l'image ne s'affiche JAMAIS. À la place, pour toute illustration sans fichier image réel dans le workspace : insère un SVG INLINE (<svg viewBox> avec un fond aux couleurs de la marque, une forme/icône simple et un court label). Un SVG inline s'affiche TOUJOURS, hors-ligne, sans dépendance. N'écris une balise <img src="chemin"> QUE si ce fichier existe réellement dans le workspace, avec un chemin relatif correct.
 - CSS — chaque page doit rester stylée même ouverte seule. UN SEUL fichier CSS d'entrée nommé "styles.css", dans le MÊME dossier que les pages HTML. Chaque page le lie par EXACTEMENT <link rel="stylesheet" href="styles.css">. Si tu découpes le CSS (tokens, layout…), c'est "styles.css" qui les rassemble via @import (chemins relatifs au même dossier) — les pages ne lient JAMAIS tokens.css/layout.css en direct. Un seul nom de fichier, un seul dossier : jamais "style.css" ici et "styles.css" là, jamais "css/" et "assets/css/" en parallèle.
 - VÉRIFICATION FINALE : chaque href/src local pointe vers un fichier réellement présent (ou un SVG inline). Zéro lien cassé, zéro page sans CSS.`;
+
+// Version condensée de la politique assets — pour le tier « modèle léger ».
+const ASSET_POLICY_COMPACT = `ASSETS (clé) : images → SVG inline (JAMAIS d'URL externe type unsplash/picsum, elles renvoient 404). UN seul "styles.css" dans le même dossier que les pages, lié par <link rel="stylesheet" href="styles.css">. Chaque href/src local pointe vers un fichier réel.`;
 
 const QUALITY_RULES: Record<string, string> = {
   code: `RÈGLES DE QUALITÉ :
@@ -223,8 +237,63 @@ SI DES PAGES HTML SONT PRÉSENTES :
 - Fournir des recommandations concrètes et détaillées, pas des généralités`,
 };
 
-function getQualityRules(type: string | undefined): string {
-  return QUALITY_RULES[type ?? "code"] ?? QUALITY_RULES.code;
+// Règles condensées (~50 % plus courtes, formulées en positif, avec un
+// mini-exemple bon/mauvais) pour le tier « modèle léger ». Les invariants de
+// sécurité sont CONSERVÉS : secrets → variables d'env, cohérence d'identité,
+// validité/colocation des chemins d'assets.
+const QUALITY_RULES_COMPACT: Record<string, string> = {
+  code: `RÈGLES (essentiel) :
+- Livre du code COMPLET et fonctionnel — pas de "// TODO", pas de "...", pas de squelette.
+- Inclus TOUS les imports ; chaque fichier doit tourner tel quel.
+- Secrets → variables d'environnement, JAMAIS en dur dans le code.
+- Si des maquettes/un design existent (dépendances ou workspace), LIS-les et reproduis-les à l'identique : mêmes couleurs, même identité/marque, mêmes noms. N'invente pas de nouveau thème ni de nouveau nom.
+- Si la tâche demande N fichiers, produis-les TOUS.
+
+✅ BON : const key = process.env.API_KEY ; <img src="logo.svg"> (le fichier existe)
+❌ MAUVAIS : const key = "sk-123" ; <img src="https://unsplash.com/photo">
+
+${ASSET_POLICY_COMPACT}`,
+
+  design: `RÈGLES (essentiel) — tu crées les maquettes que l'agent code reproduira :
+- Livre du HTML/CSS COMPLET (du code, pas une description) ; une page = un fichier.
+- Responsive réel (media queries mobile/tablette/desktop) ; variables CSS pour couleurs/espacements.
+- TOUS les états interactifs : hover, focus, active, disabled, loading, vide, erreur.
+- Contenu RÉEL (jamais "Lorem ipsum" ni "Titre ici"), cohérent avec l'identité du projet.
+- Accessibilité : contraste WCAG AA, focus visible, HTML sémantique.
+
+✅ BON : --color-primary défini une fois et réutilisé ; bouton avec :hover ET :focus
+❌ MAUVAIS : couleurs hex répétées en dur ; un seul état par défaut
+
+${ASSET_POLICY_COMPACT}`,
+
+  work: `RÈGLES (essentiel) :
+- HTML sémantique et valide ; chaque page COMPLÈTE (pas de section "à venir").
+- Si la tâche demande N pages/articles, produis les N, ≥ 500 mots de contenu réel chacun.
+- Personnalise au sujet — pas de contenu générique.
+- Reprends l'identité/marque et les couleurs des sources ; n'invente pas un nouveau nom.
+- Pages HTML : <title> unique, <meta name="description">, attribut alt sur chaque image.
+
+✅ BON : article de 600 mots spécifique au sujet ; <img alt="portrait de l'artiste">
+❌ MAUVAIS : 3 lignes génériques ; "lorem ipsum"
+
+${ASSET_POLICY_COMPACT}`,
+
+  recherche: `RÈGLES (essentiel) :
+- Structure en sections claires, avec un résumé exécutif au début.
+- Cite les sources ; distingue clairement les faits des recommandations.
+- Approfondis chaque point (exemples, données) — ne survole pas.
+- Termine par des recommandations concrètes et actionnables.
+
+✅ BON : "Source : X (2024). Fait : … → Recommandation : …"
+❌ MAUVAIS : un paragraphe vague, sans source ni recommandation`,
+};
+
+function getQualityRules(type: string | undefined, compact = false): string {
+  const key = type ?? "code";
+  if (compact) {
+    return QUALITY_RULES_COMPACT[key] ?? QUALITY_RULES[key] ?? QUALITY_RULES.code;
+  }
+  return QUALITY_RULES[key] ?? QUALITY_RULES.code;
 }
 
 const TYPE_ROLE_HINTS: Record<string, string> = {
@@ -312,15 +381,16 @@ EXEMPLE DE RÉPONSE :
 
 export interface NodePromptOptions {
   readonly codeFenceFormat?: boolean;
+  readonly compact?: boolean;
 }
 
 export function buildNodeSystemPrompt(
   node: Project,
   opts: NodePromptOptions = {},
 ): string {
-  const { codeFenceFormat = true } = opts;
+  const { codeFenceFormat = true, compact = false } = opts;
   const identity = node.instructions || `Agent de type "${node.type ?? "général"}"`;
-  const rules = getQualityRules(node.type);
+  const rules = getQualityRules(node.type, compact);
 
   const fileSection = codeFenceFormat
     ? `FORMAT FICHIERS (OBLIGATOIRE) :
@@ -346,18 +416,26 @@ EXÉCUTION IMMÉDIATE (CRITIQUE) :
 - Si tu lis des fichiers existants, fais-le rapidement puis PRODUIS sans t'arrêter.
 - Ton objectif : à la fin de ce message, TOUS les fichiers demandés sont écrits dans le workspace.`;
 
-  return `${identity}
-
-${rules}
-
-COMPORTEMENT ATTENDU :
+  const behavior = compact
+    ? `COMPORTEMENT :
+- Workspace partagé : ton livrable sert directement aux agents suivants.
+- Produis du contenu COMPLET et professionnel — pas de squelette, pas de "à compléter".
+- Si ta tâche mentionne N éléments, produis-les TOUS en entier.
+- Concentre-toi uniquement sur TA tâche assignée.`
+    : `COMPORTEMENT ATTENDU :
 - Tu travailles dans un workspace partagé avec d'autres agents — ton livrable sera utilisé par les agents suivants
 - Produis du contenu de QUALITÉ PROFESSIONNELLE, exhaustif et production-ready
 - INTERDIT : contenu superficiel, paragraphes de 2 lignes, fichiers squelettes, "à compléter plus tard"
 - OBLIGATOIRE : chaque fichier doit être COMPLET et INTÉGRAL du début à la fin
 - Si ta tâche mentionne N éléments (N pages, N composants, N sections), produis-les TOUS en entier
 - La qualité de ton travail détermine la qualité du projet final — pas de raccourcis
-- Concentre-toi uniquement sur TA tâche assignée
+- Concentre-toi uniquement sur TA tâche assignée`;
+
+  return `${identity}
+
+${rules}
+
+${behavior}
 
 ${fileSection}`;
 }
@@ -689,9 +767,9 @@ export interface SubStepResult {
   readonly output: string;
 }
 
-export function buildDecomposeSystemPrompt(node: Project): string {
+export function buildDecomposeSystemPrompt(node: Project, compact = false): string {
   const identity = node.instructions || `Agent de type "${node.type ?? "général"}"`;
-  const rules = getQualityRules(node.type);
+  const rules = getQualityRules(node.type, compact);
 
   return `${identity}
 
@@ -709,14 +787,19 @@ export function buildDecomposeUserPrompt(
   node: Project,
   workspaceContext: string,
   depContext: string,
+  compact = false,
 ): string {
   const sections = [`TÂCHE À DÉCOMPOSER :\n"${node.task ?? "non définie"}"`];
 
   if (workspaceContext) sections.push(workspaceContext);
   if (depContext) sections.push(depContext);
 
+  const granularity = compact
+    ? `Découpe cette tâche en étapes FINES : 1 étape = 1 seul livrable (ex: 1 page, 1 fichier, 1 composant). Chaque étape sera exécutée indépendamment par le même agent, avec les résultats des étapes précédentes en contexte.`
+    : `Découpe cette tâche en 2 à 8 étapes séquentielles. Chaque étape sera exécutée indépendamment par le même agent, avec les résultats des étapes précédentes en contexte.`;
+
   sections.push(`CONSIGNE :
-Découpe cette tâche en 2 à 8 étapes séquentielles. Chaque étape sera exécutée indépendamment par le même agent, avec les résultats des étapes précédentes en contexte.
+${granularity}
 
 Réponds STRICTEMENT par un JSON valide (array), sans autre texte ni balise markdown :
 [
@@ -817,6 +900,8 @@ ${base ? `INSTRUCTIONS PERSONNALISÉES :\n${base}\n` : ""}RÔLE DE CHAQUE TYPE D
 - "code" → OpenCode : développement et codage. Produit le livrable fonctionnel : application, librairie, API, CLI, scripts, ou structuration de données. S'il existe des maquettes, il les reproduit fidèlement ; sinon il code à partir de la spécification, des données ou du contenu fournis.
 - "verifier" → Tests et assurance qualité. Vérifie les livrables des autres agents.
 
+ÉCONOMIE D'AGENTS (RÈGLE FORTE) : NE crée QUE les agents et livrables réellement nécessaires au livrable demandé. PAS de scaffolding parasite (tests, scripts, SEO, maquettes, données annexes) si la demande ne l'implique pas explicitement. Moins d'agents parasites = meilleure cohérence et moins de pollution du workspace. En cas de doute sur l'utilité d'un agent/livrable, NE le crée PAS.
+
 ÉTABLIR LES DÉPENDANCES SELON LES LIVRABLES RÉELS (pas un pipeline figé) :
 - Crée les agents et les dépendances dont le LIVRABLE a réellement besoin. N'insère PAS d'agent "design"/maquette ni de dépendance vers lui si le livrable n'a pas d'interface visuelle (ex: librairie de code, API, rapport, ebook, données, CV).
 - NE PAS donner la rédaction de contenu à un agent "code" → c'est le rôle de "work"
@@ -830,6 +915,8 @@ L'agent "design" produit les maquettes HTML/CSS qui servent de RÉFÉRENCE VISUE
 - Demande EXPLICITEMENT la complétude : tous les états (hover, focus, erreur, vide, loading), responsive (mobile/tablette/desktop), composants de navigation
 - L'agent design itère automatiquement pour améliorer ses maquettes — donne-lui un cahier des charges riche pour qu'il ait matière à travailler
 - N'hésite PAS sur le volume — une maquette complète fait 500+ lignes HTML/CSS par page, c'est normal
+
+AGENT DESIGN = SI ET SEULEMENT SI INTERFACE WEB : n'assigne un agent "design" QUE si le livrable final est un site/app web ou une UI. Pour un document, rapport, guide, ebook ou des données (livrable texte/structuré sans interface), N'assigne AUCUN agent design : le rendu se fait en .md (ou, si une mise en forme visuelle est explicitement demandée, un seul HTML simple via un agent "work"), JAMAIS via une maquette ou une charte graphique.
 
 PROCESSUS :
 1. Analyse la tâche globale et identifie les livrables nécessaires
@@ -851,6 +938,18 @@ Pour chaque agent work/code/design, utilise le paramètre "expected_files" de as
 C'est un CONTRAT : un fichier absent = tâche échouée + relance automatique. Sois exhaustif.
 Exemple : expected_files: ["src/index.html", "src/styles/main.css", "src/components/header.html"]
 Ceci est GÉNÉRIQUE — fonctionne pour tout type de livrable (.py, .md, .json, .css, .html, etc.).
+EMPLACEMENT CANONIQUE UNIQUE — chaque livrable logique a UN SEUL chemin canonique. N'écris JAMAIS le même contenu dans plusieurs dossiers (ex: à la racine + research/ + reports/ + legal/) : ça détruit la source de vérité. Si plusieurs agents ont besoin du même fichier, UN SEUL le produit (déclaré dans son expected_files) et les autres en DÉPENDENT (depends_on) au lieu de le recopier.
+
+CONTRAT DE VÉRIFICATION (checks) — MACHINE-VÉRIFIABLE, NE TE FIE PAS AU LLM :
+Pour chaque CRITÈRE CHIFFRÉ de la demande, émets-le dans le paramètre "checks" de assign_task (indexé par chemin de fichier). Le SYSTÈME le vérifie automatiquement après exécution et RELANCE l'agent si non respecté — c'est la garantie déterministe que même un petit modèle produit le bon volume.
+Contraintes disponibles : minWords, minItems (longueur d'un tableau JSON), minSections (titres ## / ###), requiredSubstrings (chaînes obligatoires), format (json|csv|md).
+Exemple :
+  checks: {
+    "content/guide.md": { "minSections": 8, "minWords": 4000 },
+    "data/produits.json": { "format": "json", "minItems": 12 },
+    "data/clients.csv": { "format": "csv" }
+  }
+DÉRIVE les seuils des CRITÈRES de la demande (« 12 produits » → minItems:12 ; « 8 chapitres » → minSections:8 ; « ≥500 mots/article » → minWords:500). N'invente PAS de seuils ; si un fichier n'a aucun critère chiffré, n'émets pas de checks pour lui.
 
 CRITÈRES MESURABLES — OBLIGATOIRE :
 Chaque tâche assignée doit avoir des critères de réussite MESURABLES :
@@ -858,11 +957,13 @@ Chaque tâche assignée doit avoir des critères de réussite MESURABLES :
 - BON : "10 pages HTML", "≥ 500 mots par article", "couverture tests > 80%", "3 fichiers CSS"
 Les termes vagues SEULS ("complet", "détaillé", "professionnel") sont INSUFFISANTS — ajoute TOUJOURS un seuil concret.
 
+SCAFFOLDING WEB — UNIQUEMENT POUR UN VRAI SITE : n'assigne JAMAIS de SEO, sitemap.xml, robots.txt, dossier seo/, manifest.json ni package.json de site si le livrable est un document, un rapport, un guide, des données ou tout autre livrable SANS interface web servie. Ces artefacts ne valent QUE pour un site/app web réel.
+
 COUVERTURE OBLIGATOIRE SELON LE DOMAINE DU LIVRABLE (applique le bloc pertinent) :
 - SI SITE/APP WEB → SEO (sitemap.xml, robots.txt, JSON-LD, title/meta/OG par page) ; SÉCURITÉ (corriger les failles dans le code livré si données utilisateur) ; BACKEND dédié si persistance/API/auth ; ACCESSIBILITÉ WCAG AA (contraste, alt, aria, focus).
 - SI LIBRAIRIE / CLI / API (sans front) → dans expected_files : le code source COMPLET, des TESTS unitaires réels, un README avec exemples d'usage, et (CLI) un point d'entrée exécutable / (API) une spec des endpoints. Pas de SEO/maquette.
 - SI DOCUMENT LONG (ebook, business plan, plan de cours, wiki, CV) → table des matières/structure, N sections/chapitres explicites, longueur minimale par section, sources si pertinent (+ pour un cours : exercices ET corrigés).
-- SI DONNÉES / ANALYSE → fichiers de données (.csv/.json) VALIDES, un script reproductible, des graphiques/visualisations, et une interprétation écrite des résultats.
+- SI DONNÉES / ANALYSE → distingue deux cas. (a) DOCUMENT qui contient des chiffres/tableaux (étude de marché, rapport, synthèse) : des .md/.csv/.json SUFFISENT — n'assigne NI agent code, NI scripts, NI tests. (b) ANALYSE TECHNIQUE REPRODUCTIBLE explicitement demandée (pipeline de traitement, modèle, calcul programmatique réutilisable) : alors seulement un agent code avec script + données + interprétation. Par défaut, considère que c'est le cas (a) sauf si l'utilisateur demande explicitement un traitement programmatique.
 - SI PRÉSENTATION / SLIDES → N slides explicites avec titres + contenu réel (pas de slides vides) et, si utile, des notes de présentateur.
 - SI CONTENU MARKETING (emails, posts, pages) → cohérence cross-canal (même offre/ton/CTA partout), nombre de pièces explicite par canal.
 
@@ -883,6 +984,10 @@ Tu peux créer des SOUS-AGENTS pour diviser le travail d'un agent parent.
 - Les sous-agents peuvent avoir leurs propres dépendances (depends_on)
 - IMPORTANT : chaque sous-agent est un vrai agent avec multi-turn — il fait PLUSIEURS appels LLM pour compléter sa tâche
 - Préfère les sous-agents aux sous-étapes (steps) pour les tâches volumineuses — les sous-agents sont indépendants et peuvent exploiter le multi-turn
+
+DOCUMENT LONG — UN SOUS-AGENT PAR CHAPITRE/SECTION (RÈGLE FORTE) :
+- Pour un livrable documentaire long (guide, ebook, rapport en N chapitres/sections, cours), NE crée PAS un seul agent qui écrit tout (il produit 3-4 phrases par chapitre puis s'arrête). Crée UN sous-agent PAR chapitre/section, chacun avec son propre fichier dans expected_files ET son propre checks.minWords (ex: 500-900 mots/chapitre selon la demande). Chaque sous-agent a ainsi tout son budget pour développer son chapitre en profondeur.
+- AGENT DE CONSOLIDATION FINALE : s'il existe une étape « assemblage/mise en page finale », son rôle est d'INCLURE le contenu INTÉGRAL de chaque chapitre source (copier-coller le texte complet), JAMAIS de le résumer ni d'en faire un squelette. Son fichier final doit avoir un checks.minWords ≥ somme des chapitres. Donne-lui explicitement cette consigne dans sa task.
 
 QUAND AJOUTER DES SOUS-ÉTAPES (steps) vs SOUS-AGENTS :
 - Sous-agents : quand les tâches sont INDÉPENDANTES et peuvent être parallélisées (ex: rédiger 3 articles différents)
