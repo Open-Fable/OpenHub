@@ -1,10 +1,10 @@
 import express, { Request, Response, NextFunction } from "express";
-import { randomBytes, randomUUID } from "crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { request as httpRequest } from "http";
 import { homedir, platform, arch } from "os";
 import { promises as fs } from "fs";
 import path from "path";
-import { readAllApiKeys } from "../keychain.js";
+import { readAllApiKeys, isSafeOllamaUrl } from "../keychain.js";
 import { getActiveProject } from "../project-store.js";
 import { buildMemoryBlock } from "../memory-store.js";
 import {
@@ -50,6 +50,18 @@ export function getActiveWorkspaceDir(): string {
   return ws?.path ?? homedir();
 }
 
+// A local workspace path must be an absolute directory inside the user's home.
+// The active workspace path is read into LLM prompts (AGENT-MEMORY.md, graphify
+// report), so an unconstrained path is a file-disclosure primitive.
+function isSafeWorkspacePath(p: string): boolean {
+  if (typeof p !== "string" || p.length === 0 || !path.isAbsolute(p)) return false;
+  const home = path.resolve(homedir());
+  const resolved = path.resolve(p);
+  if (resolved === home) return true;
+  const rel = path.relative(home, resolved);
+  return rel.length > 0 && !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
 export async function startProxy(): Promise<string> {
   const sessionToken = randomBytes(32).toString("hex");
 
@@ -69,6 +81,20 @@ export async function startProxy(): Promise<string> {
     next();
   });
 
+  // ── Host-header validation — DNS-rebinding defense ──
+  // The proxy binds to loopback, but a malicious web page can rebind a domain it
+  // controls to 127.0.0.1 and reach us. CORS only governs *reading* the response,
+  // not whether a state-changing request executes — so we reject any request whose
+  // Host header is not an expected loopback authority before anything else runs.
+  const ALLOWED_HOSTS = new Set([`127.0.0.1:${PROXY_PORT}`, `localhost:${PROXY_PORT}`]);
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (!ALLOWED_HOSTS.has(req.headers.host ?? "")) {
+      res.status(421).json({ error: "Misdirected Request" });
+      return;
+    }
+    next();
+  });
+
   // ── CORS — restrict to known local origins ──
   const ALLOWED_ORIGINS = new Set([
     "http://localhost:5173",
@@ -80,7 +106,7 @@ export async function startProxy(): Promise<string> {
   ]);
   app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin ?? "";
-    const allowed = ALLOWED_ORIGINS.has(origin) || origin.startsWith("file://");
+    const allowed = ALLOWED_ORIGINS.has(origin);
     res.setHeader(
       "Access-Control-Allow-Origin",
       allowed ? origin : "http://127.0.0.1:9999",
@@ -99,27 +125,31 @@ export async function startProxy(): Promise<string> {
   });
 
   // ── Auth middleware — placed BEFORE all data endpoints ──
-  // Accept both the proxy session token and "openhub-local" (for OpenWork webview).
+  // Only the per-session token (generated with randomBytes) is accepted. There is
+  // NO static/shared token: every OpenHub caller obtains the session token from
+  // get-chat-config (renderer) or OPENHUB_TOKEN (spawned apps).
   // Only /status, /health, /capabilities, /runtime/versions are exempt (above).
-  const OPENWORK_LOCAL_TOKEN = "openhub-local";
   const PUBLIC_PATHS = new Set([
     "/status",
     "/health",
     "/capabilities",
     "/runtime/versions",
   ]);
+  const sessionTokenBuf = Buffer.from(sessionToken);
+  const tokenMatches = (candidate: string): boolean => {
+    const candidateBuf = Buffer.from(candidate);
+    return (
+      candidateBuf.length === sessionTokenBuf.length &&
+      timingSafeEqual(candidateBuf, sessionTokenBuf)
+    );
+  };
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (PUBLIC_PATHS.has(req.path)) {
       next();
       return;
     }
     const auth = req.headers["authorization"] ?? "";
-    if (!auth.startsWith("Bearer ")) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-    const token = auth.slice(7);
-    if (token !== sessionToken && token !== OPENWORK_LOCAL_TOKEN) {
+    if (!auth.startsWith("Bearer ") || !tokenMatches(auth.slice(7))) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
@@ -134,7 +164,13 @@ export async function startProxy(): Promise<string> {
   // createLocalWorkspace → POST /workspaces/local
   app.post("/workspaces/local", (req: Request, res: Response) => {
     const body = req.body as { folderPath?: string; name?: string };
-    const wsPath = body.folderPath || "/";
+    const wsPath = body.folderPath ?? "";
+    if (!isSafeWorkspacePath(wsPath)) {
+      res
+        .status(400)
+        .json({ error: "folderPath must be an absolute directory inside home" });
+      return;
+    }
     const id = `openhub-${Date.now()}`;
     const name = body.name || wsPath.split("/").pop() || "workspace";
     const entry: WorkspaceEntry = {
@@ -261,9 +297,19 @@ export async function startProxy(): Promise<string> {
         },
         (proxyRes) => {
           const upstreamHeaders = proxyRes.headers;
+          // Never let the upstream override the shell's security headers or set
+          // cookies in the Electron session.
+          const BLOCKED_UPSTREAM = new Set([
+            "set-cookie",
+            "content-security-policy",
+            "x-frame-options",
+            "strict-transport-security",
+          ]);
           for (const [key, val] of Object.entries(upstreamHeaders)) {
             if (!val) continue;
-            if (key.toLowerCase().startsWith("access-control-")) continue;
+            const lower = key.toLowerCase();
+            if (lower.startsWith("access-control-")) continue;
+            if (BLOCKED_UPSTREAM.has(lower)) continue;
             res.setHeader(key, val);
           }
           if (isSSE) {
@@ -452,7 +498,7 @@ export async function startProxy(): Promise<string> {
     res.json({ runtime: "openhub", versions: {} }),
   );
 
-  // ── Cache Metrics endpoints (no auth — called by sidebar) ──
+  // ── Cache Metrics endpoints (authenticated — called by sidebar) ──
   app.get("/v1/cache/metrics", (_req, res) => {
     res.json(getCacheMetrics());
   });
@@ -462,7 +508,6 @@ export async function startProxy(): Promise<string> {
   });
 
   // Returns the model from the most recent chat completion request + whether it supports reasoning
-  // Placed before auth middleware so the OpenCode page can read it without a token
   app.get("/v1/reasoning/current-model", (_req, res) => {
     res.json({
       model: currentChatModel,
@@ -508,7 +553,7 @@ export async function startProxy(): Promise<string> {
     });
   });
 
-  // ── Assistant Orchestrateur (no auth needed, uses openhub-local token) ──
+  // ── Assistant Orchestrateur (authenticated via the per-session token) ──
   app.post("/v1/orch/assistant", async (req: Request, res: Response) => {
     const { messages, context, questionRounds: qRounds, model: reqModel } = req.body;
     const questionRounds: number = typeof qRounds === "number" ? qRounds : 0;
@@ -818,7 +863,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         );
         res
           .status(upstream.status)
-          .json({ error: `Upstream error: ${errorText.substring(0, 200)}` });
+          .json({ error: `Upstream error: ${sanitizeUpstreamError(errorText)}` });
         return;
       }
 
@@ -1102,6 +1147,11 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         const visionConfig = await getVisionConfig(keys.ollamaUrl ?? null);
         if (visionConfig.visionProxyEnabled) {
           let ollamaReachable: boolean | null = null;
+          // Bound how many images one request can fan out to the vision model.
+          // Each image is a heavy ~45s Ollama call; without a cap a single 10mb
+          // body packed with image parts becomes a DoS-amplification primitive.
+          const MAX_VISION_IMAGES = 12;
+          let visionImagesUsed = 0;
           const rawMessages = messages as Array<{
             role: string;
             content: string | unknown[];
@@ -1135,6 +1185,10 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
                   return part.text;
                 }
                 if (part.type === "image_url" && part.image_url?.url) {
+                  if (visionImagesUsed >= MAX_VISION_IMAGES) {
+                    return "[image ignorée : limite de traitement atteinte]";
+                  }
+                  visionImagesUsed++;
                   try {
                     const description = await describeImage(
                       part.image_url.url,
@@ -1343,7 +1397,13 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
                   ...(t.function.description
                     ? { description: t.function.description }
                     : {}),
-                  ...(t.function.parameters ? { parameters: t.function.parameters } : {}),
+                  ...(t.function.parameters
+                    ? {
+                        parameters: sanitizeGeminiSchema(
+                          t.function.parameters as Record<string, unknown>,
+                        ),
+                      }
+                    : {}),
                 })),
             },
           ];
@@ -1427,27 +1487,27 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
       // l'erreur réelle au lieu de tenter de lire un stream inexistant.
       if (upstream.status !== 200) {
         const errorText = await upstream.text();
+        // Full upstream body is logged server-side only; the client receives a
+        // sanitized message (provider error.message when present) to avoid leaking
+        // internal URLs, headers, or routing details.
         console.error(`[proxy] Erreur Upstream ${upstream.status}:`, errorText);
         res.status(upstream.status);
         res.setHeader("Content-Type", "application/json");
-        try {
-          const parsed = JSON.parse(errorText);
-          res.json(parsed);
-        } catch {
-          res.send(errorText);
-        }
+        res.json({
+          error: { message: sanitizeUpstreamError(errorText), type: "upstream_error" },
+        });
         return;
       }
 
       res.status(upstream.status);
       if (provider !== "gemini") {
+        // Forward ONLY a safe whitelist. Blindly copying upstream headers would
+        // let a (possibly attacker-influenced) upstream inject Set-Cookie,
+        // Access-Control-* or Content-Security-Policy and override the security
+        // headers set above.
+        const FORWARDABLE = new Set(["content-type"]);
         upstream.headers.forEach((v, k) => {
-          // Skip headers that would cause the client to misread the body
-          const lower = k.toLowerCase();
-          if (lower === "content-encoding") return;
-          if (lower === "transfer-encoding") return;
-          if (lower === "content-length") return;
-          res.setHeader(k, v);
+          if (FORWARDABLE.has(k.toLowerCase())) res.setHeader(k, v);
         });
       }
 
@@ -1646,7 +1706,12 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         errorType = "rate_limited";
       }
       console.error(`[proxy] ${errorType}:`, msg, cause);
-      res.status(502).json({ error: `Bad gateway — ${errorType}` });
+      // If streaming already started, headers are sent — can't write a JSON body.
+      if (res.headersSent) {
+        res.end();
+      } else {
+        res.status(502).json({ error: `Bad gateway — ${errorType}` });
+      }
     }
   });
 
@@ -1665,6 +1730,22 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
 
   console.warn(`[proxy] listening on ${PROXY_HOST}:${PROXY_PORT}`);
   return sessionToken;
+}
+
+// Extracts a safe, human-readable message from an upstream provider error body.
+// Returns only the provider's `error.message` (capped) — never the raw body, which
+// can contain internal URLs, request echoes, or header fragments.
+function sanitizeUpstreamError(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw) as { error?: { message?: string } | string };
+    const msg = typeof parsed.error === "string" ? parsed.error : parsed.error?.message;
+    if (typeof msg === "string" && msg.length > 0) {
+      return msg.slice(0, 300);
+    }
+  } catch {
+    // Not JSON — fall through to generic message.
+  }
+  return "The upstream provider returned an error.";
 }
 
 async function fetchWithRetry(
@@ -1703,6 +1784,61 @@ const GEMINI_MODEL_NAME_MAP: Record<string, string> = {
 const GEMINI_API_BASE = "https://cloudcode-pa.googleapis.com";
 const GEMINI_SESSION_ID = randomUUID();
 
+// Keys that Gemini's functionDeclarations actually support.
+// Everything else ($schema, exclusiveMinimum, additionalProperties, etc.) must
+// be stripped or the API returns 400.
+const GEMINI_SCHEMA_ALLOWED_KEYS = new Set([
+  "type",
+  "description",
+  "properties",
+  "required",
+  "items",
+  "enum",
+  "format",
+  "nullable",
+  "allOf",
+  "anyOf",
+  "oneOf",
+  "minLength",
+]);
+
+function sanitizeGeminiSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (!GEMINI_SCHEMA_ALLOWED_KEYS.has(key)) continue;
+    if (key === "properties" && value && typeof value === "object") {
+      const props: Record<string, unknown> = {};
+      for (const [pk, pv] of Object.entries(value as Record<string, unknown>)) {
+        if (pv && typeof pv === "object" && !Array.isArray(pv)) {
+          props[pk] = sanitizeGeminiSchema(pv as Record<string, unknown>);
+        } else {
+          props[pk] = pv;
+        }
+      }
+      out[key] = props;
+    } else if (
+      key === "items" &&
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      out[key] = sanitizeGeminiSchema(value as Record<string, unknown>);
+    } else if (
+      (key === "allOf" || key === "anyOf" || key === "oneOf") &&
+      Array.isArray(value)
+    ) {
+      out[key] = value.map((v: unknown) =>
+        v && typeof v === "object" && !Array.isArray(v)
+          ? sanitizeGeminiSchema(v as Record<string, unknown>)
+          : v,
+      );
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 function buildGeminiUserAgent(model: string): string {
   return `GeminiCLI/0.45.1/${model} (${platform()}; ${arch()}; terminal)`;
 }
@@ -1715,8 +1851,8 @@ type GoogleAuth = { accessToken: string; managedProjectId: string } | null;
 
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 // Gemini CLI public OAuth "installed app" credentials (same as upstream Gemini CLI).
-// These are NOT truly secret per Google's OAuth spec for native apps, but prefer
-// env-var override to keep source clean.
+// Per Google's OAuth spec these native-app credentials are NOT confidential, so the
+// literal is shipped as a working default; env vars override it for custom deployments.
 const GEMINI_CLIENT_ID =
   process.env.GEMINI_CLIENT_ID ??
   "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com";
@@ -1817,6 +1953,12 @@ async function refreshGoogleToken(packedRefresh: string): Promise<string | null>
 async function refreshGoogleTokenInternal(packedRefresh: string): Promise<string | null> {
   const parts = parseRefreshParts(packedRefresh);
   if (!parts.refreshToken) return null;
+  if (!GEMINI_CLIENT_ID || !GEMINI_CLIENT_SECRET) {
+    console.warn(
+      "[proxy] Gemini OAuth désactivé : GEMINI_CLIENT_ID / GEMINI_CLIENT_SECRET non configurés (voir .env.example)",
+    );
+    return null;
+  }
 
   try {
     const resp = await fetch(GOOGLE_OAUTH_TOKEN_URL, {
@@ -1898,6 +2040,21 @@ async function getGoogleAuth(): Promise<GoogleAuth> {
   }
 }
 
+// Gemini thinking models return a `thoughtSignature` on each functionCall that
+// MUST be echoed back when that call is replayed in the conversation history.
+// OpenAI-compatible clients (e.g. OpenCode) strip this non-standard field, so we
+// cache it keyed by the tool_call id we generate and re-inject it on the way up.
+const GEMINI_THOUGHT_SIG_CACHE = new Map<string, string>();
+const GEMINI_THOUGHT_SIG_CACHE_MAX = 500;
+
+function cacheThoughtSignature(id: string, sig: string): void {
+  if (GEMINI_THOUGHT_SIG_CACHE.size >= GEMINI_THOUGHT_SIG_CACHE_MAX) {
+    const oldest = GEMINI_THOUGHT_SIG_CACHE.keys().next().value;
+    if (oldest !== undefined) GEMINI_THOUGHT_SIG_CACHE.delete(oldest);
+  }
+  GEMINI_THOUGHT_SIG_CACHE.set(id, sig);
+}
+
 function convertOpenAIToGemini(
   messages: Array<{
     role: string;
@@ -1938,14 +2095,10 @@ function convertOpenAIToGemini(
         const fcPart: Record<string, unknown> = {
           functionCall: { name: tc.function.name, args },
         };
-        if (tc.thought_signature) {
-          fcPart.thought_signature = tc.thought_signature;
+        const sig = tc.thought_signature ?? GEMINI_THOUGHT_SIG_CACHE.get(tc.id);
+        if (sig) {
+          fcPart.thought_signature = sig;
         }
-        console.warn(
-          "[proxy:gemini] Rebuilding functionCall part:",
-          JSON.stringify(fcPart),
-        );
-        console.warn("[proxy:gemini] Original tc keys:", Object.keys(tc));
         parts.push(fcPart);
       }
       contents.push({ role: "model", parts });
@@ -1988,10 +2141,10 @@ function convertGeminiChunkToOpenAI(chunk: string): string | null {
     const parts = candidate.content?.parts ?? [];
     // Debug: log raw parts when they contain function calls
     if (parts.some((p: Record<string, unknown>) => p.functionCall)) {
-      console.warn(
-        "[proxy:gemini] Raw response parts with functionCall:",
-        JSON.stringify(parts, null, 2),
-      );
+      const fnNames = parts
+        .filter((p: Record<string, unknown>) => p.functionCall)
+        .map((p: Record<string, unknown>) => (p.functionCall as { name?: string }).name);
+      console.warn("[proxy:gemini] functionCall(s):", fnNames.join(", "));
     }
     const text =
       parts.find((p: Record<string, unknown>) => typeof p.text === "string" && !p.thought)
@@ -2018,9 +2171,11 @@ function convertGeminiChunkToOpenAI(chunk: string): string | null {
     if (functionCalls.length > 0) {
       delta.tool_calls = functionCalls.map((fc, i) => {
         const sig = fc.thought_signature ?? fc.thoughtSignature;
+        const id = `call_gemini_${Date.now()}_${i}`;
+        if (sig) cacheThoughtSignature(id, sig);
         return {
           index: i,
-          id: `call_gemini_${Date.now()}_${i}`,
+          id,
           type: "function",
           function: {
             name: fc.functionCall.name,
@@ -2134,8 +2289,13 @@ function resolveRoute(
       provider: "openai",
     };
   }
+  // Default (local) provider: Ollama. Validate the base URL so a tampered
+  // ollamaUrl cannot turn the proxy into an SSRF deputy (cloud metadata, etc.).
+  const ollamaUrl = isSafeOllamaUrl(keys.ollamaUrl)
+    ? keys.ollamaUrl
+    : "http://127.0.0.1:11434";
   return {
-    targetUrl: `${keys.ollamaUrl}/v1/chat/completions`,
+    targetUrl: `${ollamaUrl}/v1/chat/completions`,
     headers: {},
     provider: "ollama",
   };
