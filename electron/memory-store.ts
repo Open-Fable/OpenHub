@@ -32,9 +32,9 @@ function getWords(text: string): string[] {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Supprime les accents
-    .replace(/[^\w\s-]/g, " ")       // Supprime la ponctuation
+    .replace(/[^\w\s-]/g, " ") // Supprime la ponctuation
     .split(/\s+/)
-    .filter((w) => w.length >= 2);   // Garde les mots significatifs
+    .filter((w) => w.length >= 2); // Garde les mots significatifs
 }
 
 /**
@@ -49,19 +49,21 @@ export function getAdvancedSimilarity(fact: string, query: string): number {
 
   const factSet = new Set(factWords);
   // On détecte les acronymes spécifiquement dans le texte original du fait
-  const acronymes = new Set(fact.match(/\b[A-Z]{2,}\b/g)?.map(a => a.toLowerCase()) || []);
-  
+  const acronymes = new Set(
+    fact.match(/\b[A-Z]{2,}\b/g)?.map((a) => a.toLowerCase()) || [],
+  );
+
   let score = 0;
   let matches = 0;
 
   for (const qWord of queryWords) {
     if (factSet.has(qWord)) {
       matches++;
-      
+
       let weight = 1.0;
       if (qWord.length > 5) weight += 0.5;
       if (qWord.length > 8) weight += 1.0;
-      
+
       // Bonus si le mot matché est un acronyme/mot technique dans le fait
       if (acronymes.has(qWord)) {
         weight += 2.0;
@@ -75,9 +77,12 @@ export function getAdvancedSimilarity(fact: string, query: string): number {
 
   // Normalisation par la racine carrée (BM25-like normalization)
   const density = score / Math.sqrt(factWords.length * queryWords.length);
-  
+
   // Bonus pour match de phrase exacte (partielle)
-  if (fact.toLowerCase().includes(query.toLowerCase()) || query.toLowerCase().includes(fact.toLowerCase())) {
+  if (
+    fact.toLowerCase().includes(query.toLowerCase()) ||
+    query.toLowerCase().includes(fact.toLowerCase())
+  ) {
     return density * 2.0;
   }
 
@@ -183,8 +188,9 @@ async function load(): Promise<MemoryData> {
       console.warn(
         `[memory-store] Auto-cleaned/deduplicated ${loadedFacts.length - filteredFacts.length} junk/duplicate facts from memory.json`,
       );
-      await ensureDir();
-      await fs.writeFile(STORE_PATH, JSON.stringify(cache, null, 2), "utf-8");
+      // Use the atomic temp+rename writer (not a raw writeFile) so a crash mid-write
+      // can't corrupt memory.json.
+      await save(cache);
     }
 
     return cache;
@@ -208,23 +214,40 @@ async function save(data: MemoryData): Promise<void> {
   await fs.rename(tmpPath, STORE_PATH);
 }
 
+// Serializes load→modify→save sequences to avoid concurrent lost-update races.
+let writeLock: Promise<unknown> = Promise.resolve();
+function withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeLock.then(fn, fn);
+  writeLock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 export async function getMemory(): Promise<MemoryData> {
   return load();
 }
 
 export async function setEnabled(enabled: boolean): Promise<void> {
-  const data = await load();
-  await save({ ...data, enabled });
+  return withWriteLock(async () => {
+    const data = await load();
+    await save({ ...data, enabled });
+  });
 }
 
 export async function setAutoExtract(autoExtract: boolean): Promise<void> {
-  const data = await load();
-  await save({ ...data, autoExtract });
+  return withWriteLock(async () => {
+    const data = await load();
+    await save({ ...data, autoExtract });
+  });
 }
 
 export async function setProfile(profile: string): Promise<void> {
-  const data = await load();
-  await save({ ...data, profile });
+  return withWriteLock(async () => {
+    const data = await load();
+    await save({ ...data, profile });
+  });
 }
 
 export async function addFact(
@@ -236,56 +259,62 @@ export async function addFact(
     return null;
   }
 
-  const data = await load();
+  return withWriteLock(async () => {
+    const data = await load();
 
-  const exactDuplicate = data.facts.find(
-    (f) => f.text.toLowerCase() === text.toLowerCase(),
-  );
-  if (exactDuplicate) return exactDuplicate;
-
-  // Semantic duplication check using Jaccard Similarity (limit to > 0.70)
-  const semanticDuplicate = data.facts.find(
-    (f) => getJaccardSimilarity(f.text, text) > 0.7,
-  );
-  if (semanticDuplicate) {
-    console.warn(
-      `[memory-store] Rejected fact as semantic duplicate of "${semanticDuplicate.text}": "${text}"`,
+    const exactDuplicate = data.facts.find(
+      (f) => f.text.toLowerCase() === text.toLowerCase(),
     );
-    return semanticDuplicate;
-  }
+    if (exactDuplicate) return exactDuplicate;
 
-  const now = Date.now();
-  const fact: MemoryFact = {
-    id: randomBytes(6).toString("hex"),
-    text,
-    tags,
-    createdAt: now,
-    lastUsedAt: now,
-  };
+    // Semantic duplication check using Jaccard Similarity (limit to > 0.70)
+    const semanticDuplicate = data.facts.find(
+      (f) => getJaccardSimilarity(f.text, text) > 0.7,
+    );
+    if (semanticDuplicate) {
+      console.warn(
+        `[memory-store] Rejected fact as semantic duplicate of "${semanticDuplicate.text}": "${text}"`,
+      );
+      return semanticDuplicate;
+    }
 
-  // Sort by lastUsedAt desc and cap to MAX_FACTS (preserving most recently used)
-  const sorted = [...data.facts, fact].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
-  const capped = sorted.slice(0, MAX_FACTS);
+    const now = Date.now();
+    const fact: MemoryFact = {
+      id: randomBytes(6).toString("hex"),
+      text,
+      tags,
+      createdAt: now,
+      lastUsedAt: now,
+    };
 
-  await save({ ...data, facts: capped });
-  return fact;
+    // Sort by lastUsedAt desc and cap to MAX_FACTS (preserving most recently used)
+    const sorted = [...data.facts, fact].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
+    const capped = sorted.slice(0, MAX_FACTS);
+
+    await save({ ...data, facts: capped });
+    return fact;
+  });
 }
 
 export async function removeFact(id: string): Promise<void> {
-  const data = await load();
-  await save({ ...data, facts: data.facts.filter((f) => f.id !== id) });
+  return withWriteLock(async () => {
+    const data = await load();
+    await save({ ...data, facts: data.facts.filter((f) => f.id !== id) });
+  });
 }
 
 export async function updateFact(
   id: string,
   patch: { text?: string; tags?: readonly string[] },
 ): Promise<void> {
-  const data = await load();
-  await save({
-    ...data,
-    facts: data.facts.map((f) =>
-      f.id === id ? { ...f, ...patch, lastUsedAt: Date.now() } : f,
-    ),
+  return withWriteLock(async () => {
+    const data = await load();
+    await save({
+      ...data,
+      facts: data.facts.map((f) =>
+        f.id === id ? { ...f, ...patch, lastUsedAt: Date.now() } : f,
+      ),
+    });
   });
 }
 
@@ -306,11 +335,11 @@ export async function buildMemoryBlock(userQuery?: string): Promise<string | nul
 
   if (data.facts.length > 0) {
     let tokenBudget = data.maxFactTokens ?? DEFAULT_MAX_TOKENS;
-    
+
     // On pré-calcule les scores pour éviter de recalculer pendant le tri/filtrage
-    const scoredFacts = data.facts.map(f => ({
+    const scoredFacts = data.facts.map((f) => ({
       ...f,
-      relevance: userQuery ? getAdvancedSimilarity(f.text, userQuery) : 0
+      relevance: userQuery ? getAdvancedSimilarity(f.text, userQuery) : 0,
     }));
 
     // Tri par pertinence (ou par date si pas de query)
@@ -328,7 +357,7 @@ export async function buildMemoryBlock(userQuery?: string): Promise<string | nul
     for (const fact of scoredFacts) {
       const line = `- ${fact.text}`;
       const cost = approxTokens(line);
-      
+
       // Filtrage intelligent : si on a déjà 5 faits pertinents, on ignore le reste du bruit
       if (userQuery && fact.relevance < 0.1 && selectedFacts.length >= 5) {
         continue;
