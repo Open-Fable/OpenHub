@@ -1,6 +1,15 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { homedir } from "os";
+import { isSafeOllamaUrl } from "../keychain.js";
+
+const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
+
+// Resolves the configured Ollama URL but rejects unsafe (cloud-metadata / link-local)
+// hosts, falling back to loopback — prevents the vision proxy becoming an SSRF pivot.
+function safeOllamaUrl(candidate: string | null | undefined): string {
+  return candidate && isSafeOllamaUrl(candidate) ? candidate : DEFAULT_OLLAMA_URL;
+}
 
 export interface VisionConfig {
   visionProxyEnabled: boolean;
@@ -89,7 +98,7 @@ export async function getVisionConfig(
   const defaultConfig: VisionConfig = {
     visionProxyEnabled: true,
     visionModel: "openbmb/minicpm-v4.6",
-    ollamaUrl: overrideOllamaUrl || "http://127.0.0.1:11434",
+    ollamaUrl: safeOllamaUrl(overrideOllamaUrl),
     visionDetailLevel: "high",
   };
 
@@ -100,7 +109,7 @@ export async function getVisionConfig(
     return {
       visionProxyEnabled: settings.visionProxyEnabled ?? defaultConfig.visionProxyEnabled,
       visionModel: settings.visionModel ?? defaultConfig.visionModel,
-      ollamaUrl: overrideOllamaUrl || settings.ollamaUrl || defaultConfig.ollamaUrl,
+      ollamaUrl: safeOllamaUrl(overrideOllamaUrl || settings.ollamaUrl),
       visionDetailLevel: settings.visionDetailLevel ?? defaultConfig.visionDetailLevel,
     };
   } catch {
@@ -131,6 +140,13 @@ export async function describeImage(
   imageBase64: string,
   config: VisionConfig,
 ): Promise<VisionDescription> {
+  // Refuse les URL distantes (http/https) : les laisser passer déclencherait soit
+  // un SSRF si on les fetchait, soit (aujourd'hui) un décodage base64 silencieux qui
+  // produit des octets parasites. Seules les data: URI / base64 brut sont acceptées.
+  if (/^https?:\/\//i.test(imageBase64.trim())) {
+    throw new Error("URL d'image distante non supportée — fournir une data: URI.");
+  }
+
   // Nettoyage du base64 (retrait du préfixe data:image/...)
   const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
 
