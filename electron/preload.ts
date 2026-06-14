@@ -65,6 +65,7 @@ contextBridge.exposeInMainWorld("openhub", {
     braveSearchKey?: string;
   }) => ipcRenderer.invoke("save-api-keys", keys),
 
+  reloadProjectStore: () => ipcRenderer.invoke("reload-project-store"),
   getProjects: () => ipcRenderer.invoke("get-projects"),
   getActiveProject: () => ipcRenderer.invoke("get-active-project"),
   setActiveProject: (id: string | null) => ipcRenderer.invoke("set-active-project", id),
@@ -83,9 +84,18 @@ contextBridge.exposeInMainWorld("openhub", {
     path?: string;
     x?: number;
     y?: number;
+    pinned?: boolean;
+    folder?: string;
+    archived?: boolean;
   }) => ipcRenderer.invoke("save-project", project),
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   pickProjectPath: () => ipcRenderer.invoke("pick-project-path"),
+
+  getFolders: () => ipcRenderer.invoke("get-folders"),
+  createFolder: (name: string) => ipcRenderer.invoke("create-folder", name),
+  renameFolder: (id: string, name: string) =>
+    ipcRenderer.invoke("rename-folder", id, name),
+  deleteFolder: (id: string) => ipcRenderer.invoke("delete-folder", id),
 
   getWorkflows: () => ipcRenderer.invoke("get-workflows"),
   saveWorkflow: (workflow: {
@@ -114,6 +124,10 @@ contextBridge.exposeInMainWorld("openhub", {
     startedAt: number;
     finishedAt: number;
     duration: number;
+    parentRunId?: string;
+    feedback?: string;
+    iteration?: number;
+    workspaceDir?: string;
   }) => ipcRenderer.invoke("save-orch-run", run),
   deleteOrchRun: (id: string) => ipcRenderer.invoke("delete-orch-run", id),
   clearOrchRuns: (workflowId?: string) =>
@@ -139,8 +153,21 @@ contextBridge.exposeInMainWorld("openhub", {
   saveSkill: (skill: { filename?: string; title: string; content: string }) =>
     ipcRenderer.invoke("save-skill", skill),
   deleteSkill: (filename: string) => ipcRenderer.invoke("delete-skill", filename),
-  executeOrchestration: (id: string, task: string, workDir?: string) =>
-    ipcRenderer.invoke("execute-orchestration", id, task, workDir ?? ""),
+  executeOrchestration: (
+    id: string,
+    task: string,
+    workDir?: string,
+    workflowName?: string,
+  ) =>
+    ipcRenderer.invoke(
+      "execute-orchestration",
+      id,
+      task,
+      workDir ?? "",
+      workflowName ?? "",
+    ),
+  iterateOrchestration: (id: string, feedback: string, workflowId: string) =>
+    ipcRenderer.invoke("iterate-orchestration", id, feedback, workflowId),
   cancelOrchestration: () => ipcRenderer.invoke("cancel-orchestration"),
   getOrchStatusBuffer: () => ipcRenderer.invoke("get-orch-status-buffer"),
   onOrchestrationStatus: (
@@ -156,6 +183,7 @@ contextBridge.exposeInMainWorld("openhub", {
       progress?: { current: number; total: number };
       substep?: { current: number; total: number; title: string };
       dependencies?: string[];
+      workspaceDir?: string;
     }) => void,
   ) => {
     const handler = (
@@ -172,6 +200,7 @@ contextBridge.exposeInMainWorld("openhub", {
         progress?: { current: number; total: number };
         substep?: { current: number; total: number; title: string };
         dependencies?: string[];
+        workspaceDir?: string;
       },
     ) => cb(data);
     ipcRenderer.on("orchestration-status", handler);
