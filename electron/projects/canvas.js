@@ -128,6 +128,12 @@ function renderCanvas() {
       '<div class="node-card-name">' +
       escapeHtml(node.name) +
       "</div>" +
+      '<div class="node-card-substeps" data-substep-id="' +
+      node.id +
+      '" style="display:none">' +
+      '<div class="substep-bar"><div class="substep-bar-fill"></div></div>' +
+      '<span class="substep-label"></span>' +
+      "</div>" +
       '<div class="node-card-status"><span class="status-dot ' +
       statusClass +
       '"></span><span>' +
@@ -153,6 +159,7 @@ function renderCanvas() {
         return;
       dragNode = node.id;
       selectedNodeId = node.id;
+      saveSelectedNode();
       if (node.type === "orchestrator") {
         openDetailWorkflow();
       } else {
@@ -264,6 +271,10 @@ function drawConnections() {
       path.setAttribute("marker-end", "url(#arrow)");
       path.setAttribute("stroke", strokeColor);
       path.setAttribute("stroke-width", Math.max(3, 3 / zoom));
+      if (parentNode.status === "running") {
+        path.setAttribute("stroke-dasharray", "8 4");
+        path.classList.add("edge-flow");
+      }
       var hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       hitPath.setAttribute("d", d);
       hitPath.setAttribute("fill", "none");

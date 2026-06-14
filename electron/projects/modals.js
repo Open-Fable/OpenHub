@@ -56,6 +56,8 @@ async function editProject(id) {
   document.getElementById("projName").value = p.name || "";
   document.getElementById("projType").value = p.type || "code";
   document.getElementById("projModel").value = p.model || "";
+  var projReasoningEl = document.getElementById("projReasoning");
+  updateReasoningOptions(projReasoningEl, p.model || "", p.reasoningEffort || "");
   document.getElementById("projInstructions").value = p.instructions || "";
   document.getElementById("projTask").value = p.task || "";
   document.getElementById("projSteps").value =
@@ -107,6 +109,25 @@ async function deleteProject(id) {
       resolve();
     };
   });
+}
+
+async function duplicateProject(id) {
+  var p = projects.find(function (proj) {
+    return proj.id === id;
+  });
+  if (!p) return null;
+  var copy = Object.assign({}, p, {
+    name: p.name + " (copie)",
+    x: (p.x || 0) + 40,
+    y: (p.y || 0) + 40,
+  });
+  delete copy.id;
+  delete copy.createdAt;
+  delete copy.updatedAt;
+  var saved = await window.openhub.saveProject(copy);
+  await loadProjects();
+  showToast("Agent dupliqué : " + copy.name, "success");
+  return saved;
 }
 
 async function importDemoTemplate() {
@@ -346,9 +367,7 @@ function confirmLoadTemplate() {
   var hasProjects = activeOrch && (activeOrch.linked || []).length > 0;
   if (
     hasProjects &&
-    !confirm(
-      "Charger ce modèle va ajouter des projets à votre graphe actuel. Continuer ?",
-    )
+    !confirm("Charger ce modèle ajoute des agents à ton canvas actuel. Continuer ?")
   )
     return false;
   return true;
@@ -359,6 +378,7 @@ function resetProjectModal() {
   document.getElementById("projName").value = "";
   document.getElementById("projType").value = "code";
   document.getElementById("projModel").value = "";
+  updateReasoningOptions(document.getElementById("projReasoning"), "", "");
   document.getElementById("projInstructions").value = "";
   document.getElementById("projTask").value = "";
   document.getElementById("projSteps").value = "";
@@ -373,22 +393,32 @@ function resetProjectModal() {
   onProjectTypeChange();
 }
 
+async function runTemplateImport(importFn) {
+  var grid = document.querySelector(".templates-grid");
+  if (grid) grid.classList.add("loading");
+  try {
+    await importFn();
+  } finally {
+    if (grid) grid.classList.remove("loading");
+  }
+}
+
 function initModals() {
   var _origImportDemo = importDemoTemplate;
   importDemoTemplate = function () {
-    if (confirmLoadTemplate()) _origImportDemo();
+    if (confirmLoadTemplate()) runTemplateImport(_origImportDemo);
   };
   var _origImportWebsite = importWebsiteTemplate;
   importWebsiteTemplate = function () {
-    if (confirmLoadTemplate()) _origImportWebsite();
+    if (confirmLoadTemplate()) runTemplateImport(_origImportWebsite);
   };
   var _origImportSEO = importSEOContentTemplate;
   importSEOContentTemplate = function () {
-    if (confirmLoadTemplate()) _origImportSEO();
+    if (confirmLoadTemplate()) runTemplateImport(_origImportSEO);
   };
   var _origImportSimple = importSimpleOrchestrator;
   importSimpleOrchestrator = function () {
-    if (confirmLoadTemplate()) _origImportSimple();
+    if (confirmLoadTemplate()) runTemplateImport(_origImportSimple);
   };
 
   document.getElementById("btnPickPath").onclick = async function () {
@@ -402,6 +432,11 @@ function initModals() {
   };
 
   document.getElementById("projType").onchange = onProjectTypeChange;
+
+  document.getElementById("projModel").onchange = function () {
+    var rEl = document.getElementById("projReasoning");
+    if (rEl) updateReasoningOptions(rEl, this.value, rEl.value);
+  };
 
   document.getElementById("btnSaveProjectConfirm").onclick = async function () {
     if (this.disabled) return;
@@ -422,6 +457,7 @@ function initModals() {
     nameInput.style.borderColor = "";
     var type = document.getElementById("projType").value;
     var model = document.getElementById("projModel").value;
+    var reasoningEffort = document.getElementById("projReasoning").value;
     var instructions = document.getElementById("projInstructions").value;
     var task = document.getElementById("projTask").value;
     var stepsRaw = document.getElementById("projSteps").value.trim();
@@ -442,6 +478,7 @@ function initModals() {
       name: name,
       type: type,
       model: model,
+      reasoningEffort: reasoningEffort || undefined,
       instructions: instructions,
       task: task,
       steps: steps,

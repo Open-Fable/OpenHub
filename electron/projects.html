@@ -2,6 +2,10 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:9999; img-src 'self' data: blob:;"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenHub — Projets</title>
     <link rel="stylesheet" href="projects/projects.css" />
@@ -18,9 +22,7 @@
           </div>
           <div class="wf-dropdown" id="wfDropdown"></div>
         </div>
-        <div class="topbar-center">
-          <span class="topbar-title" id="canvasWfName">Orchestrateur</span>
-        </div>
+        <div class="topbar-center"></div>
         <div class="topbar-actions">
           <div class="topbar-progress" id="topbarProgress" style="display:none">
             <span class="topbar-progress-text" id="topbarProgressText">0/0</span>
@@ -51,6 +53,10 @@
             <button class="chat-tab active" id="tabChat" onclick="switchPanelTab('chat')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Assistant
+            </button>
+            <button class="chat-tab" id="tabActivity" onclick="switchPanelTab('activity')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Activit&eacute;
             </button>
             <button class="chat-tab" id="tabHistory" onclick="switchPanelTab('history')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -88,13 +94,20 @@
             </div>
           </div>
 
+          <!-- Tab: Activité -->
+          <div class="chat-tab-content" id="tabContentActivity">
+            <div class="activity-feed" id="activityFeed">
+              <div class="activity-empty" id="activityEmpty">Lance une orchestration pour suivre l'activité ici.</div>
+            </div>
+          </div>
+
           <!-- Tab: Historique -->
           <div class="chat-tab-content" id="tabContentHistory">
             <div class="history-panel-header">
               <span class="history-panel-title">Exécutions passées</span>
             </div>
             <div class="orch-history" id="orchHistoryList">
-              <div class="history-empty">Aucune exécution enregistrée.</div>
+              <div class="history-empty">Tes exécutions passées s'afficheront ici.</div>
             </div>
           </div>
         </div>
@@ -109,9 +122,14 @@
         <!-- Canvas Area (center) -->
         <div class="canvas-area" id="orchestrationView">
           <!-- Task card pinned at top of canvas -->
-          <div class="canvas-mission" onclick="openDetailWorkflow()">
-            <p class="canvas-mission-text" id="taskCardText">Définis la tâche globale…</p>
-            <svg class="canvas-mission-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <div class="canvas-mission">
+            <textarea class="canvas-mission-text" id="taskCardText" rows="1" placeholder="Définis la tâche globale…" spellcheck="false"></textarea>
+            <svg class="canvas-mission-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="document.getElementById('taskCardText').focus()"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+
+          <div class="canvas-iterate" id="iterateBar" style="display:none">
+            <textarea id="feedbackInput" rows="1" placeholder="Feedback sur le résultat… (ex : le header est moche, corrige la navigation)" spellcheck="false"></textarea>
+            <button class="btn btn--primary" id="btnIterateOrch">Itérer</button>
           </div>
 
           <div class="canvas" id="orchestrationCanvas">
@@ -194,7 +212,12 @@
               <details class="detail-accordion" id="consoleAccordion">
                 <summary class="detail-accordion-trigger">
                   <span>Console</span>
-                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <div class="detail-accordion-actions">
+                    <button class="console-copy-btn" id="consoleCopyBtn" title="Copier la console" onclick="event.stopPropagation()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    </button>
+                    <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
                 </summary>
                 <div class="detail-accordion-body">
                   <div class="orchestration-console dcon" id="orchConsole">
@@ -208,6 +231,22 @@
                   <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </summary>
                 <div class="detail-accordion-body">
+                  <div class="orch-setting-row">
+                    <span class="orch-setting-label">Mod&egrave;le de l'orchestrateur</span>
+                    <select class="form-select" id="orchModelSelect" style="flex:1;font-size:11px;"></select>
+                  </div>
+                  <div class="orch-setting-row">
+                    <span class="orch-setting-label">R&eacute;flexion (tous les agents)</span>
+                    <select class="form-select" id="orchReasoningSelect" style="flex:1;font-size:11px;">
+                      <option value="">Par d&eacute;faut (medium)</option>
+                      <option value="none">Aucune</option>
+                      <option value="low">Faible</option>
+                      <option value="medium">Moyenne</option>
+                      <option value="high">Haute</option>
+                      <option value="xhigh">Tr&egrave;s haute</option>
+                      <option value="max">Maximum</option>
+                    </select>
+                  </div>
                   <div class="orch-workdir">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
                     <span class="orch-workdir-label" id="orchWorkdirLabel">Dossier racine</span>
@@ -237,6 +276,15 @@
                   <textarea class="detail-textarea detail-textarea--mono" id="selectedNodeInstructionsText" readonly placeholder="Instructions système de l'agent (lecture seule)"></textarea>
                 </div>
               </details>
+              <details class="detail-accordion" style="display:none">
+                <summary class="detail-accordion-trigger">
+                  <span>Prompt utilisateur</span>
+                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="detail-accordion-body" style="overflow:hidden;">
+                  <div class="orch-result-viewer" id="generatedUserPrompt"></div>
+                </div>
+              </details>
               <details class="detail-accordion" id="resultAccordion">
                 <summary class="detail-accordion-trigger">
                   <span>Résultat</span>
@@ -244,7 +292,7 @@
                 </summary>
                 <div class="detail-accordion-body" style="overflow:hidden;">
                   <div class="orch-result-viewer" id="orchResultViewer">
-                    <div class="orch-result-empty">Aucun résultat pour le moment.</div>
+                    <div class="orch-result-empty">Le résultat s'affichera ici après l'exécution.</div>
                   </div>
                 </div>
               </details>
@@ -293,9 +341,21 @@
             <summary>Personnaliser l'agent</summary>
             <div class="modal-accordion-body">
               <div class="form-group">
-                <span class="form-label">Modèle d'IA</span>
+                <span class="form-label">Mod&egrave;le d'IA</span>
                 <select class="form-select" id="projModel">
-                  <option value="">— Modèle par défaut de l'application —</option>
+                  <option value="">— Mod&egrave;le par d&eacute;faut de l'application —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <span class="form-label">Niveau de r&eacute;flexion</span>
+                <select class="form-select" id="projReasoning">
+                  <option value="">Par d&eacute;faut (medium)</option>
+                  <option value="none">Aucune</option>
+                  <option value="low">Faible</option>
+                  <option value="medium">Moyenne</option>
+                  <option value="high">Haute</option>
+                  <option value="xhigh">Tr&egrave;s haute</option>
+                  <option value="max">Maximum</option>
                 </select>
               </div>
               <div class="form-group">
@@ -397,7 +457,7 @@
             <span class="mgmt-wf-list-count" id="mgmtWfCount">0</span>
           </div>
           <div class="mgmt-wf-items" id="mgmtWfList"></div>
-          <button class="mgmt-wf-add" onclick="openModal('modalWorkflowPrompt')">Nouveau workflow</button>
+          <button class="mgmt-wf-add" onclick="createWorkflow()">Nouveau workflow</button>
         </div>
         <div class="mgmt-detail" id="mgmtDetail">
           <div class="mgmt-detail-header">
@@ -407,15 +467,21 @@
             </div>
             <div class="mgmt-detail-actions">
               <button class="btn btn--primary" id="mgmtOpenBtn" onclick="openWorkflowInOrch()">Ouvrir</button>
+              <div class="mgmt-menu-wrap">
+                <button class="btn btn--ghost mgmt-menu-btn" id="mgmtMenuBtn" onclick="toggleMgmtMenu(event)" aria-label="Plus d'options" aria-haspopup="true">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                </button>
+                <div class="mgmt-menu" id="mgmtMenu">
+                  <div class="mgmt-menu-item" onclick="renameCurrentWorkflow()">Renommer</div>
+                  <div class="mgmt-menu-item mgmt-menu-item--danger" onclick="deleteCurrentWorkflow()">Supprimer</div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="mgmt-detail-body" id="mgmtDetailBody">
             <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">
               Sélectionne un workflow dans la liste pour voir ses agents.
             </div>
-          </div>
-          <div class="mgmt-detail-footer">
-            <button class="btn btn--danger" id="mgmtDeleteBtn" style="display:none;" onclick="deleteCurrentWorkflow()">Supprimer ce workflow</button>
           </div>
         </div>
       </div>
@@ -425,7 +491,7 @@
     <div class="modal-overlay" id="modalWorkflowPrompt" style="display:none">
       <div class="modal-dialog" style="max-width: 400px;">
         <div class="modal-header">
-          <span class="modal-title">Nouveau workflow</span>
+          <span class="modal-title">Renommer le workflow</span>
           <button class="modal-close" onclick="closeModal('modalWorkflowPrompt')" aria-label="Fermer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -438,7 +504,7 @@
         </div>
         <div class="modal-footer">
           <button class="btn btn--ghost" onclick="closeModal('modalWorkflowPrompt')">Annuler</button>
-          <button class="btn btn--primary" id="btnConfirmWorkflow">Créer</button>
+          <button class="btn btn--primary" id="btnConfirmWorkflow">Renommer</button>
         </div>
       </div>
     </div>
@@ -455,6 +521,8 @@
         <div class="modal-body" id="mgmtAllProjBody"></div>
         <div class="modal-footer">
           <span style="font-size:11px;color:var(--text-muted);margin-right:auto;" id="mgmtAllProjCount"></span>
+          <button class="btn btn--secondary" id="btnLinkSelectedProjs" style="display:none;" onclick="linkSelectedProjects()">Lier au workflow (0)</button>
+          <button class="btn btn--danger" id="btnDeleteSelectedProjs" style="display:none;" onclick="deleteSelectedProjects()">Supprimer (0)</button>
           <button class="btn btn--ghost" onclick="closeModal('modal-all-projects')">Fermer</button>
         </div>
       </div>

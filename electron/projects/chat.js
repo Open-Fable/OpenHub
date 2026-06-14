@@ -3,9 +3,14 @@
 var conversations = [];
 var activeConvId = null;
 var CONV_KEY = "openhub-orch-convs";
+var ACTIVE_CONV_KEY = "openhub-last-conv";
 
 function getConvKey() {
   return activeWorkflowId ? CONV_KEY + "-" + activeWorkflowId : CONV_KEY;
+}
+
+function getActiveConvKey() {
+  return activeWorkflowId ? ACTIVE_CONV_KEY + "-" + activeWorkflowId : ACTIVE_CONV_KEY;
 }
 
 function loadConversations() {
@@ -28,7 +33,17 @@ function loadConversations() {
       return c.id === activeConvId;
     })
   ) {
-    activeConvId = conversations[0].id;
+    var savedConvId = localStorage.getItem(getActiveConvKey());
+    if (
+      savedConvId &&
+      conversations.find(function (c) {
+        return c.id === savedConvId;
+      })
+    ) {
+      activeConvId = savedConvId;
+    } else {
+      activeConvId = conversations[0].id;
+    }
   }
   renderOrchChatHistory();
   renderConvDropdown();
@@ -38,6 +53,37 @@ function saveConversations() {
   try {
     localStorage.setItem(getConvKey(), JSON.stringify(conversations.slice(-20)));
   } catch (e) {}
+  persistConvsToDisk();
+}
+
+function persistActiveConvId() {
+  if (activeConvId && activeWorkflowId) {
+    localStorage.setItem(getActiveConvKey(), activeConvId);
+  }
+}
+
+var _convDiskTimer = null;
+function persistConvsToDisk() {
+  if (_convDiskTimer) clearTimeout(_convDiskTimer);
+  _convDiskTimer = setTimeout(function () {
+    _convDiskTimer = null;
+    try {
+      var allKeys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(CONV_KEY) === 0) allKeys.push(key);
+      }
+      var dump = {};
+      allKeys.forEach(function (k) {
+        try {
+          dump[k] = JSON.parse(localStorage.getItem(k));
+        } catch (e) {}
+      });
+      if (window.openhub && window.openhub.writeOrchConversations) {
+        window.openhub.writeOrchConversations(JSON.stringify(dump));
+      }
+    } catch (e) {}
+  }, 2000);
 }
 
 function getActiveConv() {
@@ -64,6 +110,7 @@ function ensureConversation() {
   };
   conversations.unshift(conv);
   activeConvId = conv.id;
+  persistActiveConvId();
   saveConversations();
   renderConvDropdown();
   return conv;
@@ -105,6 +152,7 @@ function renderConvDropdown() {
 
 function selectConversation(id) {
   activeConvId = id;
+  persistActiveConvId();
   document.getElementById("convDropdown").classList.remove("open");
   renderOrchChatHistory();
   renderConvDropdown();
@@ -121,6 +169,7 @@ function newConversation() {
     updatedAt: Date.now(),
   });
   activeConvId = conversations[0].id;
+  persistActiveConvId();
   saveConversations();
   renderOrchChatHistory();
   renderConvDropdown();
@@ -179,7 +228,7 @@ function renderOrchChatHistory() {
 
   if (!conv || conv.messages.length === 0) {
     container.innerHTML =
-      '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Posez une question ou décrivez votre projet. Je vous aiderai à créer et gérer vos workflows.</div>';
+      '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Pose une question ou décris ton projet. Je t\'aide à créer et gérer tes workflows.</div>';
     return;
   }
 
@@ -295,37 +344,40 @@ function sendChat() {
     return m.role === "assistant" && /```questions\n[\s\S]*?\n```/.test(m.content);
   }).length;
 
-  fetch(proxyUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer openhub-local",
-    },
-    body: JSON.stringify({
-      messages: msgs.map(function (m) {
-        return { role: m.role, content: m.content };
-      }),
-      context: {
-        projects: projects.map(function (p) {
-          return {
-            id: p.id,
-            name: p.name,
-            type: p.type,
-            model: p.model,
-            instructions: p.instructions,
-            task: p.task,
-          };
+  getProxyToken()
+    .then(function (__token) {
+      return fetch(proxyUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + __token,
+        },
+        body: JSON.stringify({
+          messages: msgs.map(function (m) {
+            return { role: m.role, content: m.content };
+          }),
+          context: {
+            projects: projects.map(function (p) {
+              return {
+                id: p.id,
+                name: p.name,
+                type: p.type,
+                model: p.model,
+                instructions: p.instructions,
+                task: p.task,
+              };
+            }),
+            workflows: workflows,
+            activeWorkflowId: activeWorkflowId,
+            availableModels: models.map(function (m) {
+              return m.id;
+            }),
+          },
+          questionRounds: questionRounds,
+          model: model,
         }),
-        workflows: workflows,
-        activeWorkflowId: activeWorkflowId,
-        availableModels: models.map(function (m) {
-          return m.id;
-        }),
-      },
-      questionRounds: questionRounds,
-      model: model,
-    }),
-  })
+      });
+    })
     .then(async function (res) {
       if (!res.ok) {
         removeThinkingIndicator(bubble);
@@ -405,7 +457,7 @@ function sendChat() {
         } catch (e) {}
       }
 
-      addMessageToConv("assistant", stripBlocks(fullText));
+      addMessageToConv("assistant", fullText);
 
       if (window.openhub && window.openhub.notifyTaskDone) {
         window.openhub.notifyTaskDone("chat");
@@ -911,6 +963,23 @@ async function createWorkflowFromAssistant(name, batch) {
 function suggestChat(text) {
   document.getElementById("chatInput").value = text;
   sendChat();
+}
+
+async function restoreConvsFromDisk() {
+  if (!window.openhub || !window.openhub.readOrchConversations) return;
+  try {
+    var raw = await window.openhub.readOrchConversations();
+    if (!raw) return;
+    var dump = JSON.parse(raw);
+    var keys = Object.keys(dump);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (key.indexOf(CONV_KEY) !== 0) continue;
+      if (!localStorage.getItem(key) && dump[key]) {
+        localStorage.setItem(key, JSON.stringify(dump[key]));
+      }
+    }
+  } catch (e) {}
 }
 
 function initChat() {
