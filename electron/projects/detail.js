@@ -16,10 +16,54 @@ function openDetailWorkflow() {
   document.getElementById("detailViewAgent").style.display = "none";
   document.getElementById("sharedTaskText").value = active.task || "";
   document.getElementById("systemInstructionsText").value = active.instructions || "";
+  var orchModelSelect = document.getElementById("orchModelSelect");
+  if (orchModelSelect) {
+    orchModelSelect.innerHTML =
+      '<option value="">— Même modèle que les agents —</option>' +
+      models
+        .map(function (m) {
+          return (
+            '<option value="' +
+            escapeHtml(m.id) +
+            '">' +
+            escapeHtml(displayModelName(m.id)) +
+            "</option>"
+          );
+        })
+        .join("");
+    orchModelSelect.value = active.model || "";
+  }
+  var orchReasoningSelect = document.getElementById("orchReasoningSelect");
+  if (orchReasoningSelect) {
+    var effectiveModel = active.model || "";
+    if (!effectiveModel) {
+      var linked = active.linked || [];
+      for (var li = 0; li < linked.length; li++) {
+        var lp = projects.find(function (pp) {
+          return pp.id === linked[li];
+        });
+        if (lp && lp.model) {
+          effectiveModel = lp.model;
+          break;
+        }
+      }
+    }
+    updateReasoningOptions(
+      orchReasoningSelect,
+      effectiveModel,
+      active.reasoningEffort || "",
+    );
+  }
   var workdirPath = document.getElementById("orchWorkdirPath");
-  if (active.path) {
-    workdirPath.textContent = active.path;
-    workdirPath.title = active.path;
+  var activeWf = activeWorkflowId
+    ? workflows.find(function (w) {
+        return w.id === activeWorkflowId;
+      })
+    : null;
+  var displayPath = active.path || (activeWf && activeWf.workDir) || "";
+  if (displayPath) {
+    workdirPath.textContent = displayPath;
+    workdirPath.title = displayPath;
   } else {
     workdirPath.textContent = "—";
     workdirPath.title = "Aucun dossier défini";
@@ -39,7 +83,23 @@ function openDetailAgent(nodeId) {
   document.getElementById("detailViewAgent").style.display = "flex";
   document.getElementById("lblSelectedNodeTask").textContent = "Tâche : " + node.name;
   document.getElementById("selectedNodeTaskText").value = node.task || "";
-  document.getElementById("selectedNodeInstructionsText").value = node.instructions || "";
+  var prompts = typeof orchPrompts !== "undefined" ? orchPrompts[nodeId] : null;
+  var instructionsEl = document.getElementById("selectedNodeInstructionsText");
+  if (prompts && prompts.system) {
+    instructionsEl.value = prompts.system;
+  } else {
+    instructionsEl.value = node.instructions || "";
+  }
+  var userPromptEl = document.getElementById("generatedUserPrompt");
+  if (userPromptEl) {
+    if (prompts && prompts.user) {
+      userPromptEl.textContent = prompts.user;
+      userPromptEl.closest(".detail-accordion").style.display = "";
+    } else {
+      userPromptEl.textContent = "";
+      userPromptEl.closest(".detail-accordion").style.display = "none";
+    }
+  }
   if (node.status && node.status !== "idle") {
     document.getElementById("agentStatusSection").style.display = "";
     var statusLabels = {
@@ -64,7 +124,7 @@ function openDetailAgent(nodeId) {
     document.getElementById("resultAccordion").open = true;
   } else {
     document.getElementById("orchResultViewer").innerHTML =
-      '<div class="orch-result-empty">Aucun résultat pour le moment.</div>';
+      "<div class=\"orch-result-empty\">Le résultat s'affichera ici après l'exécution.</div>";
   }
 }
 
@@ -93,14 +153,42 @@ function updateTaskCard() {
   });
   var el = document.getElementById("taskCardText");
   if (!el) return;
-  if (active && active.task && active.task.trim()) {
-    el.textContent = active.task.trim().substring(0, 120);
-  } else {
-    el.textContent = "Définis la tâche globale…";
-  }
+  if (document.activeElement === el) return;
+  el.value = active && active.task ? active.task.trim() : "";
+  autosizeTaskCard(el);
+}
+
+var TASK_CARD_MAX_HEIGHT = 96;
+
+function autosizeTaskCard(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, TASK_CARD_MAX_HEIGHT) + "px";
 }
 
 function initDetailPanel() {
+  var taskCardEl = document.getElementById("taskCardText");
+  taskCardEl.oninput = function () {
+    autosizeTaskCard(this);
+    var self = this;
+    clearTimeout(_taskSaveTimer);
+    _taskSaveTimer = setTimeout(function () {
+      var active = projects.find(function (p) {
+        return p.id === selectedOrchestratorId;
+      });
+      if (!active) return;
+      active.task = self.value;
+      window.openhub.saveProject(active);
+      var shared = document.getElementById("sharedTaskText");
+      if (shared && document.activeElement !== shared) shared.value = self.value;
+    }, 400);
+  };
+  taskCardEl.onkeydown = function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      this.blur();
+    }
+  };
+
   document.getElementById("sharedTaskText").oninput = function () {
     var self = this;
     clearTimeout(_taskSaveTimer);
@@ -144,6 +232,36 @@ function initDetailPanel() {
     }, 400);
   };
 
+  document.getElementById("orchModelSelect").onchange = function () {
+    var active = projects.find(function (p) {
+      return p.id === selectedOrchestratorId;
+    });
+    if (active) {
+      var updated = Object.assign({}, active, { model: this.value });
+      window.openhub.saveProject(updated);
+      var idx = projects.indexOf(active);
+      if (idx !== -1) projects[idx] = updated;
+    }
+    var rSelect = document.getElementById("orchReasoningSelect");
+    if (rSelect) {
+      updateReasoningOptions(rSelect, this.value, rSelect.value);
+    }
+  };
+
+  document.getElementById("orchReasoningSelect").onchange = function () {
+    var active = projects.find(function (p) {
+      return p.id === selectedOrchestratorId;
+    });
+    if (active) {
+      var updated = Object.assign({}, active, {
+        reasoningEffort: this.value || undefined,
+      });
+      window.openhub.saveProject(updated);
+      var idx = projects.indexOf(active);
+      if (idx !== -1) projects[idx] = updated;
+    }
+  };
+
   document.getElementById("btnEditSelectedNode").onclick = function () {
     if (selectedNodeId) editProject(selectedNodeId);
   };
@@ -160,6 +278,15 @@ function initDetailPanel() {
     if (!active) return;
     active.path = p;
     await window.openhub.saveProject(active);
+    if (activeWorkflowId) {
+      var wf = workflows.find(function (w) {
+        return w.id === activeWorkflowId;
+      });
+      if (wf) {
+        wf.workDir = p;
+        await window.openhub.saveWorkflow(wf);
+      }
+    }
     document.getElementById("orchWorkdirPath").textContent = p;
     document.getElementById("orchWorkdirPath").title = p;
     showToast("Dossier de travail mis à jour", "success");
