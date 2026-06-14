@@ -298,12 +298,15 @@ export class OpencodeBackend implements ExecutionBackend {
       );
     }
 
+    const snapshotFinal = await snapshotWorkspaceFiles(workspaceDir);
+    const filesWritten = countChangedFiles(snapshotBefore, snapshotFinal);
+
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.warn(
-      `${tag} ✓ DONE in ${totalElapsed}s — result: ${resultText.length} chars (preview: "${resultText.substring(0, 120)}…")`,
+      `${tag} ✓ DONE in ${totalElapsed}s — result: ${resultText.length} chars, ${filesWritten} fichier(s) écrit(s) (preview: "${resultText.substring(0, 120)}…")`,
     );
 
-    return { resultText, backend: "opencode" };
+    return { resultText, backend: "opencode", filesWritten };
   }
 
   private async sendMessage(
