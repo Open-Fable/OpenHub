@@ -13,6 +13,13 @@ export interface BackendContext {
 export interface BackendResult {
   readonly resultText: string;
   readonly backend: "opencode" | "open-design";
+  /**
+   * Number of files the backend actually wrote/changed on disk via its tools.
+   * Used so a node that produced real files but returned a short chat summary
+   * (e.g. "Créé 6 fichiers") is never judged "trivial" and re-run through the
+   * direct LLM, which would clobber the tool-authored files.
+   */
+  readonly filesWritten: number;
 }
 
 export class BackendUnavailableError extends Error {
