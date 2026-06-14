@@ -6,7 +6,22 @@ import type { SlotName } from "./types.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OVERRIDES_DIR = path.join(__dirname, "overrides");
 
+// Override names come from index.json keys; constrain them so a crafted key like
+// "../../something" can never escape OVERRIDES_DIR and load arbitrary files.
+const OVERRIDE_NAME_RE = /^[a-z0-9_-]+$/i;
+
 type OverrideIndex = Record<string, Record<string, boolean>>;
+
+function safeOverridePath(
+  subdir: string,
+  name: string,
+  type: "css" | "js",
+): string | null {
+  if (!OVERRIDE_NAME_RE.test(name)) return null;
+  const full = path.resolve(OVERRIDES_DIR, subdir, `${name}.${type}`);
+  const root = path.resolve(OVERRIDES_DIR);
+  return full.startsWith(root + path.sep) ? full : null;
+}
 
 async function readIndex(): Promise<OverrideIndex> {
   const raw = await fs.readFile(path.join(OVERRIDES_DIR, "index.json"), "utf-8");
@@ -23,9 +38,12 @@ export async function loadOverrides(
   // Global overrides apply to all slots
   for (const [name, enabled] of Object.entries(index["global"] ?? {})) {
     if (!enabled) continue;
-    const content = await readFileSafe(
-      path.join(OVERRIDES_DIR, "global", `${name}.${type}`),
-    );
+    const safePath = safeOverridePath("global", name, type);
+    if (!safePath) {
+      console.warn(`[overrides] Rejected unsafe override name: ${name}`);
+      continue;
+    }
+    const content = await readFileSafe(safePath);
     if (content) results.push(content);
   }
 
@@ -33,9 +51,12 @@ export async function loadOverrides(
   const appName = slotToAppName(slot);
   for (const [name, enabled] of Object.entries(index[appName] ?? {})) {
     if (!enabled) continue;
-    const content = await readFileSafe(
-      path.join(OVERRIDES_DIR, appName, `${name}.${type}`),
-    );
+    const safePath = safeOverridePath(appName, name, type);
+    if (!safePath) {
+      console.warn(`[overrides] Rejected unsafe override name: ${name}`);
+      continue;
+    }
+    const content = await readFileSafe(safePath);
     if (content) results.push(content);
   }
 
