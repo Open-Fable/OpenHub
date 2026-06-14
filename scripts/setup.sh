@@ -51,8 +51,12 @@ fi
 info "Git $(git --version | head -1) ✓"
 
 if ! command -v pnpm &>/dev/null; then
-  warn "pnpm introuvable — installation globale..."
-  npm install -g pnpm
+  warn "pnpm introuvable — activation via corepack (ships with Node, no unpinned fetch)..."
+  if command -v corepack &>/dev/null; then
+    corepack enable pnpm
+  else
+    npm install -g pnpm@9
+  fi
 fi
 info "pnpm $(pnpm --version) ✓"
 
@@ -64,6 +68,9 @@ if command -v opencode &>/dev/null; then
   info "opencode déjà installé: $(opencode --version 2>/dev/null || echo 'présent') ✓"
 else
   warn "Installation de opencode CLI..."
+  # TRUST NOTE: the installer is fetched over HTTPS to a temp file (not piped into a
+  # shell) and then executed. There is no checksum pin because upstream does not
+  # publish a stable one; this inherits trust in opencode.ai's TLS + release pipeline.
   INSTALL_SCRIPT=$(mktemp -t opencode-install.XXXXXX)
   curl -fsSL https://opencode.ai/install -o "$INSTALL_SCRIPT"
   bash "$INSTALL_SCRIPT"
