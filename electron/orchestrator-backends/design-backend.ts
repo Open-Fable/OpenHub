@@ -9,6 +9,11 @@ const DESIGN_BASE = `http://127.0.0.1:${DESIGN_PORT}`;
 const HEALTH_TIMEOUT_MS = 2_000;
 const POLL_INTERVAL_MS = 2_000;
 const RUN_TIMEOUT_MS = 20 * 60 * 1000;
+// Refinement runs are polish, not generation — cap them tighter than the first
+// run so a single slow refine can't burn ~15 min before failing (N9). And bound
+// the cumulative time across iterations: once exceeded, ship the current result.
+const REFINE_TIMEOUT_MS = 6 * 60 * 1000;
+const TOTAL_DESIGN_BUDGET_MS = 18 * 60 * 1000;
 
 const MAX_DESIGN_ITERATIONS = 3;
 
@@ -174,6 +179,15 @@ export class DesignBackend implements ExecutionBackend {
       if (signal?.aborted) throw new Error("Aborted by user");
 
       const isFirst = iter === 1;
+      // Stop refining once the cumulative budget is spent — ship what we have
+      // rather than starting another long run (the first run is never skipped).
+      if (!isFirst && Date.now() - startTime > TOTAL_DESIGN_BUDGET_MS) {
+        const spent = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.warn(
+          `${tag} Design budget spent (${spent}s) — skipping further refinement`,
+        );
+        break;
+      }
       const iterLabel = isFirst
         ? "Génération de la maquette…"
         : `Amélioration de la maquette (itération ${iter}/${MAX_DESIGN_ITERATIONS})…`;
@@ -198,9 +212,14 @@ export class DesignBackend implements ExecutionBackend {
           : `Amélioration en cours (${iter}/${MAX_DESIGN_ITERATIONS})…`,
       );
 
-      const finalStatus = await this.pollRun(runId, signal, (status) => {
-        ctx.onProgress(`${iterLabel} (${status})…`);
-      });
+      const finalStatus = await this.pollRun(
+        runId,
+        signal,
+        (status) => {
+          ctx.onProgress(`${iterLabel} (${status})…`);
+        },
+        isFirst ? RUN_TIMEOUT_MS : REFINE_TIMEOUT_MS,
+      );
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       console.warn(
         `${tag} Run ${iter} finished: status=${finalStatus.status} in ${elapsed}s`,
@@ -398,8 +417,9 @@ export class DesignBackend implements ExecutionBackend {
     runId: string,
     signal: AbortSignal | undefined,
     onStatus: (status: string) => void,
+    timeoutMs: number = RUN_TIMEOUT_MS,
   ): Promise<RunStatus> {
-    const deadline = Date.now() + RUN_TIMEOUT_MS;
+    const deadline = Date.now() + timeoutMs;
     let consecutiveErrors = 0;
     const MAX_POLL_ERRORS = 5;
 
