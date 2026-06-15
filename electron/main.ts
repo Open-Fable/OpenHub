@@ -211,6 +211,11 @@ function createSlotView(
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      // This view renders untrusted third-party remote UIs (work/code/design).
+      // Pin the same-origin policy and block mixed content explicitly instead of
+      // relying on Electron defaults, so a future change can't silently weaken it.
+      webSecurity: true,
+      allowRunningInsecureContent: false,
       preload: path.join(__dirname, "preload.cjs"),
       partition: "persist:chat",
     },
