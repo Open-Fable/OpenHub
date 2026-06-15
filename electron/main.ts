@@ -239,8 +239,14 @@ function createSlotView(
     },
   });
 
-  view.webContents.on("did-navigate", () => injectOverrides(slot, view));
-  view.webContents.on("did-navigate-in-page", () => injectOverrides(slot, view));
+  // CSS only on full navigation: a did-navigate-in-page keeps the same document,
+  // so the stylesheet inserted by insertCSS() is still present. Re-inserting it
+  // there appends a DUPLICATE stylesheet that accumulates unboundedly over a long
+  // SPA session (memory + style-recalc cost). JS is re-run on both events because
+  // an in-page route swap can drop our injected DOM; the overrides are guarded by
+  // window.__OPENHUB_*_INJECTED__ flags so re-running is idempotent.
+  view.webContents.on("did-navigate", () => injectOverrides(slot, view, true));
+  view.webContents.on("did-navigate-in-page", () => injectOverrides(slot, view, false));
 
   // Block drag-and-drop navigation to local files or other unsafe protocols
   view.webContents.on("will-navigate", (event, url) => {
@@ -280,10 +286,13 @@ function createSlotView(
 async function injectOverrides(
   slot: Exclude<SlotName, "config" | "chat" | "projects">,
   view: WebContentsView,
+  injectCss: boolean,
 ): Promise<void> {
-  const cssBlocks = await loadOverrides(slot, "css");
-  for (const css of cssBlocks) {
-    await view.webContents.insertCSS(css);
+  if (injectCss) {
+    const cssBlocks = await loadOverrides(slot, "css");
+    for (const css of cssBlocks) {
+      await view.webContents.insertCSS(css);
+    }
   }
   const jsBlocks = await loadOverrides(slot, "js");
   for (const js of jsBlocks) {
