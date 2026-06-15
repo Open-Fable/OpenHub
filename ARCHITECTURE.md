@@ -9,77 +9,12 @@
 **Statut :** V1 figée — vérifiée sur le code source réel des dépôts.
 **Date :** 2026-06-03.
 
-## RÈGLES CRITIQUES : PROTECTION ABSOLUE DU CACHE DEEPSEEK (PREFIX CACHING)
-
-Le fichier `electron/proxy/index.ts` contient une logique critique optimisée pour le "Prefix Caching" de DeepSeek.  
-Toute modification de la structure du préfixe, de l’ordre des messages, de la composition des blocs système, ou de l’historique conversationnel peut provoquer une chute majeure du cache hit rate, augmenter fortement les tokens recalculés, dégrader les performances et augmenter les coûts API. [cite:11][cite:12]
-
-### INTERDICTION ABSOLUE
-
-Il est strictement interdit de modifier automatiquement, refactoriser, réordonner, simplifier, nettoyer, dédupliquer, factoriser ou “améliorer” les zones suivantes sans validation explicite de l’utilisateur :
-
-- la structure des messages système dans `electron/proxy/index.ts`
-- l’ordre exact des 5 blocs système
-- la présence de 5 blocs système fixes, même vides
-- la valeur et la gestion de `userQuery` (actuellement figée à `""`)
-- toute logique liée à `structuredMessages.push(...)`
-- toute logique qui change la position, le contenu ou l’ordre des messages avant l’appel provider
-- toute logique de suppression de doublons dans l’historique
-- toute mutation automatique d’un fichier ou contenu injecté dans le préfixe, notamment `AGENT-MEMORY.md`
-- toute logique de mémoire ou skills pouvant faire varier le préfixe d’un tour à l’autre
-- toute logique de réinjection sur les sous-agents
-- toute logique liée à `bypassInjection`
-- toute logique touchant `buildMemoryBlock` et `buildDynamicSkillsSnippet`
-
-### INVARIANTS NON NÉGOCIABLES
-
-Les invariants suivants doivent être considérés comme contractuels et ne doivent jamais être cassés :
-
-1. Le prompt système doit toujours conserver exactement 5 blocs système, dans le même ordre, avec la même forme JSON, même si certains blocs sont vides.
-2. Le préfixe doit rester le plus stable possible entre deux requêtes successives.
-3. Aucun contenu volatil ne doit être injecté tôt dans le prompt si cela modifie le préfixe.
-4. L’historique ne doit pas être dédupliqué si cette déduplication change la séquence exacte des messages envoyés au provider.
-5. Aucun mécanisme automatique ne doit réécrire ou enrichir un contenu injecté dans le préfixe sans accord explicite.
-6. Les sous-agents ne doivent jamais subir une double injection architecture/mémoire/skills.
-7. Toute modification impactant la stabilité du préfixe doit être considérée comme une régression potentielle de performance.
-
-### COMPORTEMENT OBLIGATOIRE DE L’AGENT
-
-Si une tâche, un patch, une correction, une optimisation, une refactorisation ou un nettoyage implique l’un des éléments protégés ci-dessus, l’agent doit obligatoirement :
-
-1. stopper immédiatement toute tentative de modification ;
-2. expliquer explicitement que le changement risque de casser le prefix caching DeepSeek ;
-3. décrire textuellement l’impact probable sur le cache hit rate, les coûts et les performances ;
-4. attendre une confirmation explicite de l’utilisateur ;
-5. ne produire aucun diff, aucun patch, aucune réécriture de code tant que cette confirmation n’a pas été donnée.
-
-### INTERDICTIONS SPÉCIFIQUES
-
-Les actions suivantes sont interdites par défaut :
-
-- supprimer des doublons dans l’historique si cela modifie la séquence transmise au provider ;
-- modifier automatiquement `AGENT-MEMORY.md` ou tout équivalent injecté dans les blocs système ;
-- changer l’ordre des blocs système ;
-- remplacer une structure fixe par une structure conditionnelle ;
-- fusionner, compresser ou supprimer des messages système “vides” ;
-- réactiver une injection sur des appels sous-agents protégés ;
-- modifier les zones liées à `userQuery`, `structuredMessages`, `bypassInjection`, `buildMemoryBlock`, `buildDynamicSkillsSnippet` ;
-- faire un refactor “cosmétique” ou “clean code” sur ces zones.
-
-### POLITIQUE PAR DÉFAUT
-
-Sur toutes les zones protégées de `electron/proxy/index.ts`, la politique par défaut est :
-
-**NE PAS TOUCHER.**
-**NE PAS OPTIMISER.**
-**NE PAS REFACTORISER.**
-**NE PAS DÉDUPLIQUER.**
-**NE PAS RÉINJECTER.**
-**NE PAS MUTER LE PRÉFIXE.**
-
-En cas de doute, l’agent doit considérer que le changement est dangereux pour le cache et s’arrêter.
-
----
+> [!NOTE]
+> Le proxy (`electron/proxy/index.ts`) contient une zone sensible optimisée pour le
+> **prefix caching** des providers (DeepSeek, Anthropic…). Sa structure de préfixe
+> ne doit pas être réordonnée ou « nettoyée » à la légère sous peine de chute du
+> cache hit rate. Les contraintes détaillées (et les consignes pour les agents IA
+> qui contribuent au code) sont dans [AGENTS.md](AGENTS.md).
 
 ## 1. Périmètre V1
 
@@ -253,3 +188,5 @@ Chat (4e pilule du brief initial) : **reporté V2** par décision.
 3. Générateur de `~/.config/opencode/opencode.json`
 4. Sidebar + WebContentsView + couche d'injection
 5. Panel Config (clés API, modèles, toggles d'overrides)
+   </content>
+   </invoke>

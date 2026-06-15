@@ -13,7 +13,7 @@ A macOS desktop shell that unifies [OpenWork](https://github.com/different-ai/op
 [![typecheck](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/typecheck.yml?label=typecheck&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/typecheck.yml)
 [![lint](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/lint.yml?label=lint&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/lint.yml)
 
-[Francais](#-version-francaise) | [Installation](#-installation) | [Architecture](#-architecture) | [Contributing](CONTRIBUTING.md)
+[Francais](#-version-francaise) | [Installation](#-installation) | [Usage](docs/USAGE.md) | [FAQ](docs/FAQ.md) | [Architecture](#-architecture) | [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -113,7 +113,7 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-**[Open an issue](https://github.com/1zalt/OpenHub/issues) · [Read the docs](ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
+**[Open an issue](https://github.com/1zalt/OpenHub/issues) · [Usage guide](docs/USAGE.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
 ---
 

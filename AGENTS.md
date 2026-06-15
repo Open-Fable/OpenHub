@@ -42,6 +42,49 @@ Never parallelize agents that write to the same files.
 4. Validate selectors after every change to `electron/overrides/`.
 5. Every agent reads and maintains `AGENT-MEMORY.md` before acting and after completing a task.
 6. Every agent has the knowledge graph (Graphify) auto-loaded via `opencode.json` instructions — context is always fresh from `graphify-out/GRAPH_REPORT.md`.
+7. Respect the protected proxy zone below — never refactor it without explicit user confirmation.
+
+## ZONE PROTÉGÉE : cache de préfixe du proxy
+
+Le fichier `electron/proxy/index.ts` contient une logique critique optimisée pour le
+**prefix caching** des providers (DeepSeek, Anthropic…). Toute modification de la
+structure du préfixe, de l'ordre des messages, de la composition des blocs système ou
+de l'historique conversationnel peut provoquer une chute majeure du cache hit rate,
+augmenter fortement les tokens recalculés, dégrader les performances et augmenter les
+coûts API.
+
+### Interdiction par défaut
+
+Ne pas modifier, refactoriser, réordonner, simplifier, nettoyer, dédupliquer,
+factoriser ou « améliorer » ces zones sans validation explicite de l'utilisateur :
+
+- la structure et l'ordre exact des 5 blocs système dans `electron/proxy/index.ts`
+  (présents même vides) ;
+- la valeur et la gestion de `userQuery` (actuellement figée à `""`) ;
+- toute logique liée à `structuredMessages.push(...)` ou qui change la position, le
+  contenu ou l'ordre des messages avant l'appel provider ;
+- toute déduplication d'historique qui change la séquence transmise au provider ;
+- toute mutation automatique d'un contenu injecté dans le préfixe (notamment
+  `AGENT-MEMORY.md`) ;
+- toute logique de mémoire ou de skills pouvant faire varier le préfixe d'un tour à
+  l'autre, ou de réinjection sur les sous-agents ;
+- `bypassInjection`, `buildMemoryBlock`, `buildDynamicSkillsSnippet`.
+
+### Invariants contractuels
+
+1. Exactement 5 blocs système, même ordre, même forme JSON, même si certains sont vides.
+2. Le préfixe reste le plus stable possible entre deux requêtes successives.
+3. Aucun contenu volatil injecté tôt dans le prompt s'il modifie le préfixe.
+4. Pas de déduplication d'historique qui change la séquence envoyée au provider.
+5. Aucune réécriture/enrichissement automatique d'un contenu injecté sans accord explicite.
+6. Les sous-agents ne subissent jamais de double injection architecture/mémoire/skills.
+
+### Comportement attendu de l'agent
+
+Si une tâche touche l'une de ces zones, l'agent doit : (1) s'arrêter ; (2) expliquer le
+risque pour le prefix caching et son impact probable sur le cache hit rate, les coûts et
+les performances ; (3) attendre une confirmation explicite ; (4) ne produire aucun diff
+tant que cette confirmation n'a pas été donnée. En cas de doute : **ne pas toucher**.
 
 ## Knowledge Graph (Graphify)
 
