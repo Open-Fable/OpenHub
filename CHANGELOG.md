@@ -1,44 +1,44 @@
+**English** · [Français](CHANGELOG.fr.md)
+
 # Changelog
 
-Toutes les modifications notables de ce projet sont documentées ici.
+All notable changes to this project are documented here.
 
-Le format s'inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
-projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
+project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.1.0] — 2026-06-15
 
-Première version publique. Shell desktop macOS unifiant trois outils IA open-source.
+First public release. A macOS desktop shell unifying three open-source AI tools.
 
-### Ajouté
+### Added
 
-- **Shell Electron** avec sidebar à 3 slots (Work, Code, Design) + Chat,
-  Orchestrateur et Config, chaque vue isolée dans un `WebContentsView` à l'état
-  préservé.
-- **Proxy LLM unifié** sur `127.0.0.1:9999` (OpenAI-compatible, Bearer obligatoire)
-  routant vers Anthropic, OpenAI, OpenRouter, Ollama et Google Gemini.
-- **Stockage des secrets dans le Trousseau macOS** (`keytar`) — jamais sur disque ;
-  les apps ne reçoivent qu'un faux jeton local.
-- **Chat intégré** : sélecteur de modèles, effort de raisonnement par modèle,
-  historique sauvegardé, recherche web, pièces jointes, contexte projet.
-- **Orchestrateur multi-agents** : planification itérative, exécution d'un DAG
-  d'agents (code / design / work / LLM pur / vérification), quality gates
-  déterministes et relance sur erreur.
-- **Gestion de projets** : projets autonomes et projets orchestrateur, instructions
-  personnalisées injectées dans le contexte IA.
-- **Mémoire persistante** : profil, faits taggés, auto-extraction et budget de tokens.
-- **Couche d'overrides** CSS/JS par app — le code source upstream n'est jamais
-  modifié, ce qui préserve la compatibilité avec les mises à jour.
-- **Optimisation du prefix caching** dans le proxy pour réduire coûts et latence.
-- **Outillage** : setup automatisé (`scripts/setup.sh`), `npm run update:apps`,
-  `npm run check:selectors`, tests Vitest + Playwright, CI lint & typecheck.
+- **Electron shell** with a 3-slot sidebar (Work, Code, Design) plus Chat,
+  Orchestrator and Config, each view isolated in a state-preserving
+  `WebContentsView`.
+- **Unified LLM proxy** on `127.0.0.1:9999` (OpenAI-compatible, Bearer required)
+  routing to Anthropic, OpenAI, OpenRouter, Ollama and Google Gemini.
+- **Secret storage in the macOS Keychain** (`keytar`) — never on disk;
+  the apps only receive a fake local token.
+- **Built-in chat**: model selector, per-model reasoning effort,
+  saved history, web search, attachments, project context.
+- **Multi-agent orchestrator**: iterative planning, execution of a DAG of
+  agents (code / design / work / pure LLM / verification), deterministic
+  quality gates and retry on error.
+- **Project management**: standalone projects and orchestrator projects, with
+  custom instructions injected into the AI context.
+- **Persistent memory**: profile, tagged facts, auto-extraction and token budget.
+- **Override layer** (CSS/JS) per app — upstream source code is never
+  modified, which preserves compatibility with updates.
+- **Prefix caching optimization** in the proxy to reduce cost and latency.
+- **Tooling**: automated setup (`scripts/setup.sh`), `npm run update:apps`,
+  `npm run check:selectors`, Vitest + Playwright tests, CI lint & typecheck.
 
-### Sécurité
+### Security
 
-- WebViews verrouillées (`contextIsolation`, `sandbox`, sans `nodeIntegration`).
-- `opencode serve` lié à `127.0.0.1` strict avec mot de passe de session généré,
-  jamais loggé.
-- Bridge `contextBridge` minimal, sans paramètre de chemin disque.
+- Locked-down WebViews (`contextIsolation`, `sandbox`, no `nodeIntegration`).
+- `opencode serve` bound strictly to `127.0.0.1` with a generated session
+  password, never logged.
+- Minimal `contextBridge` bridge, with no disk path parameter.
 
 [0.1.0]: https://github.com/1zalt/OpenHub/releases/tag/v0.1.0
-
-</content>
