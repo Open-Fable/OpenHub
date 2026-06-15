@@ -294,7 +294,7 @@ export function buildQualityGateUserPrompt(inputs: QualityGateInputs): string {
     `CRITÈRES D'AUDIT GÉNÉRIQUES :
 1. COMPLÉTUDE — Chaque agent a-t-il livré TOUT ce qui était demandé ? Fichiers attendus présents ?
 2. QUALITÉ — Le contenu est-il substantiel (pas de placeholders, pas de Lorem ipsum, pas de "TODO") ?
-3. COHÉRENCE — Les livrables des différents agents sont-ils compatibles entre eux ?
+3. COHÉRENCE QUANTITATIVE (CRITIQUE) — Les FAITS partagés entre livrables concordent-ils ? Une même grandeur ne doit JAMAIS avoir deux valeurs différentes selon le fichier : prix, montants, pourcentages, dates/échéances, quantités, noms propres / identité de marque, identifiants, unités. Compare activement les chiffres d'un fichier à l'autre (ex: une métrique annoncée dans un .json vs le détail d'un .csv ; un prix affiché vs une donnée structurée ; un seuil/point-mort dont les hypothèses excluent un coût pourtant compté ailleurs). Toute contradiction = une "issue" attribuée à l'agent propriétaire du fichier fautif.
 4. ERREURS CORRIGÉES — Si un agent a signalé des problèmes, ont-ils été corrigés ?`,
   ];
 

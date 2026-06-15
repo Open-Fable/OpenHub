@@ -30,6 +30,7 @@ describe("buildFixTask", () => {
   it("always restates the critical rules about modifying existing files", () => {
     const out = buildFixTask("fix", "feedback");
     expect(out).toContain("RÈGLES CRITIQUES");
-    expect(out).toContain("MODIFIE-les");
+    expect(out).toContain("SOURCE DE VÉRITÉ");
+    expect(out).toContain("NE RACCOURCIS JAMAIS");
   });
 });
