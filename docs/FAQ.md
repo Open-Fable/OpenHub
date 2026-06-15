@@ -1,78 +1,77 @@
+**English** · [Français](FAQ.fr.md)
+
 # OpenHub — FAQ
 
-### OpenHub est-il gratuit ?
+### Is OpenHub free?
 
-Le shell OpenHub est open-source (MIT). Mais il **n'inclut aucun crédit IA** : tu
-utilises **tes propres clés API** (Anthropic, OpenAI, OpenRouter, Google) ou des
-modèles locaux via Ollama. Les coûts d'inférence sont facturés par ton provider, pas
-par OpenHub.
+The OpenHub shell is open-source (MIT). But it **includes no AI credits**: you use
+**your own API keys** (Anthropic, OpenAI, OpenRouter, Google) or local models via
+Ollama. Inference costs are billed by your provider, not by OpenHub.
 
-### Ça marche sur Windows ou Linux ?
+### Does it work on Windows or Linux?
 
-Non, **macOS uniquement** (macOS 14+) pour l'instant. OpenHub dépend du Trousseau
-macOS pour stocker les secrets et de `WebContentsView` d'Electron. Un portage n'est
-pas prévu à court terme.
+No, **macOS only** (macOS 14+) for now. OpenHub depends on the macOS Keychain to
+store secrets and on Electron's `WebContentsView`. A port isn't planned in the short
+term.
 
-### Où sont stockées mes clés API ?
+### Where are my API keys stored?
 
-Dans le **Trousseau macOS (Keychain)**, via `keytar`. Elles ne sont jamais écrites sur
-disque, ni dans le stockage local, ni dans les WebViews des apps. Le proxy local les
-charge en RAM et les injecte au démarrage des process. Les 3 apps ne reçoivent qu'un
-**faux jeton local**, jamais tes vraies clés.
+In the **macOS Keychain**, via `keytar`. They are never written to disk, nor to local
+storage, nor to the apps' WebViews. The local proxy loads them into RAM and injects
+them when the processes start. The 3 apps only receive a **fake local token**, never
+your real keys.
 
-### Où sont stockées mes données (projets, mémoire, chats) ?
+### Where is my data (projects, memory, chats) stored?
 
-Tout est local, dans ton dossier utilisateur :
+Everything is local, in your home directory:
 
-| Donnée               | Emplacement                                    |
-| -------------------- | ---------------------------------------------- |
-| Projets              | `~/.config/openhub/projects.json`              |
-| Mémoire              | `~/.config/openhub/memory.json`                |
-| Config opencode      | `~/.config/opencode/opencode.json`             |
-| Historique des chats | stockage local + sauvegarde fichier sur disque |
+| Data            | Location                            |
+| --------------- | ----------------------------------- |
+| Projects        | `~/.config/openhub/projects.json`   |
+| Memory          | `~/.config/openhub/memory.json`     |
+| opencode config | `~/.config/opencode/opencode.json`  |
+| Chat history    | local storage + file backup on disk |
 
-Rien n'est envoyé à un serveur OpenHub — il n'y en a pas.
+Nothing is sent to an OpenHub server — there isn't one.
 
-### Pourquoi un proxy local sur le port 9999 ?
+### Why a local proxy on port 9999?
 
-Pour **centraliser les secrets et la configuration**. Au lieu de coller tes clés dans
-chacune des 3 apps, tu les saisis une fois ; le proxy (`127.0.0.1:9999`,
-OpenAI-compatible, Bearer obligatoire) détient les vraies clés et route les appels
-vers le bon provider. Il sert aussi de point d'injection pour la recherche web et
-l'enrichissement de contexte.
+To **centralize secrets and configuration**. Instead of pasting your keys into each of
+the 3 apps, you enter them once; the proxy (`127.0.0.1:9999`, OpenAI-compatible,
+Bearer required) holds the real keys and routes calls to the right provider. It also
+serves as the injection point for web search and context enrichment.
 
-### Mes apps upstream sont-elles modifiées ?
+### Are my upstream apps modified?
 
-**Jamais.** OpenHub clone OpenWork, OpenCode et Open Design dans `apps/` et les laisse
-intacts. Toute la personnalisation (thème, masquage de settings, features) passe par
-de l'injection CSS/JS depuis `electron/overrides/`. C'est pour ça que les mises à jour
-upstream (`npm run update:apps`) restent indolores.
+**Never.** OpenHub clones OpenWork, OpenCode, and Open Design into `apps/` and leaves
+them intact. All customization (theme, hiding settings, features) happens through
+CSS/JS injection from `electron/overrides/`. That's why upstream updates
+(`npm run update:apps`) stay painless.
 
-### Quels providers LLM sont supportés ?
+### Which LLM providers are supported?
 
-Anthropic (Claude), OpenAI (GPT), OpenRouter (multi-modèles), Ollama (local) et Google
-Gemini (via OAuth). Tu peux mélanger cloud et local selon les tâches.
+Anthropic (Claude), OpenAI (GPT), OpenRouter (multi-model), Ollama (local), and Google
+Gemini (via OAuth). You can mix cloud and local depending on the task.
 
-### C'est quoi l'orchestrateur, concrètement ?
+### What is the orchestrator, concretely?
 
-Un moteur qui décompose un objectif en plusieurs agents spécialisés (code, design,
-work, recherche, vérification) organisés en graphe de dépendances, puis enchaîne leur
-exécution avec des contrôles qualité automatiques. Le résultat est un dossier de
-livrables. Voir le [guide d'usage](USAGE.md#4-lorchestrateur-multi-agents).
+An engine that breaks a goal down into several specialized agents (code, design, work,
+research, verification) organized into a dependency graph, then chains their execution
+with automatic quality checks. The result is a folder of deliverables. See the
+[usage guide](USAGE.md#4-the-multi-agent-orchestrator).
 
-### Après une mise à jour upstream, l'interface est cassée. Que faire ?
+### After an upstream update, the interface is broken. What do I do?
 
-Lance `npm run check:selectors` : ça vérifie que les sélecteurs CSS visés par les
-overrides existent toujours dans le nouveau code des apps. Si un sélecteur a changé en
-amont, il faut ajuster le fichier d'override concerné dans `electron/overrides/`.
+Run `npm run check:selectors`: it verifies that the CSS selectors targeted by the
+overrides still exist in the apps' new code. If a selector changed upstream, you need
+to adjust the relevant override file in `electron/overrides/`.
 
-### Comment contribuer ?
+### How do I contribute?
 
-Voir [CONTRIBUTING.md](../CONTRIBUTING.md). En résumé : fork, branche, tests
-(`npm test`), typecheck (`npm run typecheck`), lint (`npm run lint`), puis PR.
+See [CONTRIBUTING.md](../CONTRIBUTING.md). In short: fork, branch, tests
+(`npm test`), typecheck (`npm run typecheck`), lint (`npm run lint`), then PR.
 
-### Comment signaler un bug ou demander une fonctionnalité ?
+### How do I report a bug or request a feature?
 
-Via les [issues GitHub](https://github.com/1zalt/OpenHub/issues) — des templates sont
-fournis pour les bugs, les fonctionnalités et les questions.
-</content>
+Via the [GitHub issues](https://github.com/1zalt/OpenHub/issues) — templates are
+provided for bugs, features, and questions.

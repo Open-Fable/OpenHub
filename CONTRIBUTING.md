@@ -1,14 +1,16 @@
-# Contribuer a OpenHub
+**English** · [Français](CONTRIBUTING.fr.md)
 
-Merci de vouloir contribuer ! Voici comment participer.
+# Contributing to OpenHub
 
-## Prerequis
+Thanks for wanting to contribute! Here's how to get involved.
+
+## Prerequisites
 
 - macOS 14+
 - Node.js 22+
 - Git
 
-## Setup local
+## Local setup
 
 ```bash
 git clone https://github.com/1zalt/OpenHub.git
@@ -19,29 +21,29 @@ npm run dev
 
 ## Workflow
 
-1. **Fork** le repo et cree une branche depuis `main`
-2. **Installe** les dependances avec `bash scripts/setup.sh`
-3. **Fais tes changements** — touche uniquement ce qui est necessaire
-4. **Verifie** : `npm run typecheck && npm run lint && npm test`
-5. **Teste** manuellement dans Electron (`npm run dev`)
-6. **Ouvre une PR** avec une description claire
+1. **Fork** the repo and create a branch from `main`
+2. **Install** dependencies with `bash scripts/setup.sh`
+3. **Make your changes** — touch only what's necessary
+4. **Verify**: `npm run typecheck && npm run lint && npm test`
+5. **Test** manually in Electron (`npm run dev`)
+6. **Open a PR** with a clear description
 
-## Regles
+## Rules
 
-- **Ne modifie jamais le code source des apps upstream** (`apps/`). Toute personnalisation passe par `electron/overrides/`.
-- **Pas de secrets dans le code.** Les cles API passent par le macOS Keychain.
-- **Commits conventionnels :** `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
-- **TypeScript strict.** Pas de `any` sauf aux frontieres de serialisation.
-- **Fichiers < 400 lignes, fonctions < 50 lignes.**
+- **Never modify the upstream apps' source code** (`apps/`). All customization goes through `electron/overrides/`.
+- **No secrets in the code.** API keys go through the macOS Keychain.
+- **Conventional commits:** `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
+- **Strict TypeScript.** No `any` except at serialization boundaries.
+- **Files < 400 lines, functions < 50 lines.**
 
-## Signaler un bug
+## Reporting a bug
 
-Utilise le template [Bug Report](https://github.com/1zalt/OpenHub/issues/new?template=bug_report.yml).
+Use the [Bug Report](https://github.com/1zalt/OpenHub/issues/new?template=bug_report.yml) template.
 
-## Proposer une fonctionnalite
+## Proposing a feature
 
-Utilise le template [Feature Request](https://github.com/1zalt/OpenHub/issues/new?template=feature_request.yml).
+Use the [Feature Request](https://github.com/1zalt/OpenHub/issues/new?template=feature_request.yml) template.
 
-## Licence
+## License
 
-En contribuant, tu acceptes que tes contributions soient sous licence [MIT](LICENSE).
+By contributing, you agree that your contributions are licensed under the [MIT](LICENSE) license.

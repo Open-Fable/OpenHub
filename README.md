@@ -13,7 +13,9 @@ A macOS desktop shell that unifies [OpenWork](https://github.com/different-ai/op
 [![typecheck](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/typecheck.yml?label=typecheck&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/typecheck.yml)
 [![lint](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/lint.yml?label=lint&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/lint.yml)
 
-[Francais](#-version-francaise) | [Installation](#-installation) | [Usage](docs/USAGE.md) | [FAQ](docs/FAQ.md) | [Architecture](#-architecture) | [Contributing](CONTRIBUTING.md)
+**English** · [Français](README.fr.md)
+
+[Installation](#-installation) | [Usage](docs/USAGE.md) | [Orchestrator](docs/ORCHESTRATOR.md) | [FAQ](docs/FAQ.md) | [Architecture](#-architecture) | [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -25,16 +27,16 @@ Running OpenWork, OpenCode, and Open Design separately means three terminals, th
 
 ## Features
 
-|                              |                                                                                                               |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **3 apps, 1 window**         | Switch between OpenWork (orchestration), OpenCode (code agent), and Open Design (visual design) via a sidebar |
-| **Unified LLM proxy**        | Routes calls to Anthropic, OpenAI, OpenRouter, Ollama, and Google Gemini — on `127.0.0.1:9999`                |
-| **Persistent memory**        | AI remembers your project and decisions across sessions                                                       |
-| **Built-in chat**            | Model selector, history, auto-save                                                                            |
-| **Project management**       | Multiple projects with custom instructions, injected into AI context                                          |
-| **Unified theming**          | CSS/JS overrides per app for a cohesive look — upstream code is never modified                                |
-| **Multi-agent orchestrator** | Complex workflows with smart classification and pro/flash routing                                             |
-| **Secure by default**        | API keys in **macOS Keychain**, never on disk. WebViews sandboxed. Proxy localhost-only with Bearer auth      |
+|                              |                                                                                                                  |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **3 apps, 1 window**         | Switch between OpenWork (orchestration), OpenCode (code agent), and Open Design (visual design) via a sidebar    |
+| **Unified LLM proxy**        | Routes calls to Anthropic, OpenAI, OpenRouter, Ollama, and Google Gemini — on `127.0.0.1:9999`                   |
+| **Persistent memory**        | AI remembers your project and decisions across sessions                                                          |
+| **Built-in chat**            | Model selector, history, auto-save                                                                               |
+| **Project management**       | Multiple projects with custom instructions, injected into AI context                                             |
+| **Unified theming**          | CSS/JS overrides per app for a cohesive look — upstream code is never modified                                   |
+| **Multi-agent orchestrator** | A DAG of agents that plan, build, and self-verify a real deliverable — see [the deep dive](docs/ORCHESTRATOR.md) |
+| **Secure by default**        | API keys in **macOS Keychain**, never on disk. WebViews sandboxed. Proxy localhost-only with Bearer auth         |
 
 ---
 
@@ -66,6 +68,8 @@ npm run dev
 > [!TIP]
 > To use Google Gemini models directly (without OpenRouter), run `opencode auth login` in your terminal.
 
+See the [Usage guide](docs/USAGE.md) for how to use the chat, projects, and orchestrator day-to-day.
+
 ---
 
 ## Architecture
@@ -81,7 +85,7 @@ WebView (OpenWork / OpenCode / Open Design)
                              └── Background memory extraction
 ```
 
-For the full spec — ports, security model, config cascade, and overlay system — see [ARCHITECTURE.md](ARCHITECTURE.md).
+For the full spec — ports, security model, config cascade, and overlay system — see [ARCHITECTURE.md](ARCHITECTURE.md). For the orchestrator engine, see [docs/ORCHESTRATOR.md](docs/ORCHESTRATOR.md).
 
 ---
 
@@ -105,6 +109,8 @@ For the full spec — ports, security model, config cascade, and overlay system 
 - **WebViews** sandboxed (`contextIsolation`, `sandbox`, no `nodeIntegration`)
 - **Overrides** are CSS/JS injection only — upstream source code is never modified
 
+See [SECURITY.md](SECURITY.md) for the full policy and how to report a vulnerability.
+
 ---
 
 ## License
@@ -113,39 +119,7 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-**[Open an issue](https://github.com/1zalt/OpenHub/issues) · [Usage guide](docs/USAGE.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
-
----
-
-## Version francaise
-
-**OpenHub** est un hub desktop macOS qui reunit plusieurs outils IA open-source dans une interface unique.
-
-Une seule fenetre, une sidebar a icones, un proxy LLM central — et ton environnement de developpement IA prefere, unifie.
-
-### Fonctionnalites
-
-- **3 apps en 1** — Bascule entre OpenWork (orchestration), OpenCode (agent de code), et Open Design (design visuel)
-- **Proxy LLM unifie** — Route les appels vers Anthropic, OpenAI, OpenRouter, Ollama, et Google Gemini
-- **Memoire persistante** — L'IA se souvient de ton projet et de tes decisions entre les sessions
-- **Chat integre** — Selection de modele, historique, sauvegarde automatique
-- **Gestion de projets** — Projets multiples avec instructions personnalisees injectees dans le contexte IA
-- **Theme unifie** — Override CSS/JS par app pour une experience visuelle coherente
-- **Orchestrateur multi-agent** — Workflows complexes avec classification intelligente
-- **Securise** — Cles API dans le macOS Keychain, jamais sur disque
-
-### Installation
-
-```bash
-git clone https://github.com/1zalt/OpenHub.git
-cd OpenHub
-bash scripts/setup.sh
-npm run dev
-```
-
-Le script `setup.sh` s'occupe de tout : verification des prerequis, installation d'opencode, clonage des apps, configuration, et compilation.
-
-Apres le premier lancement, ouvre le panneau Config pour ajouter tes cles API (stockees dans le Keychain) et configurer tes modeles.
+**[Open an issue](https://github.com/1zalt/OpenHub/issues) · [Usage](docs/USAGE.md) · [Orchestrator](docs/ORCHESTRATOR.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
 ---
 
