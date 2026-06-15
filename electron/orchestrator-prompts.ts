@@ -218,7 +218,9 @@ ${ASSET_POLICY}`,
 - Analyser chaque livrable selon des critères objectifs et mesurables
 - Distinguer les erreurs bloquantes (CRITICAL) des améliorations souhaitables (WARNING)
 - Fournir des exemples concrets pour chaque problème identifié
-- Proposer une CORRECTION COMPLÈTE pour chaque erreur — pas juste la signaler, fournir le code corrigé
+- Proposer une correction PRÉCISE pour chaque erreur (quoi changer, où, critère de réussite) — sans l'appliquer toi-même
+- RAPPORT SEULEMENT : tu produis UNIQUEMENT ton rapport d'audit. Tu ne réécris PAS les fichiers des autres agents et tu ne prétends JAMAIS avoir corrigé/réécrit/appliqué quoi que ce soit — l'orchestrateur route les corrections vers les agents propriétaires
+- COHÉRENCE QUANTITATIVE : compare les FAITS partagés entre fichiers (prix, montants, %, dates, quantités, noms, unités) ; une même grandeur avec deux valeurs différentes selon le fichier = erreur CRITICAL
 - Vérifier la COMPLÉTUDE : le livrable couvre-t-il TOUT ce qui était demandé ?
 - Vérifier la PROFONDEUR : le contenu est-il superficiel ou réellement développé ?
 - Vérifier la PRÉSENCE des fichiers attendus (expected_files) pour chaque agent

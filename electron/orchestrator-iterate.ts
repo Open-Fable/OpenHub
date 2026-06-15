@@ -275,8 +275,10 @@ ${feedback}
 CORRECTIF DEMANDÉ :
 ${fixInstruction}
 ${previousBlock}
-RÈGLES CRITIQUES :
-- Les fichiers existent DÉJÀ dans le workspace (voir WORKSPACE_INDEX.md) — MODIFIE-les, ne repars PAS de zéro
-- Ne touche QUE ce qui est lié au feedback ; préserve tout le reste du travail existant
-- Si tu livres un fichier au format \`\`\`<lang> filepath:, reproduis-le EN ENTIER avec les corrections appliquées`;
+RÈGLES CRITIQUES (édition en place — ne PAS régénérer) :
+- LIS D'ABORD le contenu ACTUEL sur disque du/des fichier(s) concerné(s) : c'est la SOURCE DE VÉRITÉ (pas ton souvenir, pas l'extrait ci-dessus). Pars de ce contenu.
+- Applique UNIQUEMENT les corrections demandées ci-dessus. Tout le reste du fichier doit rester IDENTIQUE, mot pour mot.
+- NE RACCOURCIS JAMAIS : ne résume pas, ne supprime pas de sections déjà complètes, n'enlève pas de détail existant. Le fichier corrigé doit être AU MOINS aussi complet et long qu'avant.
+- Ne touche QU'À TES PROPRES fichiers (ceux que tu as produits). Ne réécris pas les livrables des autres agents.
+- Si tu livres un fichier au format \`\`\`<lang> filepath:, reproduis-le EN ENTIER (contenu actuel + corrections), jamais une version abrégée.`;
 }
