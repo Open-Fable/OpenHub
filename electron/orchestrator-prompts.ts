@@ -28,7 +28,13 @@ export function buildDependencyContext(
   const deps = node.dependencies ?? [];
   if (deps.length === 0) return "";
 
+  // Per-dep caps bound a single dependency, but a node depending on MANY agents
+  // (e.g. a global verifier) sums to a huge context that inflates cost and dilutes
+  // the verdict. Bound the cumulative size — above the largest single-dep cap
+  // (design 60k) so one big authoritative dep is never truncated below its budget.
+  const MAX_TOTAL_DEP_CONTEXT = 96_000;
   const blocks: string[] = [];
+  let totalLen = 0;
   let hasAuthoritativeSource = false;
   let hasWebArtifacts = false;
   for (const depId of deps) {
@@ -53,7 +59,18 @@ export function buildDependencyContext(
       hasWebArtifacts = true;
     }
 
-    const maxLen = depProject.type === "design" ? 60_000 : 24_000;
+    const header = `--- Agent "${depProject.name}" (${depProject.type ?? "inconnu"}) ---`;
+    // Once the global budget is spent, name remaining deps without their content.
+    const remaining = MAX_TOTAL_DEP_CONTEXT - totalLen;
+    if (remaining <= 600) {
+      const line = `${header} [contenu omis — budget de contexte atteint ; le fichier complet est sur disque]`;
+      blocks.push(line);
+      totalLen += line.length;
+      continue;
+    }
+
+    const perTypeCap = depProject.type === "design" ? 60_000 : 24_000;
+    const maxLen = Math.min(perTypeCap, remaining);
     const resultSummary = result ? result.substring(0, maxLen) : "(pas encore exécuté)";
 
     const evidence = depDiskEvidence?.get(depId);
@@ -62,9 +79,14 @@ export function buildDependencyContext(
         ? `\nFICHIERS PRODUITS (contenu réel sur disque — fait AUTORITÉ) :\n${evidence}`
         : "";
 
-    blocks.push(
-      `--- Agent "${depProject.name}" (${depProject.type ?? "inconnu"}) ---\nTâche : ${depProject.task ?? "non définie"}\nRésultat :\n${resultSummary}${evidenceBlock}`,
-    );
+    let block = `${header}\nTâche : ${depProject.task ?? "non définie"}\nRésultat :\n${resultSummary}${evidenceBlock}`;
+    if (totalLen + block.length > MAX_TOTAL_DEP_CONTEXT) {
+      block =
+        block.substring(0, Math.max(0, MAX_TOTAL_DEP_CONTEXT - totalLen)) +
+        "\n[… contexte de dépendances tronqué — budget global atteint ; contenu complet sur disque …]";
+    }
+    blocks.push(block);
+    totalLen += block.length;
   }
 
   if (blocks.length === 0) return "";

@@ -110,6 +110,22 @@ describe("buildDependencyContext", () => {
     expect(out).not.toContain("y".repeat(24_001));
   });
 
+  it("bounds the cumulative size across many large dependencies", () => {
+    const deps = Array.from({ length: 6 }, (_, i) =>
+      makeProject({ id: `dep${i}`, type: "code" }),
+    );
+    const node = makeProject({
+      id: "p1",
+      dependencies: deps.map((d) => d.id),
+    });
+    const results = new Map(deps.map((d) => [d.id, "z".repeat(24_000)]));
+    const out = buildDependencyContext(node, deps, results);
+    // 6 × 24k = 144k uncapped; the global budget keeps it well under that.
+    expect(out.length).toBeLessThan(110_000);
+    // Later deps are still named even when their content is dropped.
+    expect(out).toContain("budget de contexte atteint");
+  });
+
   it("appends a fidelity mandate when a code node depends on a design agent", () => {
     const dep = makeProject({ id: "dep1", type: "design" });
     const node = makeProject({ id: "p1", type: "code", dependencies: ["dep1"] });
