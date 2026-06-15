@@ -67,6 +67,8 @@ import {
   findPlaceholderDeliverables,
   findUnreferencedModules,
   findModuleGraphProblems,
+  findOrphanStylesheets,
+  sanitizeWorkspaceIndex,
   findConsolidationShrinkage,
   findUnstyledClasses,
   findDivergentDuplicates,
@@ -1400,6 +1402,10 @@ export class OrchestratorRunner {
     // Attributed to the file's OWNING agent (not front-end integration), so the
     // corrective cycle routes the fix to whoever produced the broken file.
     const moduleGraphProblems = await findModuleGraphProblems(workspaceDir);
+    // Stylesheets/scripts no served page references — leftover duplicates from a
+    // superseded design pass (e.g. styles.css beside the linked style.css).
+    // Attributed to the file's owner so the right agent integrates or removes it.
+    const orphanStylesheets = await findOrphanStylesheets(workspaceDir);
     // Machine-checkable contract declared by the planner (Couche 1) — attributed
     // to the owning agent so the corrective cycle routes the fix correctly.
     const declaredCheckProblems = await validateDeclaredChecks(workspaceDir, checksMap);
@@ -1428,6 +1434,7 @@ export class OrchestratorRunner {
         ...servedProblems,
         ...declaredCheckProblems,
         ...moduleGraphProblems,
+        ...orphanStylesheets,
       ]),
     ]
       .filter((s) => s.trim())
@@ -1489,6 +1496,11 @@ export class OrchestratorRunner {
         agent: agentOwning(p.sourceFile),
         issue: `${p.sourceFile} → ${p.problem}`,
         fix: `Corriger ${p.sourceFile} : aligner les noms importés/exportés sur les modules réellement produits (vérifie le contexte de dépendances), ou intégrer/supprimer le module.`,
+      })),
+      ...orphanStylesheets.map((p) => ({
+        agent: agentOwning(p.sourceFile),
+        issue: `${p.sourceFile} → ${p.problem}`,
+        fix: `Intégrer ${p.sourceFile} dans une page (via <link>/@import) si utile, sinon le supprimer pour éviter le doublon.`,
       })),
     ].slice(0, 30);
 
@@ -3474,6 +3486,10 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
       if (parsed.changelogLine) {
         content = content.trim() + "\n" + parsed.changelogLine.trim() + "\n";
       }
+
+      // Each turn inserts fresh file-map rows without checking for prior entries,
+      // so the map accumulates duplicates. Dedupe deterministically before write.
+      content = sanitizeWorkspaceIndex(content);
 
       await fs.writeFile(indexPath, content, "utf-8");
       console.warn("[orchestrator] WORKSPACE_INDEX.md updated.");

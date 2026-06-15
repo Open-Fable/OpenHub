@@ -1806,6 +1806,133 @@ export async function findUnstyledClasses(
 }
 
 /**
+ * Flags stylesheet/script files that NO served HTML references — directly or via
+ * an @import chain. These are leftovers from a superseded design pass (e.g. an
+ * old `styles.css` left beside the `style.css` the page actually links). Scoped
+ * to served roots, so the design daemon's scratch under design/ is ignored. The
+ * orphan check needs ≥1 HTML in the root (otherwise nothing references anything).
+ */
+export async function findOrphanStylesheets(
+  workspaceDir: string,
+): Promise<readonly ServedSiteProblem[]> {
+  const roots = await discoverServedRoots(workspaceDir);
+  const problems: ServedSiteProblem[] = [];
+  const linkRe = /<link\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  const scriptRe = /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  const importRe = /@import\s+(?:url\(\s*)?["']([^"')]+)["']/gi;
+
+  for (const { dir, label } of roots) {
+    const assets: string[] = [];
+    const htmls: string[] = [];
+    async function walk(d: string, depth: number): Promise<void> {
+      if (depth > 5) return;
+      let entries: import("fs").Dirent[];
+      try {
+        entries = await fs.readdir(d, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const e of entries) {
+        // Skip dotfiles + scratch/source dirs (design daemon mirror, mockups…) so
+        // the root fallback never descends into the design backend's scratch.
+        if (e.name.startsWith(".") || NON_SERVED_DIR.test(e.name)) continue;
+        const full = path.resolve(d, e.name);
+        if (e.isDirectory()) await walk(full, depth + 1);
+        else if (/\.(css|m?js)$/i.test(e.name)) assets.push(full);
+        else if (/\.html?$/i.test(e.name)) htmls.push(full);
+      }
+    }
+    await walk(dir, 0);
+    if (assets.length === 0 || htmls.length === 0) continue;
+
+    const referenced = new Set<string>();
+    const queue: string[] = [];
+    const addRef = (fromDir: string, ref: string): void => {
+      if (EXTERNAL_REF.test(ref)) return;
+      const abs = path.resolve(fromDir, ref.split(/[?#]/)[0]);
+      if (!referenced.has(abs)) {
+        referenced.add(abs);
+        queue.push(abs);
+      }
+    };
+    for (const html of htmls) {
+      let content: string;
+      try {
+        content = await fs.readFile(html, "utf-8");
+      } catch {
+        continue;
+      }
+      for (const m of content.matchAll(linkRe)) addRef(path.dirname(html), m[1].trim());
+      for (const m of content.matchAll(scriptRe)) addRef(path.dirname(html), m[1].trim());
+    }
+    // Follow @import chains within referenced CSS so a sheet pulled in indirectly
+    // isn't mislabeled an orphan.
+    while (queue.length > 0) {
+      const css = queue.shift();
+      if (css === undefined || !/\.css$/i.test(css)) continue;
+      let content: string;
+      try {
+        content = await fs.readFile(css, "utf-8");
+      } catch {
+        continue;
+      }
+      for (const m of content.matchAll(importRe)) addRef(path.dirname(css), m[1].trim());
+    }
+
+    for (const asset of assets) {
+      if (!referenced.has(asset)) {
+        problems.push({
+          sourceFile: path.relative(workspaceDir, asset),
+          problem: `feuille de style/script orpheline — référencée par aucune page HTML de ${label} (probable doublon d'une passe design précédente) : l'intégrer dans une page ou la supprimer`,
+        });
+      }
+    }
+  }
+  return problems.slice(0, 30);
+}
+
+/**
+ * Deterministic repair of WORKSPACE_INDEX.md corruption: an LLM that rewrites the
+ * whole index each turn duplicates file-map rows (the same path listed 2-3×). We
+ * drop duplicate rows WITHIN file-map tables only (header's first cell is
+ * Fichier/File/Chemin/Path), keeping the first. Changelog tables (first cell =
+ * Date) are left untouched — dates legitimately repeat. A heading ends a table;
+ * blank lines do not, so row groups split by blanks still dedupe together.
+ */
+export function sanitizeWorkspaceIndex(content: string): string {
+  const isRow = (l: string): boolean => /^\s*\|.*\|\s*$/.test(l);
+  const isSep = (l: string): boolean => /^\s*\|[\s:|-]+\|\s*$/.test(l);
+  const firstCell = (l: string): string => (l.split("|")[1] ?? "").trim();
+  const out: string[] = [];
+  let inFileMap = false;
+  let seen = new Set<string>();
+  for (const line of content.split("\n")) {
+    if (isRow(line)) {
+      if (isSep(line)) {
+        out.push(line);
+        continue;
+      }
+      const fc = firstCell(line).toLowerCase();
+      if (/^(fichier|file|chemin|path)$/i.test(fc)) {
+        inFileMap = true;
+        seen = new Set();
+        out.push(line);
+        continue;
+      }
+      if (inFileMap && fc.length > 0) {
+        if (seen.has(fc)) continue; // duplicate file-map row → drop
+        seen.add(fc);
+      }
+      out.push(line);
+    } else {
+      if (/^#{1,6}\s/.test(line)) inFileMap = false; // a heading ends the table
+      out.push(line);
+    }
+  }
+  return out.join("\n");
+}
+
+/**
  * Extracts the first balanced top-level JSON object from an LLM response.
  *
  * LLM verdicts often wrap the JSON in ```json fences or surround it with prose

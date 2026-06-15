@@ -23,6 +23,8 @@ import {
   findPlaceholderDeliverables,
   findUnreferencedModules,
   findModuleGraphProblems,
+  findOrphanStylesheets,
+  sanitizeWorkspaceIndex,
   deriveFloorChecks,
   PROSE_FLOOR_WORDS,
   findConsolidationShrinkage,
@@ -899,6 +901,85 @@ describe("parseQualityVerdict", () => {
     const raw =
       'Voici mon analyse du livrable.\n{"pass": false, "issues": []}\nEn conclusion, à corriger.';
     expect(parseQualityVerdict(raw)).toEqual({ pass: false, issues: [] });
+  });
+});
+
+describe("findOrphanStylesheets", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await realFs.mkdtemp(path.join(os.tmpdir(), "orphan-"));
+  });
+
+  it("flags a stylesheet no page references but not the linked one", async () => {
+    const root = path.join(tmpDir, "presentation");
+    await realFs.mkdir(root, { recursive: true });
+    await realFs.writeFile(
+      path.join(root, "index.html"),
+      '<!DOCTYPE html><html><head><link rel="stylesheet" href="style.css"></head><body>x</body></html>',
+    );
+    await realFs.writeFile(path.join(root, "style.css"), "body{color:red}");
+    await realFs.writeFile(path.join(root, "styles.css"), "body{color:blue}");
+
+    const orphans = await findOrphanStylesheets(tmpDir);
+    const files = orphans.map((o) => o.sourceFile);
+    expect(files).toContain(path.join("presentation", "styles.css"));
+    expect(files).not.toContain(path.join("presentation", "style.css"));
+  });
+
+  it("follows @import chains so indirectly-used sheets are not orphans", async () => {
+    const root = path.join(tmpDir, "site");
+    await realFs.mkdir(root, { recursive: true });
+    await realFs.writeFile(
+      path.join(root, "index.html"),
+      '<html><head><link rel="stylesheet" href="main.css"></head><body>x</body></html>',
+    );
+    await realFs.writeFile(path.join(root, "main.css"), '@import "tokens.css";\nbody{}');
+    await realFs.writeFile(path.join(root, "tokens.css"), ":root{--c:red}");
+
+    const orphans = await findOrphanStylesheets(tmpDir);
+    expect(orphans).toEqual([]);
+  });
+
+  it("ignores the design daemon scratch dir", async () => {
+    const scratch = path.join(tmpDir, "design", "orch-abc", "presentation");
+    await realFs.mkdir(scratch, { recursive: true });
+    await realFs.writeFile(path.join(scratch, "index.html"), "<html></html>");
+    await realFs.writeFile(path.join(scratch, "orphan.css"), "body{}");
+
+    const orphans = await findOrphanStylesheets(tmpDir);
+    expect(orphans).toEqual([]);
+  });
+});
+
+describe("sanitizeWorkspaceIndex", () => {
+  it("drops duplicate file-map rows, keeping the first", () => {
+    const idx = [
+      "## 1. Cartographie",
+      "| Fichier | Fonction |",
+      "|---|---|",
+      "| a.css | Styles. |",
+      "| b.html | Page. |",
+      "",
+      "| a.css | Styles (doublon). |",
+      "| b.html | Page (doublon). |",
+    ].join("\n");
+    const out = sanitizeWorkspaceIndex(idx);
+    expect((out.match(/\| a\.css \|/g) ?? []).length).toBe(1);
+    expect((out.match(/\| b\.html \|/g) ?? []).length).toBe(1);
+    expect(out).toContain("| a.css | Styles. |"); // first kept
+  });
+
+  it("does not dedupe changelog rows that share a date", () => {
+    const idx = [
+      "## 2. Journal",
+      "| Date | Agent | Description |",
+      "|---|---|---|",
+      "| 2026-06-15 | Design | A. |",
+      "| 2026-06-15 | Work | B. |",
+    ].join("\n");
+    const out = sanitizeWorkspaceIndex(idx);
+    expect((out.match(/2026-06-15/g) ?? []).length).toBe(2);
   });
 });
 
