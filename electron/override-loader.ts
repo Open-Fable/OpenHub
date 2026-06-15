@@ -28,10 +28,28 @@ async function readIndex(): Promise<OverrideIndex> {
   return JSON.parse(raw) as OverrideIndex;
 }
 
+// Override files (index.json + the CSS/JS assets) are static at runtime: they
+// ship with the app and never change while it runs. loadOverrides is called on
+// EVERY navigation, including the frequent did-navigate-in-page events fired by
+// the SPAs — without this cache each route change re-read index.json plus every
+// override file from disk. Memoize the assembled result per slot+type so the
+// hot path stays in memory.
+const overridesCache = new Map<string, string[]>();
+
+// Drops the in-memory override cache so the next loadOverrides re-reads from
+// disk. Used by tests and after update:apps rewrites the override files.
+export function clearOverridesCache(): void {
+  overridesCache.clear();
+}
+
 export async function loadOverrides(
   slot: Exclude<SlotName, "config" | "chat" | "projects">,
   type: "css" | "js",
 ): Promise<string[]> {
+  const cacheKey = `${slot}:${type}`;
+  const cached = overridesCache.get(cacheKey);
+  if (cached) return cached;
+
   const index = await readIndex();
   const results: string[] = [];
 
@@ -60,6 +78,7 @@ export async function loadOverrides(
     if (content) results.push(content);
   }
 
+  overridesCache.set(cacheKey, results);
   return results;
 }
 

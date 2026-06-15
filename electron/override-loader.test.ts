@@ -8,7 +8,7 @@ vi.mock("fs", () => ({
   promises: { readFile: (...args: unknown[]) => readFileMock(...args) },
 }));
 
-import { loadOverrides } from "./override-loader.js";
+import { loadOverrides, clearOverridesCache } from "./override-loader.js";
 
 function mockFs(
   index: Record<string, Record<string, boolean>>,
@@ -26,6 +26,7 @@ function mockFs(
 describe("override-loader — loadOverrides", () => {
   beforeEach(() => {
     readFileMock.mockReset();
+    clearOverridesCache();
   });
 
   it("combine les overrides global puis spécifiques au slot", async () => {
@@ -76,5 +77,22 @@ describe("override-loader — loadOverrides", () => {
   it("retourne un tableau vide quand le slot n'a aucun override déclaré", async () => {
     mockFs({ global: {} }, {});
     expect(await loadOverrides("design", "css")).toEqual([]);
+  });
+
+  it("mémoïse le résultat : aucun accès disque au second appel pour le même slot+type", async () => {
+    mockFs({ global: { theme: true } }, { "global/theme.css": "THEME" });
+    expect(await loadOverrides("code", "css")).toEqual(["THEME"]);
+    const callsAfterFirst = readFileMock.mock.calls.length;
+    expect(await loadOverrides("code", "css")).toEqual(["THEME"]);
+    expect(readFileMock.mock.calls.length).toBe(callsAfterFirst);
+  });
+
+  it("clearOverridesCache force une relecture disque", async () => {
+    mockFs({ global: { theme: true } }, { "global/theme.css": "THEME" });
+    await loadOverrides("code", "css");
+    const callsAfterFirst = readFileMock.mock.calls.length;
+    clearOverridesCache();
+    await loadOverrides("code", "css");
+    expect(readFileMock.mock.calls.length).toBeGreaterThan(callsAfterFirst);
   });
 });
