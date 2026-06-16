@@ -14,6 +14,7 @@ cp "$ROOT/electron/splash.html" "$ROOT/dist/electron/splash.html"
 cp "$ROOT/electron/chat.html" "$ROOT/dist/electron/chat.html"
 cp "$ROOT/electron/projects.html" "$ROOT/dist/electron/projects.html"
 cp "$ROOT/electron/nav-popup.html" "$ROOT/dist/electron/nav-popup.html"
+cp "$ROOT/electron/update-toast.html" "$ROOT/dist/electron/update-toast.html"
 
 # View scripts externalized from inline <script> (CSP: script-src 'self')
 cp "$ROOT/electron/sidebar-ui.js" "$ROOT/dist/electron/sidebar-ui.js"
