@@ -5,9 +5,10 @@ import { fileURLToPath } from "url";
 import type { SlotName } from "./types.js";
 import fs from "fs";
 import os from "os";
+import { startStaticServer, type StaticServerHandle } from "./static-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const APPS_DIR = path.join(__dirname, "..", "..", "apps");
+const DEV_APPS_DIR = path.join(__dirname, "..", "..", "apps");
 
 // 3 minutes — openwork installs deps on first run before starting Vite
 const HEALTH_TIMEOUT_MS = 180_000;
@@ -16,6 +17,8 @@ const HEALTH_POLL_MS = 500;
 interface RunningApp {
   // Array of child processes associated with this slot
   readonly processes: ChildProcess[];
+  // Static file servers (packaged mode) replacing the dev servers; closed on stop
+  readonly staticServers: StaticServerHandle[];
   port: number;
   healthy: boolean;
 }
@@ -24,21 +27,54 @@ export interface ApiKeys {
   googleAiKey?: string | null;
 }
 
+/**
+ * Runtime layout, computed by main.ts from `app.isPackaged`. In dev the apps live
+ * in the cloned repo and run their dev servers; when packaged they are bundled
+ * builds under Resources/ and writable data must live under userData.
+ */
+export interface PackagingContext {
+  readonly isPackaged: boolean;
+  readonly appsDir: string;
+  readonly resourcesPath: string;
+  readonly userDataDir: string;
+}
+
 export class ProcessManager {
   private readonly running = new Map<string, RunningApp>();
   private readonly starting = new Map<string, Promise<number | null>>();
   private readonly proxyToken: string;
   private readonly apiKeys: ApiKeys;
   private readonly shimDir: string;
+  private readonly ctx: PackagingContext;
 
   // NOTE: `opencode serve` is bound to 127.0.0.1 only (see startOpenCode). A
   // per-session OPENCODE_SERVER_PASSWORD is intentionally NOT set: the upstream
   // OpenWork client connects to opencode directly and we cannot inject the password
   // into it, so loopback binding is the enforced boundary for this surface.
 
-  constructor(proxyToken: string, apiKeys: ApiKeys = {}) {
+  constructor(proxyToken: string, apiKeys: ApiKeys = {}, ctx?: PackagingContext) {
     this.proxyToken = proxyToken;
     this.apiKeys = apiKeys;
+    // Default to the dev layout so tests / `npm run dev` work without wiring ctx.
+    this.ctx = ctx ?? {
+      isPackaged: false,
+      appsDir: DEV_APPS_DIR,
+      resourcesPath: path.join(__dirname, ".."),
+      userDataDir: os.tmpdir(),
+    };
+
+    // Bundled opencode binary (packaged) vs system install (dev). The shim prefers
+    // the bundled binary so a distributed .dmg never depends on ~/.opencode.
+    const bundledOpencode = path.join(this.ctx.resourcesPath, "bin", "opencode");
+    const fallbackOpencode = path.join(os.homedir(), ".opencode", "bin", "opencode");
+    // S2: only auto-inject --dangerously-skip-permissions in DEV. A distributed
+    // build must let opencode prompt the user before running shell/file actions.
+    const skipPermsBlock = this.ctx.isPackaged
+      ? ""
+      : `
+if [ "\$has_run" = true ]; then
+  args+=("--dangerously-skip-permissions")
+fi`;
 
     // Create a temporary directory for shims
     this.shimDir = path.join(
@@ -50,12 +86,20 @@ export class ProcessManager {
       // accounts from reading or planting files in it.
       fs.mkdirSync(this.shimDir, { recursive: true, mode: 0o700 });
       const shimContent = `#!/bin/bash
-# Find the next opencode in PATH (excluding this shim)
+# Prefer the bundled opencode binary, then the next one in PATH (excluding this
+# shim), then the standard ~/.opencode install location.
 SHIM_DIR="\$(dirname "\$0")"
-REAL_PATH=\$(PATH=\$(echo "\$PATH" | tr ':' '\\n' | grep -v "\$SHIM_DIR" | tr '\\n' ':') which opencode)
+REAL_PATH=""
+if [ -x "${bundledOpencode}" ]; then
+  REAL_PATH="${bundledOpencode}"
+fi
 
 if [ -z "\$REAL_PATH" ]; then
-  REAL_PATH="${path.join(os.homedir(), ".opencode", "bin", "opencode")}"
+  REAL_PATH=\$(PATH=\$(echo "\$PATH" | tr ':' '\\n' | grep -v "\$SHIM_DIR" | tr '\\n' ':') which opencode)
+fi
+
+if [ -z "\$REAL_PATH" ]; then
+  REAL_PATH="${fallbackOpencode}"
 fi
 
 args=()
@@ -66,10 +110,7 @@ for arg in "\$@"; do
     has_run=true
   fi
 done
-
-if [ "\$has_run" = true ]; then
-  args+=("--dangerously-skip-permissions")
-fi
+${skipPermsBlock}
 
 exec "\$REAL_PATH" "\${args[@]}"
 `;
@@ -111,7 +152,12 @@ exec "\$REAL_PATH" "\${args[@]}"
     if (knownUrl !== undefined && (await this.isAlreadyHealthy(knownUrl))) {
       const port = parseInt(new URL(knownUrl).port);
       console.warn(`[${slot}] reusing existing process on :${port}`);
-      this.running.set(slot, { processes: [], port, healthy: true });
+      this.running.set(slot, {
+        processes: [],
+        staticServers: [],
+        port,
+        healthy: true,
+      });
       return port;
     }
 
@@ -143,6 +189,9 @@ exec "\$REAL_PATH" "\${args[@]}"
         /* already dead */
       }
     }
+    for (const srv of app.staticServers) {
+      void srv.close();
+    }
     this.killPort(app.port);
     if (slot === "design") this.killPort(7456);
     this.running.delete(slot);
@@ -157,6 +206,9 @@ exec "\$REAL_PATH" "\${args[@]}"
         } catch {
           /* already dead */
         }
+      }
+      for (const srv of app.staticServers) {
+        void srv.close();
       }
       // Also clean up ports to prevent leaks of orphaned children (e.g. Next.js, daemon)
       this.killPort(app.port);
@@ -237,10 +289,27 @@ exec "\$REAL_PATH" "\${args[@]}"
 
   private async startOpenWork(): Promise<number> {
     const port = 5173;
-    console.warn(`[work] killing port ${port} and spawning pnpm dev:ui...`);
     this.killPort(port);
+
+    // Packaged: serve the prebuilt static SPA (vite build) over loopback instead
+    // of running the Vite dev server, which isn't shipped.
+    if (this.ctx.isPackaged) {
+      const distDir = path.join(this.ctx.appsDir, "openwork", "dist");
+      console.warn(`[work] serving static build from ${distDir} on :${port}...`);
+      const handle = await startStaticServer(distDir, port);
+      this.running.set("work", {
+        processes: [],
+        staticServers: [handle],
+        port,
+        healthy: true,
+      });
+      console.warn(`[work] healthy ✓ (static)`);
+      return port;
+    }
+
+    console.warn(`[work] killing port ${port} and spawning pnpm dev:ui...`);
     const proc = spawn("pnpm", ["dev:ui"], {
-      cwd: path.join(APPS_DIR, "openwork"),
+      cwd: path.join(this.ctx.appsDir, "openwork"),
       env: {
         ...this.sharedEnv(),
         OPENWORK_APP_PORT: String(port),
@@ -252,7 +321,12 @@ exec "\$REAL_PATH" "\${args[@]}"
     // Only add to running AFTER health check — prevents premature port access
     console.warn(`[work] waiting for health on localhost:${port}...`);
     await this.waitForHealth(`http://localhost:${port}`);
-    this.running.set("work", { processes: [proc], port, healthy: true });
+    this.running.set("work", {
+      processes: [proc],
+      staticServers: [],
+      port,
+      healthy: true,
+    });
     console.warn(`[work] healthy ✓`);
     return port;
   }
@@ -263,11 +337,14 @@ exec "\$REAL_PATH" "\${args[@]}"
     console.warn(`[code] spawning opencode serve on 127.0.0.1:${port}...`);
     // "serve" starts the server + web UI without opening the system browser
     // ("web" = serve + browser open, which we don't want inside Electron)
+    // Dev: project root (sees local sessions). Packaged: process.cwd() may be "/"
+    // or a read-only bundle path, so use a writable workspace under userData (S3).
+    const cwd = this.ctx.isPackaged ? this.workspaceDir() : process.cwd();
     const proc = spawn(
       "opencode",
       ["serve", "--port", String(port), "--hostname", "127.0.0.1"],
       {
-        cwd: process.cwd(), // Use project root to see local sessions
+        cwd,
         env: this.sharedEnv(),
         stdio: ["ignore", "pipe", "pipe"],
       },
@@ -275,40 +352,42 @@ exec "\$REAL_PATH" "\${args[@]}"
     this.pipeOutput("code", proc, "code");
     console.warn(`[code] waiting for health on 127.0.0.1:${port}...`);
     await this.waitForHealth(`http://127.0.0.1:${port}`);
-    this.running.set("code", { processes: [proc], port, healthy: true });
+    this.running.set("code", {
+      processes: [proc],
+      staticServers: [],
+      port,
+      healthy: true,
+    });
     console.warn(`[code] healthy ✓`);
     return port;
   }
 
   private async startOpenDesign(): Promise<number> {
-    const odCwd = path.join(APPS_DIR, "open-design");
+    const odCwd = path.join(this.ctx.appsDir, "open-design");
     const webCwd = path.join(odCwd, "apps", "web");
     const webPort = 3456;
     this.killPort(7456);
     this.killPort(webPort);
 
-    // 1. Start the daemon (API backend on :7456)
-    const odBin = path.join(odCwd, "node_modules", ".bin", "od");
-    console.warn(`[design] spawning daemon: ${odBin} --no-open`);
-    const daemonProc = spawn(odBin, ["--no-open"], {
-      cwd: odCwd,
-      env: {
-        ...this.sharedEnv(),
-        OD_WEB_PORT: String(webPort),
-        BROWSER: "none",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    this.pipeOutput("design-daemon", daemonProc, "design");
+    const daemonProc = this.spawnDesignDaemon(odCwd, webPort);
+    const staticServers: StaticServerHandle[] = [];
+    const processes: ChildProcess[] = [daemonProc];
 
-    // 2. Start the web frontend (Next.js on :3456)
-    console.warn(`[design] spawning web frontend: next dev on :${webPort}`);
-    const webProc = spawn("pnpm", ["dev"], {
-      cwd: webCwd,
-      env: { ...this.sharedEnv(), PORT: String(webPort), BROWSER: "none" },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    this.pipeOutput("design-web", webProc, "design");
+    if (this.ctx.isPackaged) {
+      // Serve the prebuilt Next.js static export over loopback (no dev server).
+      const outDir = path.join(webCwd, "out");
+      console.warn(`[design] serving static web from ${outDir} on :${webPort}...`);
+      staticServers.push(await startStaticServer(outDir, webPort));
+    } else {
+      console.warn(`[design] spawning web frontend: next dev on :${webPort}`);
+      const webProc = spawn("pnpm", ["dev"], {
+        cwd: webCwd,
+        env: { ...this.sharedEnv(), PORT: String(webPort), BROWSER: "none" },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      this.pipeOutput("design-web", webProc, "design");
+      processes.push(webProc);
+    }
 
     console.warn(
       `[design] waiting for web frontend (:${webPort}) AND daemon API (:7456)...`,
@@ -323,12 +402,72 @@ exec "\$REAL_PATH" "\${args[@]}"
       this.waitForHealth(`http://127.0.0.1:7456/api/health`),
     ]);
     this.running.set("design", {
-      processes: [daemonProc, webProc],
+      processes,
+      staticServers,
       port: webPort,
       healthy: true,
     });
     console.warn(`[design] healthy ✓`);
     return webPort;
+  }
+
+  // The daemon (Open Design API on :7456) is a compiled Node program. Packaged
+  // builds run it with the bundled Node 24 binary (Electron's own Node is too old)
+  // and write SQLite into a writable userData dir, not the read-only bundle (S3).
+  private spawnDesignDaemon(odCwd: string, webPort: number): ChildProcess {
+    const env: NodeJS.ProcessEnv = {
+      ...this.sharedEnv(),
+      OD_WEB_PORT: String(webPort),
+      BROWSER: "none",
+    };
+
+    if (this.ctx.isPackaged) {
+      const nodeBin = path.join(this.ctx.resourcesPath, "bin", "node");
+      const odEntry = path.join(odCwd, "apps", "daemon", "bin", "od.mjs");
+      const dataDir = path.join(this.ctx.userDataDir, "open-design");
+      // OD_DATA_DIR overrides the daemon's default <projectRoot>/.od. We point it
+      // at a writable userData dir AND expose it to our own process.env so the
+      // design backend (design-backend.ts) reads the SAME .od/projects the daemon
+      // writes — otherwise mockups land in userData but are read from the bundle.
+      const odDataDir = path.join(dataDir, ".od");
+      try {
+        fs.mkdirSync(odDataDir, { recursive: true });
+      } catch (err) {
+        console.error("[design] failed to create data dir:", err);
+      }
+      process.env.OD_DATA_DIR = odDataDir;
+      env.OD_DATA_DIR = odDataDir;
+      console.warn(`[design] spawning daemon: ${nodeBin} ${odEntry} --no-open`);
+      const proc = spawn(nodeBin, [odEntry, "--no-open"], {
+        cwd: dataDir,
+        env,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      this.pipeOutput("design-daemon", proc, "design");
+      return proc;
+    }
+
+    const odBin = path.join(odCwd, "node_modules", ".bin", "od");
+    console.warn(`[design] spawning daemon: ${odBin} --no-open`);
+    const proc = spawn(odBin, ["--no-open"], {
+      cwd: odCwd,
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    this.pipeOutput("design-daemon", proc, "design");
+    return proc;
+  }
+
+  // Writable per-user workspace for child processes that persist state (opencode
+  // sessions, etc.). Never the read-only app bundle.
+  private workspaceDir(): string {
+    const dir = path.join(this.ctx.userDataDir, "workspace");
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (err) {
+      console.error("[workspace] failed to create workspace dir:", err);
+    }
+    return dir;
   }
 
   private async isAlreadyHealthy(url: string): Promise<boolean> {

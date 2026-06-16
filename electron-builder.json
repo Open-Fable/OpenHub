@@ -10,17 +10,24 @@
     "electron/projects.html",
     "electron/nav-popup.html"
   ],
+  "extraResources": [
+    { "from": "build/bundle/apps", "to": "apps" },
+    { "from": "build/bundle/bin", "to": "bin" }
+  ],
+  "afterPack": "./scripts/afterPack.cjs",
   "extraMetadata": {
     "main": "dist/electron/main.js"
   },
   "mac": {
     "category": "public.app-category.developer-tools",
     "icon": "build/icon.icns",
-    "target": ["dmg"],
-    "hardenedRuntime": true,
-    "gatekeeperAssess": false,
-    "entitlements": "build/entitlements.mac.plist",
-    "entitlementsInherit": "build/entitlements.mac.plist"
+    "target": [
+      { "target": "dmg", "arch": "arm64" },
+      { "target": "zip", "arch": "arm64" }
+    ],
+    "identity": null,
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false
   },
   "directories": {
     "output": "release"
