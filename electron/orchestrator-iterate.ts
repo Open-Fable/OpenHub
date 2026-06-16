@@ -137,6 +137,44 @@ function fallbackAllNonSkipped(ctx: TriageContext): Record<string, string> {
   return fixes;
 }
 
+/**
+ * Structured feedback (auto-quality loop) tags each issue line with `[agent name]`
+ * via buildAutoFeedback. Match those tags to linked agents so a triage failure
+ * relaunches ONLY the implicated agents instead of the whole project. Returns null
+ * when no tag matches a real agent (e.g. free-form human feedback) so the caller
+ * falls back to all-non-skipped.
+ */
+function fixesFromTaggedAgents(ctx: TriageContext): Record<string, string> | null {
+  const tags = new Set<string>();
+  const tagPattern = /^\s*-\s*\[([^\]]+)\]/gm;
+  let match: RegExpExecArray | null;
+  while ((match = tagPattern.exec(ctx.feedback)) !== null) {
+    tags.add(match[1].trim());
+  }
+  if (tags.size === 0) return null;
+
+  const fixes: Record<string, string> = {};
+  for (const tag of tags) {
+    const lower = tag.toLowerCase();
+    const agent = ctx.linked.find(
+      (p) =>
+        p.name.toLowerCase() === lower ||
+        lower.includes(p.name.toLowerCase()) ||
+        p.name.toLowerCase().includes(lower),
+    );
+    if (agent) fixes[agent.id] = ctx.feedback;
+  }
+  return Object.keys(fixes).length > 0 ? fixes : null;
+}
+
+/**
+ * Triage failure fallback: narrow to agents named in the feedback when possible,
+ * otherwise relaunch every non-skipped agent.
+ */
+function narrowedFallback(ctx: TriageContext): Record<string, string> {
+  return fixesFromTaggedAgents(ctx) ?? fallbackAllNonSkipped(ctx);
+}
+
 function handleAssignFix(
   args: Record<string, unknown>,
   ctx: TriageContext,
@@ -189,9 +227,9 @@ export async function planIterationFixes(
       const parsed = parseTriageJsonFallback(message.content, ctx.linked);
       if (parsed) return parsed;
       console.warn(
-        "[orchestrator] Triage JSON fallback failed — targeting all non-skipped agents.",
+        "[orchestrator] Triage JSON fallback failed — targeting agents named in feedback (or all non-skipped).",
       );
-      return fallbackAllNonSkipped(ctx);
+      return narrowedFallback(ctx);
     }
 
     messages.push(message);
@@ -249,9 +287,9 @@ export async function planIterationFixes(
 
   if (Object.keys(fixes).length > 0) return fixes;
   console.warn(
-    "[orchestrator] Triage loop exhausted — targeting all non-skipped agents.",
+    "[orchestrator] Triage loop exhausted — targeting agents named in feedback (or all non-skipped).",
   );
-  return fallbackAllNonSkipped(ctx);
+  return narrowedFallback(ctx);
 }
 
 /**
@@ -263,10 +301,19 @@ export function buildFixTask(
   fixInstruction: string,
   feedback: string,
   previousResult?: string,
+  currentFilesOnDisk?: string,
 ): string {
-  const previousBlock = previousResult
-    ? `\nTON RÉSULTAT PRÉCÉDENT (extrait) :\n${previousResult.substring(0, PREVIOUS_RESULT_MAX_CHARS)}\n`
-    : "";
+  // When the runner can read the agent's own files from disk, inject their REAL
+  // current content as the source of truth. This replaces the truncated 4000-char
+  // chat excerpt for pure-LLM agents (which have no disk access), so a corrective
+  // relaunch edits the actual file instead of regenerating from a partial memory.
+  const hasDiskContent =
+    typeof currentFilesOnDisk === "string" && currentFilesOnDisk.trim().length > 0;
+  const sourceBlock = hasDiskContent
+    ? `\nCONTENU ACTUEL DE TES FICHIERS SUR DISQUE (SOURCE DE VÉRITÉ — pars EXACTEMENT de ce contenu, reproduis-le EN ENTIER avec uniquement les corrections demandées) :\n${currentFilesOnDisk}\n`
+    : previousResult
+      ? `\nTON RÉSULTAT PRÉCÉDENT (extrait) :\n${previousResult.substring(0, PREVIOUS_RESULT_MAX_CHARS)}\n`
+      : "";
 
   return `[ITÉRATION CORRECTIVE]
 FEEDBACK UTILISATEUR :
@@ -274,11 +321,22 @@ ${feedback}
 
 CORRECTIF DEMANDÉ :
 ${fixInstruction}
-${previousBlock}
+${sourceBlock}
 RÈGLES CRITIQUES (édition en place — ne PAS régénérer) :
 - LIS D'ABORD le contenu ACTUEL sur disque du/des fichier(s) concerné(s) : c'est la SOURCE DE VÉRITÉ (pas ton souvenir, pas l'extrait ci-dessus). Pars de ce contenu.
 - Applique UNIQUEMENT les corrections demandées ci-dessus. Tout le reste du fichier doit rester IDENTIQUE, mot pour mot.
 - NE RACCOURCIS JAMAIS : ne résume pas, ne supprime pas de sections déjà complètes, n'enlève pas de détail existant. Le fichier corrigé doit être AU MOINS aussi complet et long qu'avant.
 - Ne touche QU'À TES PROPRES fichiers (ceux que tu as produits). Ne réécris pas les livrables des autres agents.
-- Si tu livres un fichier au format \`\`\`<lang> filepath:, reproduis-le EN ENTIER (contenu actuel + corrections), jamais une version abrégée.`;
+
+DEUX FORMATS DE LIVRAISON — choisis selon l'ampleur des changements :
+1) PETITE MODIFICATION (PRÉFÉRÉ) : si seules quelques portions changent, n'émets QUE les portions modifiées via un bloc d'édition, sans réécrire le fichier entier :
+\`\`\`edit filepath: chemin/du/fichier
+<<<<<<< SEARCH
+(copie EXACTE du texte actuel à remplacer — inclus assez de lignes autour pour que ce passage soit UNIQUE dans le fichier)
+=======
+(le nouveau texte)
+>>>>>>> REPLACE
+\`\`\`
+Tu peux enchaîner plusieurs paires SEARCH/REPLACE dans le même bloc. Le SEARCH doit correspondre au caractère près au contenu actuel sur disque ; sinon l'édition est rejetée.
+2) RÉÉCRITURE ÉTENDUE : si les changements touchent une grande partie du fichier, réémets-le en entier au format \`\`\`<lang> filepath:, AVEC tout le contenu actuel + les corrections, jamais une version abrégée.`;
 }

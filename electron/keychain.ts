@@ -1,7 +1,25 @@
-import keytar from "keytar";
+import { app } from "electron";
+import { promises as fs } from "fs";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { execFileSync } from "child_process";
+import path from "path";
 import net from "net";
 
 const SERVICE = "openhub";
+
+// Secrets are stored in a single AES-256-GCM encrypted file under userData.
+// The encryption key is derived from the machine's hardware UUID + a public,
+// in-source salt. This avoids the macOS Keychain entirely (which, under ad-hoc
+// signing, re-prompts for the login password on every launch).
+//
+// THREAT MODEL — be honest: the salt is public and the hardware UUID is readable
+// by any unprivileged local process (`ioreg`). So this is machine-binding /
+// obfuscation, NOT confidentiality against a local attacker running as the same
+// user — such a process can re-derive the key and decrypt this file. It is on par
+// with Chromium's `password-store=basic`. It DOES stop the file from being read
+// on a different machine and from casual inspection. The real boundary remains
+// the OS user account + 0600 file perms.
+const SECRETS_FILE = "secrets.enc";
 
 // Display mask for secrets sent to the renderer. The "…" character never appears in
 // a real API key, so it doubles as a reliable "this is a mask, don't save it" marker.
@@ -82,11 +100,135 @@ function isReservedIpv6(ip: string): boolean {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Encrypted store (AES-256-GCM, key derived from hardware UUID)
+// ---------------------------------------------------------------------------
+
+type SecretStore = Record<string, Record<string, string>>;
+
+let store: SecretStore | null = null;
+let loadPromise: Promise<SecretStore> | null = null;
+let secretsPath: string | null = null;
+let derivedKey: Buffer | null = null;
+// True when the secrets file existed but could not be decrypted/parsed (key
+// mismatch or corruption). We must NOT silently overwrite it on the next save —
+// that would permanently destroy recoverable data. Instead saveStore() moves the
+// unreadable file aside first.
+let loadCorrupted = false;
+
+const APP_SALT = "openhub-secrets-v1";
+
+function getSecretsPath(): string {
+  if (!secretsPath) {
+    secretsPath = path.join(app.getPath("userData"), SECRETS_FILE);
+  }
+  return secretsPath;
+}
+
+function getDerivedKey(): Buffer {
+  if (derivedKey) return derivedKey;
+  let hwUuid: string;
+  try {
+    const raw = execFileSync("ioreg", ["-rd1", "-c", "IOPlatformExpertDevice"], {
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 5000,
+    }).toString();
+    const match = raw.match(/"IOPlatformUUID"\s*=\s*"([^"]+)"/);
+    hwUuid = match ? match[1] : "fallback-no-uuid";
+  } catch {
+    hwUuid = "fallback-no-uuid";
+  }
+  derivedKey = createHash("sha256").update(`${APP_SALT}:${hwUuid}`).digest();
+  return derivedKey;
+}
+
+function encrypt(plaintext: string): Buffer {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", getDerivedKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  // Format: [iv 12B][tag 16B][ciphertext]
+  return Buffer.concat([iv, tag, encrypted]);
+}
+
+function decrypt(data: Buffer): string {
+  const iv = data.subarray(0, 12);
+  const tag = data.subarray(12, 28);
+  const ciphertext = data.subarray(28);
+  const decipher = createDecipheriv("aes-256-gcm", getDerivedKey(), iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+}
+
+async function loadStore(): Promise<SecretStore> {
+  if (store) return store;
+  if (loadPromise) return loadPromise;
+  loadPromise = doLoadStore();
+  return loadPromise;
+}
+
+async function doLoadStore(): Promise<SecretStore> {
+  let raw: Buffer;
+  try {
+    raw = await fs.readFile(getSecretsPath());
+  } catch {
+    // No file yet (first run) — an empty store is correct.
+    store = {};
+    return store;
+  }
+  // The file exists. If decrypt/parse fails the data is present but unreadable
+  // (key mismatch or corruption) — flag it so saveStore() preserves it instead
+  // of clobbering, rather than pretending the secrets simply vanished.
+  try {
+    store = JSON.parse(decrypt(raw)) as SecretStore;
+  } catch {
+    loadCorrupted = true;
+    console.error(
+      "[keychain] secrets file present but unreadable (key mismatch or corruption); " +
+        "it will be backed up on next save and not overwritten.",
+    );
+    store = {};
+  }
+  return store;
+}
+
+async function saveStore(): Promise<void> {
+  if (!store) return;
+  const json = JSON.stringify(store);
+  const encrypted = encrypt(json);
+  const filePath = getSecretsPath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+
+  // If the prior file couldn't be decrypted, move it aside before writing so the
+  // user can still recover it manually — never destroy it silently.
+  if (loadCorrupted) {
+    await fs.rename(filePath, `${filePath}.corrupt-${Date.now()}`).catch(() => undefined);
+    loadCorrupted = false;
+  }
+
+  // Atomic write: a crash mid-write would otherwise truncate the file, making
+  // EVERY stored secret unrecoverable on next launch. Write to a fresh 0600 temp
+  // file then rename over the target.
+  const tmpPath = `${filePath}.tmp.${randomBytes(6).toString("hex")}`;
+  try {
+    await fs.writeFile(tmpPath, encrypted, { mode: 0o600 });
+    await fs.rename(tmpPath, filePath);
+  } catch (err) {
+    await fs.rm(tmpPath, { force: true }).catch(() => undefined);
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API (unchanged signatures)
+// ---------------------------------------------------------------------------
+
 export async function readSecret(
   service: string,
   account: string,
 ): Promise<string | null> {
-  return keytar.getPassword(service, account);
+  const s = await loadStore();
+  return s[service]?.[account] ?? null;
 }
 
 export async function writeSecret(
@@ -94,11 +236,22 @@ export async function writeSecret(
   account: string,
   secret: string,
 ): Promise<void> {
-  await keytar.setPassword(service, account, secret);
+  const s = await loadStore();
+  const updated = {
+    ...s,
+    [service]: { ...s[service], [account]: secret },
+  };
+  store = updated;
+  await saveStore();
 }
 
 export async function deleteSecret(service: string, account: string): Promise<void> {
-  await keytar.deletePassword(service, account);
+  const s = await loadStore();
+  const bucket = s[service];
+  if (!bucket || !(account in bucket)) return;
+  const rest = Object.fromEntries(Object.entries(bucket).filter(([k]) => k !== account));
+  store = { ...s, [service]: rest };
+  await saveStore();
 }
 
 export async function readAllApiKeys(): Promise<{
@@ -110,31 +263,15 @@ export async function readAllApiKeys(): Promise<{
   braveSearchKey: string | null;
   ollamaUrl: string;
 }> {
-  const [
-    anthropic,
-    openai,
-    openrouterKey,
-    googleAiKey,
-    githubToken,
-    braveSearchKey,
-    ollamaUrl,
-  ] = await Promise.all([
-    keytar.getPassword(SERVICE, "anthropic-api-key"),
-    keytar.getPassword(SERVICE, "openai-api-key"),
-    keytar.getPassword(SERVICE, "openrouter-api-key"),
-    keytar.getPassword(SERVICE, "google-ai-key"),
-    keytar.getPassword(SERVICE, "github-token"),
-    keytar.getPassword(SERVICE, "brave-search-key"),
-    keytar.getPassword(SERVICE, "ollama-url"),
-  ]);
-
+  const s = await loadStore();
+  const svc = s[SERVICE] ?? {};
   return {
-    anthropic,
-    openai,
-    openrouterKey,
-    googleAiKey,
-    githubToken,
-    braveSearchKey,
-    ollamaUrl: ollamaUrl ?? "http://127.0.0.1:11434",
+    anthropic: svc["anthropic-api-key"] ?? null,
+    openai: svc["openai-api-key"] ?? null,
+    openrouterKey: svc["openrouter-api-key"] ?? null,
+    googleAiKey: svc["google-ai-key"] ?? null,
+    githubToken: svc["github-token"] ?? null,
+    braveSearchKey: svc["brave-search-key"] ?? null,
+    ollamaUrl: svc["ollama-url"] ?? "http://127.0.0.1:11434",
   };
 }

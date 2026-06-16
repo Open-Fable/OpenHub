@@ -8,6 +8,7 @@ export interface BackendContext {
   readonly fallbackModel?: string;
   readonly signal?: AbortSignal;
   readonly onProgress: (label: string) => void;
+  readonly otherOwnedPaths?: readonly string[];
 }
 
 export interface BackendResult {
@@ -20,6 +21,7 @@ export interface BackendResult {
    * direct LLM, which would clobber the tool-authored files.
    */
   readonly filesWritten: number;
+  readonly writtenPaths: readonly string[];
 }
 
 export class BackendUnavailableError extends Error {

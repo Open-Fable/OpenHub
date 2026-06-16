@@ -3,6 +3,8 @@ import {
   OrchestratorRunner,
   mapWithConcurrency,
   parseFilepathBlocks,
+  parseEditBlocks,
+  applyEdits,
   detectTruncation,
 } from "./orchestrator-runner.js";
 import type { Project } from "./project-store.js";
@@ -221,6 +223,137 @@ describe("parseFilepathBlocks", () => {
     const blocks = parseFilepathBlocks(text);
     expect(blocks).toHaveLength(1);
     expect(blocks[0].content).toBe("const a = 1;");
+  });
+
+  it("ignores ```edit filepath: blocks (reserved for surgical edits)", () => {
+    const text = [
+      `${fence}edit filepath: src/a.ts`,
+      "<<<<<<< SEARCH",
+      "old",
+      "=======",
+      "new",
+      ">>>>>>> REPLACE",
+      fence,
+    ].join("\n");
+    expect(parseFilepathBlocks(text)).toEqual([]);
+  });
+
+  it("ignores ```edit fences regardless of case (no marker corruption)", () => {
+    for (const kw of ["Edit", "EDIT", "eDiT"]) {
+      const text = [
+        `${fence}${kw} filepath: src/a.ts`,
+        "<<<<<<< SEARCH",
+        "old",
+        "=======",
+        "new",
+        ">>>>>>> REPLACE",
+        fence,
+      ].join("\n");
+      // Must NOT be parsed as a full-file write (which would dump raw markers).
+      expect(parseFilepathBlocks(text)).toEqual([]);
+      // And parseEditBlocks must claim it instead.
+      expect(parseEditBlocks(text)).toHaveLength(1);
+    }
+  });
+});
+
+describe("parseEditBlocks", () => {
+  const fence = "```";
+
+  it("parses a single SEARCH/REPLACE pair", () => {
+    const text = [
+      `${fence}edit filepath: index.html`,
+      "<<<<<<< SEARCH",
+      "<h1>Ancien</h1>",
+      "=======",
+      "<h1>Nouveau</h1>",
+      ">>>>>>> REPLACE",
+      fence,
+    ].join("\n");
+    const blocks = parseEditBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].path).toBe("index.html");
+    expect(blocks[0].edits).toEqual([
+      { search: "<h1>Ancien</h1>", replace: "<h1>Nouveau</h1>" },
+    ]);
+  });
+
+  it("parses multiple pairs in one block and multiline bodies", () => {
+    const text = [
+      `${fence}edit filepath: a.css`,
+      "<<<<<<< SEARCH",
+      ".a { color: red; }",
+      "=======",
+      ".a { color: blue; }",
+      ">>>>>>> REPLACE",
+      "<<<<<<< SEARCH",
+      "line1",
+      "line2",
+      "=======",
+      "line1-bis",
+      ">>>>>>> REPLACE",
+      fence,
+    ].join("\n");
+    const blocks = parseEditBlocks(text);
+    expect(blocks[0].edits).toHaveLength(2);
+    expect(blocks[0].edits[1]).toEqual({ search: "line1\nline2", replace: "line1-bis" });
+  });
+
+  it("ignores a malformed block with no divider", () => {
+    const text = [
+      `${fence}edit filepath: a.ts`,
+      "<<<<<<< SEARCH",
+      "orphan",
+      ">>>>>>> REPLACE",
+      fence,
+    ].join("\n");
+    expect(parseEditBlocks(text)).toEqual([]);
+  });
+
+  it("returns empty when there are no edit blocks", () => {
+    expect(parseEditBlocks("just prose")).toEqual([]);
+  });
+});
+
+describe("applyEdits", () => {
+  it("applies a unique-match edit", () => {
+    const res = applyEdits("a\nOLD\nb", [{ search: "OLD", replace: "NEW" }]);
+    expect(res.ok).toBe(true);
+    expect(res.content).toBe("a\nNEW\nb");
+  });
+
+  it("applies sequential edits in order", () => {
+    const res = applyEdits("x1 y1", [
+      { search: "x1", replace: "x2" },
+      { search: "y1", replace: "y2" },
+    ]);
+    expect(res.content).toBe("x2 y2");
+  });
+
+  it("fails (all-or-nothing) when SEARCH is not found", () => {
+    const res = applyEdits("hello", [{ search: "absent", replace: "x" }]);
+    expect(res.ok).toBe(false);
+    expect(res.content).toBe("hello");
+  });
+
+  it("fails when SEARCH matches more than once (ambiguous)", () => {
+    const res = applyEdits("dup dup", [{ search: "dup", replace: "x" }]);
+    expect(res.ok).toBe(false);
+    expect(res.content).toBe("dup dup");
+  });
+
+  it("leaves the original untouched when a later edit in the batch fails", () => {
+    const res = applyEdits("keep OLD", [
+      { search: "OLD", replace: "NEW" },
+      { search: "missing", replace: "z" },
+    ]);
+    expect(res.ok).toBe(false);
+    expect(res.content).toBe("keep OLD");
+  });
+
+  it("treats replacement as a literal (no $ pattern interpretation)", () => {
+    const res = applyEdits("price: X", [{ search: "X", replace: "$1.00" }]);
+    expect(res.content).toBe("price: $1.00");
   });
 });
 

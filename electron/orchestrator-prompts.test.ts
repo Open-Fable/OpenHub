@@ -245,6 +245,16 @@ describe("buildNodeSystemPrompt", () => {
     expect(out).toContain("EXÉCUTION IMMÉDIATE");
   });
 
+  it("backend prompt instructs relative paths, no shell, and markdown fallback when codeFenceFormat is false", () => {
+    const out = buildNodeSystemPrompt(makeProject({ type: "code" }), {
+      codeFenceFormat: false,
+    });
+    expect(out).toContain("chemins RELATIFS");
+    expect(out).toContain("JAMAIS de chemins absolus");
+    expect(out).toContain("PAS d'accès shell (bash)");
+    expect(out).toContain("DERNIER RECOURS");
+  });
+
   it("injects the design quality rules for a design agent", () => {
     const out = buildNodeSystemPrompt(makeProject({ type: "design" }));
     expect(out).toContain("MAQUETTES VISUELLES");
@@ -344,6 +354,22 @@ describe("buildNodeUserPrompt", () => {
   it("falls back to a default task label when task is missing", () => {
     const out = buildNodeUserPrompt(makeProject({ task: undefined }), "", "");
     expect(out).toContain("Aucune tâche définie.");
+  });
+
+  it("uses markdown filepath format by default (codeFenceFormat: true)", () => {
+    const out = buildNodeUserPrompt(makeProject(), "", "");
+    expect(out).toContain("filepath:");
+    expect(out).not.toContain("outils write/edit");
+  });
+
+  it("switches to tool-based reminder when codeFenceFormat is false", () => {
+    const out = buildNodeUserPrompt(makeProject(), "", "", [], {
+      codeFenceFormat: false,
+    });
+    expect(out).toContain("outils write/edit");
+    expect(out).toContain("dernier recours");
+    expect(out).toContain("chemins RELATIFS");
+    expect(out).toContain("pas d'accès shell (bash)");
   });
 });
 

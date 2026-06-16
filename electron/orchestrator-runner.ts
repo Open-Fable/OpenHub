@@ -149,7 +149,13 @@ export function parseFilepathBlocks(
   text: string,
 ): ReadonlyArray<{ path: string; content: string }> {
   const lines = text.split("\n");
-  const openerRe = /^(`{3,})[\w-]*[ \t]+filepath:[ \t]*(.+?)[ \t]*$/;
+  // `(?![Ee][Dd][Ii][Tt]…)` reserves ```edit filepath: for surgical SEARCH/REPLACE
+  // blocks (parseEditBlocks) — otherwise this would parse them as a full-file write
+  // and dump the raw SEARCH/REPLACE markers into the file. Case-INSENSITIVE on
+  // "edit": a ```Edit / ```EDIT fence must be excluded here too, exactly matching
+  // parseEditBlocks' case-insensitive opener, or the markers corrupt the file.
+  const openerRe =
+    /^(`{3,})(?![Ee][Dd][Ii][Tt][ \t]+filepath:)[\w-]*[ \t]+filepath:[ \t]*(.+?)[ \t]*$/;
   const openers: Array<{ line: number; filePath: string; fence: number }> = [];
   for (let i = 0; i < lines.length; i++) {
     const m = openerRe.exec(lines[i]);
@@ -172,6 +178,113 @@ export function parseFilepathBlocks(
     blocks.push({ path: filePath, content: lines.slice(start, end).join("\n") });
   }
   return blocks;
+}
+
+// ── Édition chirurgicale (SEARCH/REPLACE) ────────────────────────────────────
+export interface SearchReplaceEdit {
+  readonly search: string;
+  readonly replace: string;
+}
+
+const EDIT_SEARCH_MARK = "<<<<<<< SEARCH";
+const EDIT_DIVIDER_MARK = "=======";
+const EDIT_REPLACE_MARK = ">>>>>>> REPLACE";
+
+function parseSearchReplacePairs(lines: readonly string[]): SearchReplaceEdit[] {
+  const edits: SearchReplaceEdit[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (lines[i].trim() !== EDIT_SEARCH_MARK) {
+      i++;
+      continue;
+    }
+    i++;
+    const search: string[] = [];
+    while (i < lines.length && lines[i].trim() !== EDIT_DIVIDER_MARK)
+      search.push(lines[i++]);
+    if (i >= lines.length) break; // malformed: no divider
+    i++;
+    const replace: string[] = [];
+    while (i < lines.length && lines[i].trim() !== EDIT_REPLACE_MARK)
+      replace.push(lines[i++]);
+    if (i >= lines.length) break; // malformed: no closing marker
+    i++;
+    edits.push({ search: search.join("\n"), replace: replace.join("\n") });
+  }
+  return edits;
+}
+
+/**
+ * Parse les blocs ```edit filepath: chemin … ``` dont le contenu est une suite de
+ * paires SEARCH/REPLACE. Permet à un agent de MODIFIER quelques lignes d'un fichier
+ * existant sans le réémettre en entier :
+ *
+ *   ```edit filepath: index.html
+ *   <<<<<<< SEARCH
+ *   <h1>Ancien</h1>
+ *   =======
+ *   <h1>Nouveau</h1>
+ *   >>>>>>> REPLACE
+ *   ```
+ *
+ * Parsing ligne par ligne (pas de méga-regex) → linéaire, sans backtracking
+ * catastrophique sur sortie LLM adverse.
+ */
+export function parseEditBlocks(
+  text: string,
+): ReadonlyArray<{ path: string; edits: readonly SearchReplaceEdit[] }> {
+  const lines = text.split("\n");
+  // Case-insensitive on "edit"/"filepath" so ```Edit / ```EDIT are still routed
+  // here (and excluded from parseFilepathBlocks) instead of corrupting the file.
+  const openerRe = /^(`{3,})edit[ \t]+filepath:[ \t]*(.+?)[ \t]*$/i;
+  const openers: Array<{ line: number; filePath: string; fence: number }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = openerRe.exec(lines[i]);
+    if (m) openers.push({ line: i, filePath: m[2].trim(), fence: m[1].length });
+  }
+
+  const blocks: Array<{ path: string; edits: readonly SearchReplaceEdit[] }> = [];
+  for (let k = 0; k < openers.length; k++) {
+    const { line: openLine, filePath, fence } = openers[k];
+    const start = openLine + 1;
+    const boundary = k + 1 < openers.length ? openers[k + 1].line : lines.length;
+    const closeRe = new RegExp("^`{" + fence + ",}[ \\t]*$");
+    let end = boundary;
+    for (let j = boundary - 1; j >= start; j--) {
+      if (closeRe.test(lines[j])) {
+        end = j;
+        break;
+      }
+    }
+    const edits = parseSearchReplacePairs(lines.slice(start, end));
+    if (edits.length > 0) blocks.push({ path: filePath, edits });
+  }
+  return blocks;
+}
+
+/**
+ * Applique une suite de paires SEARCH/REPLACE à un contenu. ALL-OR-NOTHING : chaque
+ * SEARCH doit correspondre EXACTEMENT une seule fois ; sinon l'édition entière
+ * échoue et le contenu d'origine est renvoyé inchangé (l'appelant retombe alors
+ * sur la réémission complète du fichier). Le match unique évite d'éditer la
+ * mauvaise occurrence ; `replace` est traité comme littéral (pas de motif $).
+ */
+export function applyEdits(
+  original: string,
+  edits: readonly SearchReplaceEdit[],
+): { ok: boolean; content: string; failedSearch?: string } {
+  let content = original;
+  for (const { search, replace } of edits) {
+    if (search.length === 0)
+      return { ok: false, content: original, failedSearch: search };
+    const first = content.indexOf(search);
+    const last = content.lastIndexOf(search);
+    if (first === -1 || first !== last) {
+      return { ok: false, content: original, failedSearch: search };
+    }
+    content = content.slice(0, first) + replace + content.slice(first + search.length);
+  }
+  return { ok: true, content };
 }
 
 // ── Détecteur déterministe de troncature ─────────────────────────────────────
@@ -499,6 +612,7 @@ export class OrchestratorRunner {
   // Files written on disk by a backend's tools, keyed by node id. Used so a node
   // that produced files but returned a short chat summary isn't judged "trivial".
   private readonly backendFilesWritten = new Map<string, number>();
+  private readonly backendWrittenPaths = new Map<string, readonly string[]>();
   // relPath → owning node id. First node to write a path claims it; later nodes
   // (e.g. during a corrective cycle) cannot overwrite another agent's deliverable.
   // This is what stops the research/design agents from clobbering everyone else's
@@ -1038,15 +1152,26 @@ export class OrchestratorRunner {
       );
       const initialResultText = resultText;
 
+      // Backend tools may have already written files — claim ownership and
+      // pass them as a skip-set so extraction doesn't overwrite them (S5).
+      const bwp = this.backendWrittenPaths.get(node.id) ?? [];
+      if (bwp.length > 0) {
+        this.claimOwnership(node.id, bwp);
+        console.warn(
+          `[orchestrator] Backend wrote ${bwp.length} files for "${node.name}": ${bwp.join(", ")}`,
+        );
+      }
+
       const writtenFiles = await this.extractAndWriteFiles(
         resultText,
         workspaceDir,
         nodePathFilter,
+        bwp.length > 0 ? new Set(bwp) : undefined,
       );
       this.claimOwnership(node.id, writtenFiles);
       if (writtenFiles.length > 0) {
         console.warn(
-          `[orchestrator] Wrote ${writtenFiles.length} files for "${node.name}": ${writtenFiles.join(", ")}`,
+          `[orchestrator] Extracted ${writtenFiles.length} files for "${node.name}": ${writtenFiles.join(", ")}`,
         );
       }
 
@@ -1084,6 +1209,7 @@ export class OrchestratorRunner {
                   text,
                   workspaceDir,
                   nodePathFilter,
+                  bwp.length > 0 ? new Set(bwp) : undefined,
                 );
                 this.claimOwnership(node.id, w);
                 return w;
@@ -1315,7 +1441,17 @@ export class OrchestratorRunner {
       const prevResult = previousRun.nodeResults.find(
         (r) => r.projectId === p.id,
       )?.result;
-      const fixTask = buildFixTask(fixes[p.id], feedback, prevResult);
+      // Pure-LLM agents have no disk access, so inject the REAL current content of
+      // their own files as the source of truth. Backend agents (OpenCode/Open
+      // Design) read the workspace via their own tools — skip to avoid bloat.
+      let diskContent = "";
+      if (selectBackend(p.type) === null) {
+        const ownedFiles = this.ownedFilesForNode(p.id, expectedFilesMap);
+        if (ownedFiles.length > 0) {
+          diskContent = await this.readDiskEvidence(workspaceDir, ownedFiles);
+        }
+      }
+      const fixTask = buildFixTask(fixes[p.id], feedback, prevResult, diskContent);
       await saveProject({ ...p, task: fixTask });
       this.sendStatus({ projectId: p.id, status: "idle", task: fixTask });
     }
@@ -2332,6 +2468,22 @@ export class OrchestratorRunner {
   }
 
   /**
+   * Files a node currently owns: its contracted expected files plus any path it
+   * claimed during execution (fileOwner map). Used to feed a corrective relaunch
+   * the REAL on-disk content of its own deliverables instead of a chat excerpt.
+   */
+  private ownedFilesForNode(
+    nodeId: string,
+    expectedFilesMap: Record<string, readonly string[]>,
+  ): string[] {
+    const files = new Set<string>(expectedFilesMap[nodeId] ?? []);
+    for (const [rel, owner] of this.fileOwner) {
+      if (owner === nodeId) files.add(rel);
+    }
+    return [...files];
+  }
+
+  /**
    * Reads the actual files a node was expected to produce, from disk, so the
    * output verifier judges ground truth instead of the chat stream. Reports
    * presence/size per expected file and includes capped contents.
@@ -2518,17 +2670,28 @@ export class OrchestratorRunner {
           compact: this.tierProfile.compactPrompts,
         });
 
-        let appUserPrompt = userPrompt;
+        let appUserPrompt = buildNodeUserPrompt(
+          node,
+          workspaceContext,
+          depContext,
+          expectedFiles,
+          { codeFenceFormat: false },
+        );
         if (plannedSteps && plannedSteps.length >= 2) {
           const checklist = plannedSteps
             .map((s, i) => `${i + 1}. ${s.title} — ${s.focus}`)
             .join("\n");
-          appUserPrompt = `${userPrompt}\n\nÉTAPES À SUIVRE :\n${checklist}`;
+          appUserPrompt = `${appUserPrompt}\n\nÉTAPES À SUIVRE :\n${checklist}`;
         }
         // Backend = un seul execute() : l'Axe C (itérations) ne s'y applique
         // pas. En tier weak, on guide le rythme via le prompt utilisateur.
         if (this.tierProfile.tier === "weak") {
           appUserPrompt = `${appUserPrompt}\n\n${WEAK_BACKEND_DIRECTIVE}`;
+        }
+
+        const otherOwnedPaths: string[] = [];
+        for (const [relPath, ownerId] of this.fileOwner) {
+          if (ownerId !== node.id) otherOwnedPaths.push(relPath);
         }
 
         const pm = this.getProcessManager?.();
@@ -2546,6 +2709,7 @@ export class OrchestratorRunner {
                 status: "running",
                 task: label,
               }),
+            otherOwnedPaths: otherOwnedPaths.length > 0 ? otherOwnedPaths : undefined,
           },
           (slot) => (pm ? pm.ensureRunning(slot) : Promise.resolve(null)),
         );
@@ -2553,10 +2717,8 @@ export class OrchestratorRunner {
         console.warn(
           `[orchestrator] ✓ Backend SUCCESS for "${node.name}" — ${result.backend}, ${result.resultText.length} chars, ${result.filesWritten} fichier(s)`,
         );
-        // Record real files written by the backend's tools so the trivial-result
-        // gate never relaunches (and clobbers) a node that produced files but
-        // returned only a short chat summary.
         this.backendFilesWritten.set(node.id, result.filesWritten);
+        this.backendWrittenPaths.set(node.id, result.writtenPaths);
         return result.resultText;
       } catch (err: unknown) {
         if (this.abortSignal?.aborted) {
@@ -3314,17 +3476,61 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
     resultText: string,
     workspaceDir: string,
     pathFilter?: (relPath: string) => boolean,
+    skipPaths?: ReadonlySet<string>,
   ): Promise<string[]> {
     const written: string[] = [];
     // Resolved paths already written this call, so the three parsers below can ALL
     // run (an agent may mix formats mid-response) without re-writing the same file.
     // First-writer-wins → the primary ```filepath: format takes precedence.
+    // skipPaths: relative paths already written by a backend's tools — never
+    // overwrite them. Convert to absolute because tryWriteWorkspaceFile checks
+    // seen against resolved full paths (safeResolveInWorkspace output).
     const seen = new Set<string>();
+    if (skipPaths !== undefined) {
+      for (const rel of skipPaths) {
+        const full = safeResolveInWorkspace(workspaceDir, rel);
+        if (full !== null) seen.add(full);
+      }
+    }
     // Explicit filter wins; otherwise fall back to the executing node's scope so
     // intermediate (multi-turn) writes are gated too, not just the final write.
     const filter = pathFilter ?? this.activeNodePathFilter;
     const accept = (p: string): boolean =>
       OrchestratorRunner.isValidFilePath(p) && (!filter || filter(p));
+
+    // Pre-pass: surgical ```edit filepath: SEARCH/REPLACE blocks. Patch the file
+    // ON DISK instead of rewriting it whole. ALL-OR-NOTHING per file — a failed
+    // match leaves the file untouched and unclaimed, so the full-file parsers
+    // below still act as the fallback. Reserved fence (parseFilepathBlocks skips
+    // ```edit filepath:), so a failed edit never dumps raw markers into the file.
+    for (const block of parseEditBlocks(resultText)) {
+      if (!accept(block.path) || written.length >= MAX_WRITTEN_FILES) continue;
+      const full = safeResolveInWorkspace(workspaceDir, block.path);
+      if (!full || seen.has(full)) continue;
+      let current: string;
+      try {
+        current = await fs.readFile(full, "utf-8");
+      } catch {
+        console.warn(
+          `[orchestrator:files] Edit ignoré — fichier introuvable : ${block.path.substring(0, 80)}`,
+        );
+        continue;
+      }
+      const res = applyEdits(current, block.edits);
+      if (!res.ok) {
+        console.warn(
+          `[orchestrator:files] Edit échoué (SEARCH absent ou non unique) sur ${block.path.substring(0, 80)} — repli sur fichier complet`,
+        );
+        continue;
+      }
+      await this.tryWriteWorkspaceFile(
+        workspaceDir,
+        block.path,
+        res.content,
+        written,
+        seen,
+      );
+    }
 
     // Primary: ```lang filepath: path blocks (filepath: REQUIRED). Nested-fence
     // safe — see parseFilepathBlocks (a naive non-greedy regex truncates a file
