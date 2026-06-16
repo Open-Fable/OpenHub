@@ -2,13 +2,12 @@
 
 # OpenHub — Usage Guide
 
-This guide explains **how to use OpenHub day to day**, once the app is installed
+This guide explains how to use OpenHub day to day, once the app is installed
 (see the [README](../README.md#-installation) for installation).
 
-> OpenHub is a shell: it doesn't reinvent OpenWork, OpenCode, and Open Design — it
-> brings them together in a single window with a chat, a multi-agent orchestrator, a
-> persistent memory, and a single LLM proxy. Your API keys are entered **once** and
-> shared across all three tools.
+> OpenHub is a shell: it wraps OpenWork, OpenCode, and Open Design in a single
+> window, adds a chat and orchestrator on top, and routes everything through one LLM
+> proxy. You enter your API keys once and all three tools share them.
 
 ---
 
@@ -82,8 +81,8 @@ bypassed for that project).
 
 ## 4. The multi-agent orchestrator
 
-The heart of OpenHub: breaking a goal down into a **DAG of agents** that together
-produce a deliverable (website, report, ebook, code library, study, slides…).
+Break a goal into a DAG of agents that together produce a deliverable (site, report,
+ebook, code library, slides...).
 
 **Launching a workflow:**
 
@@ -108,11 +107,10 @@ produce a deliverable (website, report, ebook, code library, study, slides…).
 - **Quality gate** — deterministic checks verify the deliverables and rerun failing
   nodes (based on the configured number of retries).
 
-**Deliverables**: agents write their files into the run's **workspace** (a folder of
-files), via `filepath:` blocks in their output. That folder is what you get back at
-the end.
+Agents write their files into the run's workspace (a folder on disk) via `filepath:`
+blocks in their output. That folder is your deliverable.
 
-For a deep technical dive, see [ORCHESTRATOR.md](ORCHESTRATOR.md).
+For the full technical reference, see [ORCHESTRATOR.md](ORCHESTRATOR.md).
 
 ---
 
@@ -159,8 +157,8 @@ npm run update:apps     # git pull + rebuild des 3 apps
 npm run check:selectors # vérifie que les sélecteurs CSS des overrides existent encore
 ```
 
-The source code of the 3 apps is **never modified**: all customization lives in
-`electron/overrides/`, so upstream updates stay painless.
+The source code of the 3 apps is never modified: all customization lives in
+`electron/overrides/`, so upstream updates don't break anything.
 
 ---
 

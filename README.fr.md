@@ -4,7 +4,7 @@
 
 **Tout ton workflow IA dans une seule fenêtre macOS.**
 
-Un espace de travail IA unifié : un **chat** intégré, un **orchestrateur multi-agents** qui produit de vrais livrables, une **mémoire** persistante, et trois outils open-source intégrés — [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode) et [Open Design](https://github.com/nexu-io/open-design) — partageant tous un même proxy LLM local qui route vers n'importe quel provider. Zéro Docker.
+Un espace de travail IA local : discute avec n'importe quel modèle, orchestre une équipe d'agents qui produit un vrai livrable, et bascule entre trois outils open-source intégrés — [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode) et [Open Design](https://github.com/nexu-io/open-design). Un seul proxy LLM, une mémoire persistante, zéro Docker.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/platform-macOS_14+-black?logo=apple)](https://www.apple.com/macos)
@@ -22,21 +22,21 @@ Un espace de travail IA unifié : un **chat** intégré, un **orchestrateur mult
 
 ## Pourquoi OpenHub ?
 
-La plupart des outils IA vivent en silo — fenêtres séparées, clés API séparées, aucun contexte partagé. OpenHub est une seule fenêtre macOS qui relie tout : discuter avec n'importe quel modèle, lancer un orchestrateur multi-agents qui produit de vrais livrables, et basculer entre des outils intégrés de code, de design et de travail — le tout partageant une même mémoire, un même contexte de projet et un même proxy LLM. Tes clés sont saisies **une seule fois** et ne quittent jamais le Trousseau macOS.
+La plupart des outils IA tournent dans des fenêtres séparées avec des clés API séparées. Aucun ne parle aux autres. OpenHub met le chat, l'orchestration, le code, le design et le travail dans une seule fenêtre macOS. Ils partagent la même mémoire, le même contexte projet et le même proxy LLM. Tu saisis tes clés une fois, dans le Trousseau macOS, et c'est tout.
 
 **Cinq slots dans la sidebar :** Chat · Code · Work · Design · Orchestrateur (plus un panneau Config).
 
 ## Fonctionnalités
 
-|                                |                                                                                                                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Orchestrateur multi-agents** | Décris un objectif ; un DAG d'agents planifie, construit et **auto-vérifie** un vrai livrable — site, rapport, librairie de code… Voir [le deep-dive](docs/ORCHESTRATOR.fr.md) |
-| **Chat intégré**               | Discute avec n'importe quel modèle : historique, pièces jointes, recherche web, effort de raisonnement par modèle                                                              |
-| **3 outils intégrés**          | OpenCode (agent de code), OpenWork (travail structuré), Open Design (maquettes visuelles) — une seule sidebar, l'état de chaque vue préservé                                   |
-| **Proxy LLM unifié**           | Un seul endpoint (`127.0.0.1:9999`) qui route vers Anthropic, OpenAI, OpenRouter, Ollama et Google Gemini                                                                      |
-| **Mémoire persistante**        | Un profil et des faits taggés injectés entre les sessions, pour que l'IA se souvienne de ton projet et de tes décisions                                                        |
-| **Gestion de projets**         | Projets multiples avec instructions personnalisées, injectées dans le contexte IA                                                                                              |
-| **Sécurisé par défaut**        | Clés API dans le **Trousseau macOS**, jamais sur disque. WebViews sandboxées. Proxy localhost-only avec auth Bearer                                                            |
+|                                |                                                                                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Orchestrateur multi-agents** | Donne-lui un objectif et un DAG d'agents planifie, construit et vérifie le résultat (site, rapport, librairie de code...). Voir [le deep-dive](docs/ORCHESTRATOR.fr.md) |
+| **Chat intégré**               | Discute avec n'importe quel modèle : historique, pièces jointes, recherche web, effort de raisonnement par modèle                                                       |
+| **3 outils intégrés**          | OpenCode (agent de code), OpenWork (travail structuré), Open Design (maquettes visuelles) dans une seule sidebar qui garde l'état de chaque vue                         |
+| **Proxy LLM unifié**           | Un seul endpoint (`127.0.0.1:9999`) qui route vers Anthropic, OpenAI, OpenRouter, Ollama et Google Gemini                                                               |
+| **Mémoire persistante**        | Profil et faits taggés qui persistent entre les sessions                                                                                                                |
+| **Gestion de projets**         | Projets multiples avec instructions personnalisées, injectées dans le contexte IA                                                                                       |
+| **Sécurisé par défaut**        | Clés API dans le Trousseau macOS, jamais sur disque. WebViews sandboxées. Proxy localhost-only avec auth Bearer                                                         |
 
 ---
 
@@ -51,7 +51,7 @@ bash scripts/setup.sh
 npm run dev
 ```
 
-`setup.sh` s'occupe de tout :
+`setup.sh` :
 
 - Vérifie Node.js, Git, pnpm
 - Installe le binaire CLI `opencode`
@@ -115,7 +115,7 @@ Voir [SECURITY.fr.md](SECURITY.fr.md) pour la politique complète et comment sig
 
 ## Remerciements
 
-OpenHub est un shell — il unifie, il ne forke pas. L'outillage IA appartient à
+OpenHub est un shell, pas un fork. L'outillage IA appartient à
 [OpenCode](https://github.com/sst/opencode) (sst),
 [OpenWork](https://github.com/different-ai/openwork) (different-ai) et
 [Open Design](https://github.com/nexu-io/open-design) (nexu-io), chacun cloné à
@@ -132,5 +132,3 @@ outils wrappés gardent leurs propres licences.
 **[Ouvrir une issue](https://github.com/1zalt/OpenHub/issues) · [Usage](docs/USAGE.fr.md) · [Orchestrateur](docs/ORCHESTRATOR.fr.md) · [FAQ](docs/FAQ.fr.md) · [Architecture](ARCHITECTURE.fr.md) · [Remerciements](ACKNOWLEDGEMENTS.fr.md) · [Contribuer](CONTRIBUTING.fr.md)**
 
 ---
-
-_Conçu pour les développeurs qui veulent garder le contrôle de leurs outils IA._

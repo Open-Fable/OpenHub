@@ -2,11 +2,10 @@
 
 # OpenHub — The Multi-Agent Orchestrator
 
-> Deep technical reference for OpenHub's orchestrator: how a single objective is
-> turned into a graph of cooperating AI agents that produce a real deliverable
-> (a website, a code library, a report, an ebook, a study, slides…), and how the
-> system **guarantees the output actually works** instead of trusting the model's
-> optimism.
+> Technical reference for the orchestrator engine. Covers how a goal becomes a
+> graph of AI agents that produce a deliverable (website, code library, report,
+> ebook, slides...), and how the system catches structural defects instead of
+> trusting the model's word for it.
 
 This document is for contributors and power users who want to understand the engine.
 For day-to-day usage, see [USAGE](USAGE.md#4-the-multi-agent-orchestrator). The code

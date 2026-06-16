@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenHub — Your entire AI workflow in one macOS window</title>
+    <meta
+      name="description"
+      content="Free, open-source macOS app: chat, multi-agent orchestrator, code agent, design tool in one sidebar. Supports Anthropic, OpenAI, Ollama, Gemini."
+    />
+    <meta property="og:title" content="OpenHub — AI workspace for macOS" />
+    <meta
+      property="og:description"
+      content="Chat, code, design, and multi-agent orchestration in one window. Open source, MIT licensed."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://1zalt.github.io/OpenHub" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenHub — AI workspace for macOS" />
+    <meta
+      name="twitter:description"
+      content="Chat, code, design, and multi-agent orchestration in one window. Open source."
+    />
+    <style>
+      :root {
+        --bg: #0a0a0b;
+        --surface: #141416;
+        --border: #27272a;
+        --text: #fafafa;
+        --text-muted: #a1a1aa;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --gradient-start: #3b82f6;
+        --gradient-end: #8b5cf6;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Nav */
+      nav {
+        padding: 20px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      nav .container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      nav .logo {
+        font-size: 1.25rem;
+        font-weight: 700;
+        text-decoration: none;
+        color: var(--text);
+      }
+      nav .links {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      nav .links a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+      }
+      nav .links a:hover {
+        color: var(--text);
+      }
+
+      /* Hero */
+      .hero {
+        text-align: center;
+        padding: 100px 0 80px;
+      }
+      .hero .badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 24px;
+      }
+      .hero h1 {
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 20px;
+        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hero p {
+        font-size: 1.2rem;
+        color: var(--text-muted);
+        max-width: 600px;
+        margin: 0 auto 40px;
+      }
+      .hero .cta {
+        display: inline-flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: none;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover {
+        border-color: var(--text-muted);
+      }
+
+      /* Screenshot placeholder */
+      .screenshot {
+        margin: 0 auto 100px;
+        max-width: 800px;
+        aspect-ratio: 16 / 10;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      /* Features */
+      .features {
+        padding: 80px 0;
+      }
+      .features h2 {
+        text-align: center;
+        font-size: 2rem;
+        margin-bottom: 60px;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+      }
+      .feature-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+      }
+      .feature-card .icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        font-size: 1.2rem;
+      }
+      .feature-card h3 {
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+      }
+      .feature-card p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      /* Architecture */
+      .architecture {
+        padding: 80px 0;
+        text-align: center;
+      }
+      .architecture h2 {
+        font-size: 2rem;
+        margin-bottom: 16px;
+      }
+      .architecture .subtitle {
+        color: var(--text-muted);
+        margin-bottom: 48px;
+        font-size: 1.1rem;
+      }
+      .arch-diagram {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 32px;
+        text-align: left;
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        overflow-x: auto;
+        white-space: pre;
+        line-height: 1.8;
+      }
+
+      /* CTA */
+      .final-cta {
+        text-align: center;
+        padding: 100px 0;
+      }
+      .final-cta h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 16px;
+      }
+      .final-cta p {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        margin-bottom: 32px;
+      }
+
+      /* Footer */
+      footer {
+        padding: 40px 0;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+      }
+      footer a {
+        color: var(--text-muted);
+        text-decoration: none;
+      }
+      footer a:hover {
+        color: var(--text);
+      }
+      footer .footer-links {
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      @media (max-width: 640px) {
+        .hero {
+          padding: 60px 0 40px;
+        }
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="container">
+        <a href="/" class="logo">OpenHub</a>
+        <div class="links">
+          <a href="https://github.com/1zalt/OpenHub/blob/main/docs/USAGE.md">Docs</a>
+          <a href="https://github.com/1zalt/OpenHub/blob/main/docs/ORCHESTRATOR.md"
+            >Orchestrator</a
+          >
+          <a href="https://github.com/1zalt/OpenHub/blob/main/docs/FAQ.md">FAQ</a>
+          <a
+            href="https://github.com/1zalt/OpenHub"
+            class="btn btn-secondary"
+            style="padding: 8px 16px; font-size: 0.85rem"
+            >GitHub</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="container">
+        <span class="badge">Open source &middot; MIT licensed &middot; macOS</span>
+        <h1>Your entire AI workflow in one window</h1>
+        <p>
+          Chat, code, design, and multi-agent orchestration — unified in a single macOS
+          sidebar. Enter your keys once. All tools share context and memory.
+        </p>
+        <div class="cta">
+          <a
+            href="https://github.com/1zalt/OpenHub/releases/latest"
+            class="btn btn-primary"
+            >Download .dmg</a
+          >
+          <a href="https://github.com/1zalt/OpenHub" class="btn btn-secondary"
+            >View on GitHub</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="screenshot">
+        <!-- Replace with actual screenshot: <img src="screenshot.png" alt="OpenHub" style="width:100%;border-radius:16px;"> -->
+        Replace this with a screenshot of the app
+      </div>
+    </div>
+
+    <section class="features">
+      <div class="container">
+        <h2>Five tools, one sidebar</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="icon">&#x1F4AC;</div>
+            <h3>Built-in chat</h3>
+            <p>
+              Talk to any model. History, attachments, web search, per-model reasoning
+              effort. No separate app needed.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">&#x1F916;</div>
+            <h3>Multi-agent orchestrator</h3>
+            <p>
+              Give it a goal. It builds a DAG of agents — planner, coder, designer,
+              verifier — and produces real deliverables.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">&#x1F4BB;</div>
+            <h3>Code agent</h3>
+            <p>
+              OpenCode by SST — a terminal-grade code assistant running in its own
+              sandboxed view.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">&#x1F3A8;</div>
+            <h3>Design tool</h3>
+            <p>
+              Open Design for visual mockups and prototypes. Generate and iterate on
+              designs with AI assistance.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">&#x1F512;</div>
+            <h3>Secure by default</h3>
+            <p>
+              API keys in macOS Keychain — never on disk. Sandboxed WebViews.
+              Localhost-only proxy with Bearer auth.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">&#x1F310;</div>
+            <h3>Any LLM provider</h3>
+            <p>
+              One proxy endpoint routes to Anthropic, OpenAI, OpenRouter, Ollama, and
+              Google Gemini. Configure once.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="architecture">
+      <div class="container">
+        <h2>How it works</h2>
+        <p class="subtitle">One proxy, one config, zero Docker</p>
+        <div class="arch-diagram">
+          WebView (OpenWork / OpenCode / Open Design) | |-- CSS/JS overrides &lt;--
+          electron/overrides/ | '-- LLM calls --&gt; Proxy :9999 --&gt; Anthropic / OpenAI
+          / OpenRouter / Ollama / Gemini | |-- Context injection (project, memory) '--
+          Background memory extraction Secrets: macOS Keychain &rarr; RAM &rarr; env vars
+          at process spawn (never disk)
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="container">
+        <h2>Get started in 60 seconds</h2>
+        <p>Clone, setup, run. Or just download the .dmg.</p>
+        <div class="cta">
+          <a
+            href="https://github.com/1zalt/OpenHub/releases/latest"
+            class="btn btn-primary"
+            >Download for macOS</a
+          >
+          <a
+            href="https://github.com/1zalt/OpenHub#-installation"
+            class="btn btn-secondary"
+            >Build from source</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <div class="footer-links">
+          <a href="https://github.com/1zalt/OpenHub">GitHub</a>
+          <a href="https://github.com/1zalt/OpenHub/blob/main/docs/USAGE.md"
+            >Documentation</a
+          >
+          <a href="https://github.com/1zalt/OpenHub/issues">Issues</a>
+          <a href="https://github.com/1zalt/OpenHub/blob/main/CONTRIBUTING.md"
+            >Contributing</a
+          >
+          <a href="https://github.com/1zalt/OpenHub/blob/main/LICENSE">MIT License</a>
+        </div>
+        <p>
+          OpenHub is a shell, not a fork. The AI tools belong to their respective
+          creators.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
