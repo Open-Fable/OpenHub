@@ -1,5 +1,5 @@
 import { app } from "electron";
-import { promises as fs } from "fs";
+import { promises as fs, readFileSync, mkdirSync, writeFileSync } from "fs";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { execFileSync } from "child_process";
 import path from "path";
@@ -125,6 +125,22 @@ function getSecretsPath(): string {
   return secretsPath;
 }
 
+const FALLBACK_KEY_FILE = "machine-key.bin";
+
+function getOrCreateFallbackKey(): string {
+  const keyPath = path.join(app.getPath("userData"), FALLBACK_KEY_FILE);
+  try {
+    const existing = readFileSync(keyPath);
+    if (existing.length === 32) return existing.toString("hex");
+  } catch {
+    /* doesn't exist yet */
+  }
+  const key = randomBytes(32);
+  mkdirSync(path.dirname(keyPath), { recursive: true, mode: 0o700 });
+  writeFileSync(keyPath, key, { mode: 0o600 });
+  return key.toString("hex");
+}
+
 function getDerivedKey(): Buffer {
   if (derivedKey) return derivedKey;
   let hwUuid: string;
@@ -134,9 +150,17 @@ function getDerivedKey(): Buffer {
       timeout: 5000,
     }).toString();
     const match = raw.match(/"IOPlatformUUID"\s*=\s*"([^"]+)"/);
-    hwUuid = match ? match[1] : "fallback-no-uuid";
+    if (match) {
+      hwUuid = match[1];
+    } else {
+      console.warn(
+        "[keychain] ioreg returned no IOPlatformUUID — using per-machine random fallback",
+      );
+      hwUuid = getOrCreateFallbackKey();
+    }
   } catch {
-    hwUuid = "fallback-no-uuid";
+    console.warn("[keychain] ioreg failed — using per-machine random fallback");
+    hwUuid = getOrCreateFallbackKey();
   }
   derivedKey = createHash("sha256").update(`${APP_SALT}:${hwUuid}`).digest();
   return derivedKey;

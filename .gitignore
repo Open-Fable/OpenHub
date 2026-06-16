@@ -50,6 +50,10 @@ config/opencode.local.json
 # Build artifacts
 build/
 
+# Vendored Node toolchain — downloaded at build time by scripts (afterPack/setup),
+# multi-MB binaries that must never enter version control. Regenerated on demand.
+vendor/
+
 # Scratch / temp / recovery scripts
 scratch/
 salvage*.cjs
@@ -81,6 +85,7 @@ Portfolio_d_Art/
 # Orchestrator test-output workspaces (each has a WORKSPACE_INDEX.md) and debug
 # screenshots — generated during development, never part of the shell.
 bouteil/
+bouteil2/
 code-pure/
 csv/
 saas/
