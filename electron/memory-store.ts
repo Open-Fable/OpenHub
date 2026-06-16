@@ -150,6 +150,38 @@ export function shouldKeepFact(text: string): boolean {
   return true;
 }
 
+/**
+ * Parse la sortie JSON d'un modèle d'extraction en une liste de faits propre.
+ * Tolérant : renvoie [] sur JSON malformé ou forme inattendue. Accepte soit un
+ * tableau de strings, soit `{ facts: string[] }`.
+ */
+export function parseFactsFromJson(raw: string, maxFacts: number): string[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    const list = Array.isArray(parsed)
+      ? parsed
+      : ((parsed as { facts?: unknown }).facts ?? []);
+    if (!Array.isArray(list)) return [];
+    return (
+      list
+        .filter((f): f is string => typeof f === "string")
+        // Les faits extraits viennent de contenu non fiable (réponse assistant) : on
+        // neutralise toute évasion du bloc <memory> injecté (retrait des balises,
+        // aplatissement des sauts de ligne) avant stockage.
+        .map((f) =>
+          f
+            .replace(/<\/?memory>/gi, "")
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
+        .filter((f) => f.length > 0)
+        .slice(0, maxFacts)
+    );
+  } catch {
+    return [];
+  }
+}
+
 async function ensureDir(): Promise<void> {
   await fs.mkdir(STORE_DIR, { recursive: true });
 }
