@@ -21,7 +21,8 @@ var state = {
   token: "",
   abortController: null,
   attachments: [],
-  webSearchEnabled: localStorage.getItem("openhub-chat-websearch") === "true",
+  webSearchEnabled: false, // reflète l'interrupteur maître « Recherche Internet » (Config), synchronisé à l'init
+
   modelPreferences: JSON.parse(localStorage.getItem("openhub-model-preferences") || "{}"),
   initReady: false,
   isSearchMode: false,
@@ -422,7 +423,9 @@ function saveCurrentConversation() {
   });
   if (!conv || state.messages.length === 0) return;
   conv.messages = state.messages.map(function (m) {
-    return { role: m.role, content: m.content, model: m.model };
+    var obj = { role: m.role, content: m.content, model: m.model };
+    if (m.reasoning) obj.reasoning = m.reasoning;
+    return obj;
   });
   if (!conv.customTitle) conv.title = getConvTitle(state.messages);
   persistConversations();
@@ -436,7 +439,9 @@ function switchToConversation(id) {
   if (!conv) return;
   activeConvId = id;
   state.messages = conv.messages.map(function (m) {
-    return { role: m.role, content: m.content, attachments: [], model: m.model };
+    var obj = { role: m.role, content: m.content, attachments: [], model: m.model };
+    if (m.reasoning) obj.reasoning = m.reasoning;
+    return obj;
   });
   artifacts = [];
   nextArtifactId = 0;
@@ -447,7 +452,7 @@ function switchToConversation(id) {
   document.body.classList.toggle("oh-is-new-conv", state.messages.length === 0);
   for (var i = 0; i < state.messages.length; i++) {
     var m = state.messages[i];
-    renderMessage(m.role, m.content, []);
+    renderMessage(m.role, m.content, [], m.reasoning);
   }
   els.chatTitle.textContent = conv.title;
   renderConvList();
@@ -1005,7 +1010,45 @@ function renderCatalogList() {
       container.appendChild(gDiv);
     });
 
-  if (filtered.length === 0)
+  // 3. Show empty state for local models when none are discovered
+  var localGroupLabel = "Modèles Locaux (Ollama)";
+  var hasLocalModels =
+    filtered.some(function (m) {
+      return m.source === "local";
+    }) || !!otherGroups[localGroupLabel];
+  if (!hasLocalModels && !q) {
+    var gDiv = document.createElement("div");
+    gDiv.className = "oh-catalog-provider-group";
+    gDiv.innerHTML =
+      '<div class="oh-catalog-provider-header">' + escapeHtml(localGroupLabel) + "</div>";
+    var msg = document.createElement("div");
+    msg.style.cssText =
+      "padding:12px 16px;color:var(--text-muted);font-size:12px;line-height:1.5";
+    if (window.openhub && window.openhub.ollamaCheckModels) {
+      window.openhub
+        .ollamaCheckModels()
+        .then(function (status) {
+          if (!status || !status.running) {
+            msg.textContent =
+              "Ollama n'est pas démarré. Lance-le pour voir tes modèles locaux.";
+          } else {
+            msg.textContent =
+              "Aucun modèle local détecté. ollama pull <modèle> pour en ajouter (aucune clé requise).";
+          }
+        })
+        .catch(function () {
+          msg.textContent =
+            "Aucun modèle local détecté. Vérifie qu'Ollama est lancé et que des modèles sont installés.";
+        });
+    } else {
+      msg.textContent =
+        "Aucun modèle local détecté. Vérifie qu'Ollama est lancé et que des modèles sont installés.";
+    }
+    gDiv.appendChild(msg);
+    container.appendChild(gDiv);
+  }
+
+  if (filtered.length === 0 && !container.hasChildNodes())
     container.innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-muted)">Aucun modèle trouvé</div>';
 }
@@ -1040,19 +1083,88 @@ async function saveCatalogSelections() {
   }
 }
 
-/* ── Web search ── */
-if (state.webSearchEnabled) {
-  $("ddWebSearch").classList.add("more-dropdown-item--active");
-  $("ddWebSearch").setAttribute("aria-pressed", "true");
+/* ── Web search (interrupteur maître partagé avec Config « Recherche Internet ») ── */
+function syncWebSearchUI() {
+  var btn = $("ddWebSearch");
+  btn.classList.toggle("more-dropdown-item--active", state.webSearchEnabled);
+  btn.setAttribute("aria-pressed", state.webSearchEnabled.toString());
+}
+if (window.openhub.getWebSearchEnabled) {
+  window.openhub.getWebSearchEnabled().then(function (e) {
+    state.webSearchEnabled = !!e;
+    syncWebSearchUI();
+  });
 }
 $("ddWebSearch").addEventListener("click", function (e) {
   e.stopPropagation();
   state.webSearchEnabled = !state.webSearchEnabled;
-  localStorage.setItem("openhub-chat-websearch", state.webSearchEnabled);
-  this.classList.toggle("more-dropdown-item--active", state.webSearchEnabled);
-  this.setAttribute("aria-pressed", state.webSearchEnabled.toString());
+  if (window.openhub.setWebSearchEnabled)
+    window.openhub.setWebSearchEnabled(state.webSearchEnabled);
+  syncWebSearchUI();
   $("btnInputMore").click();
 });
+
+/* Pré-jugement : un petit modèle rapide (« Tri des informations ») décide si une
+   recherche web est nécessaire. Renvoie la requête à chercher, ou null si inutile.
+   Fail-safe : toute erreur → null (on ne cherche pas, on ne bloque jamais la réponse). */
+var WEB_SEARCH_DECISION_PROMPT =
+  "Tu décides si répondre au message nécessite une recherche web. " +
+  "Réponds par une recherche UNIQUEMENT si le message demande des informations récentes, des actualités, " +
+  "des données factuelles qui changent (prix, météo, événements, versions, statistiques), ou des faits sur " +
+  "des entités/pages précises que tu ne peux pas connaître de façon fiable. Pour du code, du raisonnement, " +
+  "du créatif, de la reformulation ou des connaissances générales stables, NE cherche PAS. " +
+  "Si une recherche est nécessaire, réponds UNIQUEMENT par la requête de recherche optimale (quelques mots-clés). " +
+  "Sinon, réponds UNIQUEMENT par le mot : NON";
+
+var _classifierModel = null;
+async function getClassifierModel() {
+  if (_classifierModel) return _classifierModel;
+  if (window.openhub.getAiClassifierModel) {
+    try {
+      _classifierModel = await window.openhub.getAiClassifierModel();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  return _classifierModel || "deepseek/deepseek-v4-flash";
+}
+
+async function decideWebSearch(text) {
+  try {
+    var model = await getClassifierModel();
+    var resp = await fetch(state.proxyUrl + "/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + state.token,
+      },
+      body: JSON.stringify({
+        model: model,
+        stream: false,
+        bypassInjection: true, // pas de mémoire/vision/extraction pour ce méta-appel
+        temperature: 0,
+        max_tokens: 60,
+        messages: [
+          { role: "system", content: WEB_SEARCH_DECISION_PROMPT },
+          { role: "user", content: text.slice(0, 2000) },
+        ],
+      }),
+    });
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    var out = (
+      (data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content
+        : "") || ""
+    ).trim();
+    if (!out || /^non\b/i.test(out)) return null;
+    var q = out.replace(/^["']|["']$/g, "").trim();
+    if (q.length > 200) q = q.slice(0, 197) + "...";
+    return q || null;
+  } catch (_) {
+    return null;
+  }
+}
 
 /* ── UI events ── */
 function switchSearchMode(enabled) {
@@ -1082,13 +1194,8 @@ function switchSearchMode(enabled) {
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
   }
 
-  // Enable web search by default in search mode
-  if (enabled) {
-    state.webSearchEnabled = true;
-  } else {
-    // Revert to user's setting
-    state.webSearchEnabled = localStorage.getItem("openhub-chat-websearch") === "true";
-  }
+  // Le mode « Recherches » n'active plus la recherche de force : c'est l'interrupteur
+  // maître « Recherche Internet » + le pré-jugement de l'IA qui décident (cf. decideWebSearch).
 
   // Load specific history
   loadConversations().then(function (convs) {
@@ -2060,9 +2167,12 @@ async function sendMessage() {
   updateSendButton();
   scrollToBottom(true);
   var searchContext = "";
+  var searchQuery = null;
+  // Recherche seulement si l'interrupteur maître est ON ET que l'IA juge ça nécessaire.
   if (state.webSearchEnabled && text) {
-    var searchQuery = text.split("\n")[0].trim();
-    if (searchQuery.length > 200) searchQuery = searchQuery.slice(0, 197) + "...";
+    searchQuery = await decideWebSearch(text);
+  }
+  if (searchQuery) {
     var searchWidget = createSearchWidget(searchQuery);
     try {
       var searchResults = await window.openhub.webSearch(searchQuery);
@@ -2092,6 +2202,8 @@ async function sendMessage() {
   }
   var isAnthropic = state.selectedModel.startsWith("claude-");
   var fullContent = "";
+  var fullReasoning = "";
+  var responseStarted = false;
   try {
     var apiMessages = state.messages.slice(0, -1).map(function (m, idx) {
       var mc = m.content;
@@ -2142,11 +2254,29 @@ async function sendMessage() {
         try {
           var parsed = JSON.parse(payload);
           var delta = "";
-          if (parsed.type === "content_block_delta" && parsed.delta)
-            delta = parsed.delta.text || "";
-          else if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta)
+          var reasoningDelta = "";
+          if (parsed.type === "content_block_delta" && parsed.delta) {
+            if (parsed.delta.type === "thinking_delta")
+              reasoningDelta = parsed.delta.thinking || "";
+            else delta = parsed.delta.text || "";
+          } else if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
             delta = parsed.choices[0].delta.content || "";
+            var rd =
+              parsed.choices[0].delta.reasoning_content ||
+              parsed.choices[0].delta.reasoning;
+            if (typeof rd === "string") reasoningDelta = rd;
+          }
+          if (reasoningDelta) {
+            if (!fullReasoning) removeThinkingIndicator(assistantEls.bubble);
+            fullReasoning += reasoningDelta;
+            updateReasoningPanel(assistantEls, fullReasoning, true);
+            scrollToBottom(false);
+          }
           if (delta) {
+            if (!responseStarted && fullReasoning) {
+              responseStarted = true;
+              collapseReasoningPanel(assistantEls);
+            }
             fullContent += delta;
             updateAssistantMessage(assistantEls, fullContent);
             scrollToBottom(false);
@@ -2155,10 +2285,16 @@ async function sendMessage() {
       }
     }
     state.messages[state.messages.length - 1].content = fullContent;
+    if (fullReasoning)
+      state.messages[state.messages.length - 1].reasoning = fullReasoning;
   } catch (err) {
     if (err.name === "AbortError") {
       removeThinkingIndicator(assistantEls.bubble);
       state.messages[state.messages.length - 1].content = fullContent;
+      if (fullReasoning) {
+        state.messages[state.messages.length - 1].reasoning = fullReasoning;
+        collapseReasoningPanel(assistantEls);
+      }
     } else {
       updateAssistantMessage(assistantEls, "");
       assistantEls.bubble.classList.add("msg-bubble--streaming");
@@ -2184,7 +2320,7 @@ function stopStreaming() {
 }
 
 /* ── Render messages ── */
-function renderMessage(role, content, attachments) {
+function renderMessage(role, content, attachments, reasoning) {
   var isUser = role === "user";
   var group = document.createElement("div");
   group.className = "msg-group" + (isUser ? " msg-group--user" : "");
@@ -2242,6 +2378,11 @@ function renderMessage(role, content, attachments) {
     bindCopyButtons(body);
   }
   bubble.appendChild(body);
+  if (!isUser && reasoning) {
+    var elsObj = { bubble: bubble };
+    updateReasoningPanel(elsObj, reasoning, false);
+    collapseReasoningPanel(elsObj);
+  }
   bubbles.appendChild(bubble);
   var copyBtn = document.createElement("button");
   copyBtn.className = "btn-copy-msg";
@@ -2249,7 +2390,8 @@ function renderMessage(role, content, attachments) {
   copyBtn.innerHTML =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
   copyBtn.onclick = function () {
-    var txt = bubble.textContent || "";
+    var msgBody = bubble.querySelector(".msg-body");
+    var txt = (msgBody ? msgBody.textContent : bubble.textContent) || "";
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(txt);
       copyBtn.style.color = "var(--success)";
@@ -2278,6 +2420,43 @@ function showThinkingIndicator(bubble) {
 function removeThinkingIndicator(bubble) {
   var indicator = bubble.querySelector(".msg-thinking");
   if (indicator) indicator.remove();
+}
+function updateReasoningPanel(elsObj, text, streaming) {
+  var panel = elsObj.bubble.querySelector(".msg-reasoning");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "msg-reasoning";
+    if (streaming) panel.classList.add("msg-reasoning--streaming");
+    var header = document.createElement("div");
+    header.className = "msg-reasoning-header";
+    header.innerHTML =
+      '<svg viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary,#14B8A6)" stroke-width="76" stroke-linecap="round" opacity="0.25"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g><g stroke="var(--accent-primary,#14B8A6)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/></g></svg>' +
+      "<span>Réflexion</span>" +
+      '<svg class="msg-reasoning-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    header.onclick = function () {
+      panel.classList.toggle("msg-reasoning--collapsed");
+    };
+    var content = document.createElement("div");
+    content.className = "msg-reasoning-content";
+    panel.appendChild(header);
+    panel.appendChild(content);
+    elsObj.bubble.insertBefore(panel, elsObj.bubble.querySelector(".msg-body"));
+  }
+  var contentEl = panel.querySelector(".msg-reasoning-content");
+  contentEl.textContent = text;
+  if (streaming) {
+    panel.classList.add("msg-reasoning--streaming");
+    contentEl.scrollTop = contentEl.scrollHeight;
+  } else {
+    panel.classList.remove("msg-reasoning--streaming");
+  }
+}
+function collapseReasoningPanel(elsObj) {
+  var panel = elsObj.bubble.querySelector(".msg-reasoning");
+  if (panel) {
+    panel.classList.add("msg-reasoning--collapsed");
+    panel.classList.remove("msg-reasoning--streaming");
+  }
 }
 function updateAssistantMessage(elsObj, content) {
   removeThinkingIndicator(elsObj.bubble);
@@ -2985,8 +3164,15 @@ function hubGetProjectType(p) {
   return p.type || "assistant";
 }
 
-function hubIsGenerated(p) {
-  return p.generated === true;
+// Un projet "orchestrateur" (agent de workflow, nœud de canvas ou sous-agent généré)
+// possède toujours une empreinte qu'un projet autonome de chat/Work n'a jamais :
+// le flag generated, un type d'agent, ou des coordonnées de canvas.
+function isOrchestratorProject(p) {
+  return (
+    p.generated === true ||
+    (typeof p.type === "string" && p.type.length > 0) ||
+    typeof p.x === "number"
+  );
 }
 
 function hubMatchesFilter(p, filter) {
@@ -3518,9 +3704,9 @@ function hubRenderContent() {
   var active = filtered.filter(function (p) {
     return !p.archived;
   });
-  var generated = active.filter(hubIsGenerated);
+  var generated = active.filter(isOrchestratorProject);
   var userProjects = active.filter(function (p) {
-    return !hubIsGenerated(p);
+    return !isOrchestratorProject(p);
   });
 
   var sorted = hubSortProjects(userProjects, hubSort);
@@ -3763,13 +3949,13 @@ function hubRenderContent() {
       toggle.tabIndex = 0;
       toggle.setAttribute("role", "button");
       toggle.setAttribute("aria-expanded", hubGenOpen ? "true" : "false");
-      toggle.setAttribute("aria-label", "Agents générés");
+      toggle.setAttribute("aria-label", "Projets de l'orchestrateur");
       toggle.innerHTML =
         '<svg class="hub-section-chevron" style="transform:rotate(' +
         (hubGenOpen ? "0" : "-90") +
         'deg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>' +
         '<svg class="hub-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="m2 14 6-6 6 6"/></svg>' +
-        '<span class="hub-section-label">Agents générés</span>' +
+        '<span class="hub-section-label">Projets de l\'orchestrateur</span>' +
         '<span class="hub-section-count">' +
         generated.length +
         "</span>";
@@ -3976,7 +4162,7 @@ function initProjectsLogic() {
             !p.archived &&
             hubMatchesFilter(p, hubFilter) &&
             hubMatchesSearch(p, hubSearchQuery) &&
-            !hubIsGenerated(p)
+            !isOrchestratorProject(p)
           );
         });
         hubAnnounce(

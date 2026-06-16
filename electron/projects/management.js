@@ -174,7 +174,7 @@ function renderMgmtDetail(wfId) {
     availableProjects.length +
     ")</span>" +
     (availableProjects.length > 0
-      ? '<input class="mgmt-inline-search" id="mgmtAvailSearch" placeholder="Filtrer…" autocomplete="off" data-action="filterAvailableProjects" />'
+      ? '<input class="mgmt-inline-search" id="mgmtAvailSearch" placeholder="Filtrer…" autocomplete="off" aria-label="Filtrer les agents disponibles" data-action="filterAvailableProjects" />'
       : "") +
     "</div>";
   if (availableProjects.length === 0) {
@@ -366,7 +366,7 @@ function showAllProjectsModal() {
       return p.type !== "orchestrator";
     });
     var html =
-      '<input class="form-input" id="mgmtSearchProj" placeholder="Rechercher un agent…" style="margin-bottom:8px;" data-action="filterMgmtProjects" />';
+      '<input class="form-input" id="mgmtSearchProj" placeholder="Rechercher un agent…" aria-label="Rechercher un agent" style="margin-bottom:8px;" data-action="filterMgmtProjects" />';
     html += '<div class="mgmt-filter-chips" id="mgmtFilterChips">';
     html +=
       '<button class="filter-chip active" data-kind="type" data-action="setAllProjTypeFilter" data-arg="">Tous</button>';

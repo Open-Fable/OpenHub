@@ -313,6 +313,7 @@ function stripBlocks(text) {
     .replace(/```questions\n[\s\S]*?\n```/g, "")
     .replace(/```action[\s\S]*$/, "")
     .replace(/```questions[\s\S]*$/, "")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 

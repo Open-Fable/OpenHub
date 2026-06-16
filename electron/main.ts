@@ -19,6 +19,7 @@ import { exec, execFile } from "child_process";
 import { ProcessManager } from "./process-manager.js";
 import { startProxy, getActiveWorkspaceDir } from "./proxy/index.js";
 import { loadOverrides } from "./override-loader.js";
+import { syncRemoteOverrides } from "./remote-overrides.js";
 import { generateOpenCodeConfig } from "./config-generator.js";
 import { parseSemver, compareSemver, findLatestTag } from "./semver-utils.js";
 import { readSecret } from "./keychain.js";
@@ -64,8 +65,25 @@ import {
   type NotifyMode,
   type NotifySources,
 } from "./notifications.js";
+import { initUpdater, checkForUpdate, downloadAndInstall } from "./updater.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Stop Chromium's os_crypt from using the macOS Keychain to encrypt cookies /
+// local storage for the webview partitions. Under ad-hoc signing (no Apple
+// Developer ID) macOS doesn't persistently trust the app, so it re-prompts for
+// the login password to access the "openhub Safe Storage" keychain item on
+// every launch. `use-mock-keychain` makes os_crypt use an in-process key
+// instead — no Keychain, no prompt. (`password-store` is a Linux-only switch and
+// is a no-op on macOS; kept for non-macOS runs.)
+app.commandLine.appendSwitch("use-mock-keychain");
+app.commandLine.appendSwitch("password-store", "basic");
+
+// Dev: apps live in the cloned repo (../../apps). Packaged: they are bundled as
+// extraResources under Resources/apps. Resolved once from app.isPackaged.
+const APPS_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "apps")
+  : path.join(__dirname, "..", "..", "apps");
 
 const HEADER_HEIGHT_TOPBAR = 82;
 const HEADER_HEIGHT_DROPDOWN = 38;
@@ -1188,6 +1206,9 @@ function cleanSearchQuery(query: string): string {
 }
 
 ipcHandle("web-search", async (_e, query: string) => {
+  // Interrupteur maître : si « Recherche Internet » est désactivé dans Config,
+  // on ne cherche jamais — quel que soit l'état du chat (kill-switch global).
+  if (!webSearchEnabled) return [];
   const { readSecret } = await import("./keychain.js");
   const braveSearchKey = await readSecret("openhub", "brave-search-key");
   if (braveSearchKey === null || braveSearchKey === "") {
@@ -1469,10 +1490,11 @@ ipcHandle("od-pdf:print", async (_event, html: string) => {
   }
 });
 
-const APPS_DIR = path.join(__dirname, "..", "..", "apps");
 const APP_NAMES = ["openwork", "opencode", "open-design"];
 
 ipcHandle("check-app-updates", async () => {
+  // Packaged builds have no .git — the 3 apps update with the shell itself.
+  if (app.isPackaged) return {};
   const results: Record<
     string,
     {
@@ -1584,6 +1606,7 @@ async function getOpencodeBinaryVersion(): Promise<string | null> {
 }
 
 ipcHandle("run-app-update", async (_e, appName: string) => {
+  if (app.isPackaged) return { ok: false, error: "packaged" };
   if (!APP_NAMES.includes(appName)) return { ok: false, error: "unknown app" };
   try {
     const dir = path.join(APPS_DIR, appName);
@@ -1673,6 +1696,8 @@ ipcHandle("run-app-update", async (_e, appName: string) => {
 
 let navMode: "topbar" | "dropdown" = "topbar";
 let autoUpdateEnabled = false;
+let toastDismissedAt = 0;
+const TOAST_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 let webSearchEnabled = false;
 let visionProxyEnabled = true;
 let visionModel = "openbmb/minicpm-v4.6";
@@ -1713,6 +1738,9 @@ async function loadSettings(): Promise<void> {
     navMode = parsed.navMode === "dropdown" ? "dropdown" : "topbar";
     headerHeight = navMode === "dropdown" ? HEADER_HEIGHT_DROPDOWN : HEADER_HEIGHT_TOPBAR;
     autoUpdateEnabled = !!parsed.autoUpdate;
+    toastDismissedAt =
+      typeof parsed.toastDismissedAt === "number" ? parsed.toastDismissedAt : 0;
+    webSearchEnabled = !!parsed.webSearchEnabled;
     visionProxyEnabled = !!parsed.visionProxyEnabled;
     visionModel = parsed.visionModel || "openbmb/minicpm-v4.6";
     visionDetailLevel = parsed.visionDetailLevel || "high";
@@ -1727,6 +1755,8 @@ async function loadSettings(): Promise<void> {
     navMode = "topbar";
     headerHeight = HEADER_HEIGHT_TOPBAR;
     autoUpdateEnabled = false;
+    toastDismissedAt = 0;
+    webSearchEnabled = false;
     visionProxyEnabled = true;
     visionModel = "openbmb/minicpm-v4.6";
     visionDetailLevel = "high";
@@ -1747,6 +1777,7 @@ async function saveSettings(): Promise<void> {
         {
           navMode,
           autoUpdate: autoUpdateEnabled,
+          toastDismissedAt,
           webSearchEnabled,
           visionProxyEnabled,
           visionModel,
@@ -1778,6 +1809,98 @@ ipcHandle("get-auto-update", () => autoUpdateEnabled);
 ipcHandle("set-auto-update", async (_e, enabled: boolean) => {
   autoUpdateEnabled = enabled;
   await saveSettings();
+});
+
+// ── Self-update (Partie 2) ───────────────────────────────────────────────
+
+// ── Update toast (floating bottom-right notification) ────────────────────
+const TOAST_WIDTH = 380;
+const TOAST_HEIGHT = 76;
+const TOAST_MARGIN = 16;
+let updateToast: BrowserWindow | null = null;
+
+function repositionToast(): void {
+  if (!updateToast || !mainWindow) return;
+  const [wx, wy] = mainWindow.getPosition();
+  const [ww, wh] = mainWindow.getSize();
+  updateToast.setPosition(
+    wx + ww - TOAST_WIDTH - TOAST_MARGIN,
+    wy + wh - TOAST_HEIGHT - TOAST_MARGIN,
+  );
+}
+
+function showUpdateToast(version: string): void {
+  if (updateToast || !mainWindow) return;
+  if (Date.now() - toastDismissedAt < TOAST_COOLDOWN_MS) return;
+
+  updateToast = new BrowserWindow({
+    parent: mainWindow,
+    width: TOAST_WIDTH,
+    height: TOAST_HEIGHT,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    focusable: false,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+    },
+  });
+
+  repositionToast();
+
+  updateToast.loadFile(path.join(__dirname, "update-toast.html"), {
+    query: { version },
+  });
+
+  mainWindow.on("move", repositionToast);
+  mainWindow.on("resize", repositionToast);
+
+  updateToast.on("closed", () => {
+    updateToast = null;
+    mainWindow?.off("move", repositionToast);
+    mainWindow?.off("resize", repositionToast);
+  });
+}
+
+function dismissUpdateToast(): void {
+  if (!updateToast) return;
+  updateToast.close();
+}
+
+ipcHandle("dismiss-update-toast", async () => {
+  toastDismissedAt = Date.now();
+  await saveSettings();
+  dismissUpdateToast();
+});
+
+ipcHandle("get-app-mode", () => ({ isPackaged: app.isPackaged }));
+
+ipcHandle("self-update-check", async () => {
+  const info = await checkForUpdate();
+  if (info) showUpdateToast(info.version);
+  return info ? { version: info.version } : null;
+});
+
+ipcHandle("self-update-install", async () => {
+  await downloadAndInstall();
+});
+
+// Read-only versions of the 3 bundled apps (written at build time by
+// package-apps.sh). Returns null in dev (no versions.json) — the UI only shows
+// this section in packaged mode anyway.
+ipcHandle("get-bundled-versions", async () => {
+  try {
+    const raw = await fs.readFile(path.join(APPS_DIR, "versions.json"), "utf-8");
+    return JSON.parse(raw) as Record<string, string>;
+  } catch {
+    return null;
+  }
 });
 
 ipcHandle("run-graphify-update", async (_e, dir?: string) => {
@@ -2022,6 +2145,10 @@ ipcHandle("od-updater:action", () => {
 });
 
 async function ensureBinarySynced(): Promise<void> {
+  // Packaged builds ship a pinned opencode binary and don't bundle the opencode
+  // source repo — there is nothing to sync against, so skip (avoids a misleading
+  // ENOENT warning on every launch).
+  if (app.isPackaged) return;
   const opencodeDir = path.join(APPS_DIR, "opencode");
   try {
     const pkgRaw = await fs.readFile(
@@ -2098,45 +2225,88 @@ function applyPermissionHardening(): void {
   }
 }
 
-app.whenReady().then(async () => {
-  // Thème sombre par défaut (ADN OpenHub) : pilote prefers-color-scheme dans
-  // toutes les WebContentsView (vues internes + apps tierces).
-  nativeTheme.themeSource = "dark";
-  applyNavigationHardening();
-  splashWindow = createSplash();
-  splashShownAt = Date.now();
+app
+  .whenReady()
+  .then(async () => {
+    // Thème sombre par défaut (ADN OpenHub) : pilote prefers-color-scheme dans
+    // toutes les WebContentsView (vues internes + apps tierces).
+    nativeTheme.themeSource = "dark";
+    applyNavigationHardening();
+    splashWindow = createSplash();
+    splashShownAt = Date.now();
 
-  applyPermissionHardening();
+    applyPermissionHardening();
 
-  await loadSettings();
-  registerOllamaHandlers();
-  proxyToken = await startProxy();
-  setProxyToken(proxyToken);
+    await loadSettings();
+    registerOllamaHandlers();
+    proxyToken = await startProxy();
+    setProxyToken(proxyToken);
 
-  const [anthropicKey, openaiKey, openrouterKey, googleAiKey] = await Promise.all([
-    readSecret("openhub", "anthropic-api-key"),
-    readSecret("openhub", "openai-api-key"),
-    readSecret("openhub", "openrouter-api-key"),
-    readSecret("openhub", "google-ai-key"),
-  ]);
+    const [anthropicKey, openaiKey, openrouterKey, googleAiKey] = await Promise.all([
+      readSecret("openhub", "anthropic-api-key"),
+      readSecret("openhub", "openai-api-key"),
+      readSecret("openhub", "openrouter-api-key"),
+      readSecret("openhub", "google-ai-key"),
+    ]);
 
-  processManager = new ProcessManager(proxyToken, { googleAiKey });
+    processManager = new ProcessManager(
+      proxyToken,
+      { googleAiKey },
+      {
+        isPackaged: app.isPackaged,
+        appsDir: APPS_DIR,
+        resourcesPath: process.resourcesPath,
+        userDataDir: app.getPath("userData"),
+      },
+    );
 
-  // Sync binary in background so it doesn't block UI startup
-  ensureBinarySynced().catch((err) => {
-    console.error("[main] background binary sync failed:", err);
+    // Sync binary in background so it doesn't block UI startup
+    ensureBinarySynced().catch((err) => {
+      console.error("[main] background binary sync failed:", err);
+    });
+
+    // Sync remote overrides (OTA patches) in background
+    syncRemoteOverrides().catch((err) => {
+      console.warn("[main] remote overrides sync failed:", err);
+    });
+
+    // Initialize the self-updater (Partie 2 — packaged mode only)
+    initUpdater({
+      getProcessManager: () => processManager,
+      onStatusChange: (status) => {
+        mainWindow?.webContents.send("self-update-status", status);
+        if (status.stage === "available") {
+          mainWindow?.webContents.send("self-update-available", status.version);
+          showUpdateToast(status.version);
+        }
+      },
+    });
+
+    await generateOpenCodeConfig({ proxyToken, anthropicKey, openaiKey, openrouterKey });
+
+    // Start opencode in the background — Work slot needs the opencode engine
+    // for workspace sessions. Don't await: let it start while window loads.
+    processManager.ensureRunning("code").catch((err) => {
+      console.warn("[main] background opencode start failed:", err);
+    });
+
+    await createWindow();
+
+    // Background self-update check (U4: only when packaged, best-effort)
+    if (app.isPackaged && autoUpdateEnabled) {
+      checkForUpdate().catch((err) => {
+        console.warn("[main] background self-update check failed:", err);
+      });
+    }
+  })
+  .catch((err) => {
+    console.error("[main] fatal startup error:", err);
+    dialog.showErrorBox(
+      "OpenHub — Startup Error",
+      `The application failed to start:\n\n${err instanceof Error ? err.message : String(err)}`,
+    );
+    app.quit();
   });
-
-  await generateOpenCodeConfig({ proxyToken, anthropicKey, openaiKey, openrouterKey });
-
-  // Start opencode in the background — Work slot needs the opencode engine
-  // for workspace sessions. Don't await: let it start while window loads.
-  processManager.ensureRunning("code").catch((err) => {
-    console.warn("[main] background opencode start failed:", err);
-  });
-
-  await createWindow();
-});
 
 app.on("window-all-closed", () => {
   processManager?.stopAll();

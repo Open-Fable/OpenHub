@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { homedir } from "os";
 import { randomBytes } from "crypto";
-import { INITIAL_PROJECTS } from "./project-seed";
+import { INITIAL_PROJECTS } from "./project-seed.js";
 
 export interface Project {
   readonly id: string;

@@ -19,28 +19,43 @@
           <div class="wf-trigger" data-action="toggleWfDropdown">
             <span class="wf-dot"></span>
             <span id="wfName">Workflow</span>
-            <svg class="wf-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg
+              class="wf-chevron"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </div>
           <div class="wf-dropdown" id="wfDropdown"></div>
         </div>
         <div class="topbar-center"></div>
         <div class="topbar-actions">
-          <div class="topbar-progress" id="topbarProgress" style="display:none">
+          <div class="topbar-progress" id="topbarProgress" style="display: none">
             <span class="topbar-progress-text" id="topbarProgressText">0/0</span>
             <div class="topbar-progress-bar">
               <div class="topbar-progress-fill" id="topbarProgressFill"></div>
             </div>
           </div>
           <button class="btn btn--secondary" id="btnNewProject">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
             Nouveau
           </button>
           <button class="btn btn--primary" id="btnExecuteOrch">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
             Lancer
           </button>
-          <button class="btn btn--danger" id="btnStopOrch" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+          <button class="btn btn--danger" id="btnStopOrch" style="display: none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+            </svg>
             Arrêter
           </button>
         </div>
@@ -51,16 +66,56 @@
         <!-- Chat Panel (left, collapsible) -->
         <div class="chat-panel" id="chatPanel">
           <div class="chat-panel-tabs">
-            <button class="chat-tab active" id="tabChat" data-action="switchPanelTab" data-arg="chat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <button
+              class="chat-tab active"
+              id="tabChat"
+              data-action="switchPanelTab"
+              data-arg="chat"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="width: 14px; height: 14px"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
               Assistant
             </button>
-            <button class="chat-tab" id="tabActivity" data-action="switchPanelTab" data-arg="activity">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <button
+              class="chat-tab"
+              id="tabActivity"
+              data-action="switchPanelTab"
+              data-arg="activity"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="width: 14px; height: 14px"
+              >
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
               Activit&eacute;
             </button>
-            <button class="chat-tab" id="tabHistory" data-action="switchPanelTab" data-arg="history">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <button
+              class="chat-tab"
+              id="tabHistory"
+              data-action="switchPanelTab"
+              data-arg="history"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="width: 14px; height: 14px"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
               Historique
             </button>
           </div>
@@ -68,10 +123,22 @@
           <!-- Tab: Chat -->
           <div class="chat-tab-content active" id="tabContentChat">
             <div class="chat-header">
-              <div style="flex:1;min-width:0;position:relative;">
-                <div class="conv-selector" id="convSelector" data-action="toggleConvDropdown">
+              <div style="flex: 1; min-width: 0; position: relative">
+                <div
+                  class="conv-selector"
+                  id="convSelector"
+                  data-action="toggleConvDropdown"
+                >
                   <span id="convTitle" class="conv-title">Nouvelle conversation</span>
-                  <svg class="conv-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg
+                    class="conv-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </div>
                 <div class="conv-dropdown" id="convDropdown"></div>
               </div>
@@ -83,22 +150,52 @@
                 <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
               </select>
               <button class="chat-collapse-btn" id="btnCollapseChat" title="Replier">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
               </button>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-area">
-              <textarea class="chat-input" id="chatInput" placeholder="Message à l'assistant…" rows="1"></textarea>
+              <textarea
+                class="chat-input"
+                id="chatInput"
+                placeholder="Message à l'assistant…"
+                rows="1"
+                aria-label="Message à l'assistant"
+                maxlength="16000"
+              ></textarea>
               <button class="chat-send-btn" id="btnSendChat" data-action="sendChat">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
               </button>
             </div>
           </div>
 
           <!-- Tab: Activité -->
           <div class="chat-tab-content" id="tabContentActivity">
-            <div class="activity-feed" id="activityFeed" role="log" aria-live="polite" aria-atomic="false">
-              <div class="activity-empty" id="activityEmpty">Lance une orchestration pour suivre l'activité ici.</div>
+            <div
+              class="activity-feed"
+              id="activityFeed"
+              role="log"
+              aria-live="polite"
+              aria-atomic="false"
+            >
+              <div class="activity-empty" id="activityEmpty">
+                Lance une orchestration pour suivre l'activité ici.
+              </div>
             </div>
           </div>
 
@@ -114,54 +211,116 @@
         </div>
 
         <!-- Chat collapsed bar -->
-        <div class="chat-collapsed-bar" id="chatCollapsedBar" style="display:none">
+        <div class="chat-collapsed-bar" id="chatCollapsedBar" style="display: none">
           <button class="chat-expand-btn" id="btnExpandChat" title="Ouvrir l'assistant">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
           </button>
         </div>
 
         <!-- Canvas Area (center) -->
         <div class="canvas-area" id="orchestrationView">
-          <!-- Task card pinned at top of canvas -->
-          <div class="canvas-mission">
-            <textarea class="canvas-mission-text" id="taskCardText" rows="1" placeholder="Définis la tâche globale…" spellcheck="false"></textarea>
-            <svg class="canvas-mission-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-action="focusTaskCard"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </div>
-
-          <div class="canvas-iterate" id="iterateBar" style="display:none">
-            <textarea id="feedbackInput" rows="1" placeholder="Feedback sur le résultat… (ex : le header est moche, corrige la navigation)" spellcheck="false"></textarea>
+          <div class="canvas-iterate" id="iterateBar" style="display: none">
+            <textarea
+              id="feedbackInput"
+              rows="1"
+              placeholder="Feedback sur le résultat… (ex : le header est moche, corrige la navigation)"
+              spellcheck="false"
+            ></textarea>
             <button class="btn btn--primary" id="btnIterateOrch">Itérer</button>
           </div>
 
           <div class="canvas" id="orchestrationCanvas">
             <div class="canvas-empty" id="canvasEmpty">
               <div class="welcome-container">
-                <svg class="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                <p class="welcome-text">Décris ton idée à l'assistant, il crée ton équipe d'agents.</p>
+                <svg
+                  class="welcome-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                  <line x1="9" y1="9" x2="9.01" y2="9" />
+                  <line x1="15" y1="9" x2="15.01" y2="9" />
+                </svg>
+                <p class="welcome-text">
+                  Décris ton idée à l'assistant, il crée ton équipe d'agents.
+                </p>
                 <div class="templates-grid">
-                  <div class="template-card template-card--purple" data-action="importDemoTemplate">
+                  <div
+                    class="template-card template-card--purple"
+                    data-action="importDemoTemplate"
+                  >
                     <div class="template-card-header">
                       <span class="template-card-title">Intégration &amp; QA</span>
                       <span class="template-card-badge">6 agents</span>
                     </div>
-                    <div class="template-card-desc">Pipeline complète avec tests automatisés.</div>
-                    <button class="template-card-btn">Charger <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+                    <div class="template-card-desc">
+                      Pipeline complète avec tests automatisés.
+                    </div>
+                    <button class="template-card-btn">
+                      Charger
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </button>
                   </div>
-                  <div class="template-card template-card--orange" data-action="importWebsiteTemplate">
+                  <div
+                    class="template-card template-card--orange"
+                    data-action="importWebsiteTemplate"
+                  >
                     <div class="template-card-header">
                       <span class="template-card-title">Site Web Vitrine</span>
                       <span class="template-card-badge">4 agents</span>
                     </div>
-                    <div class="template-card-desc">Conception, rédaction et intégration.</div>
-                    <button class="template-card-btn">Charger <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+                    <div class="template-card-desc">
+                      Conception, rédaction et intégration.
+                    </div>
+                    <button class="template-card-btn">
+                      Charger
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </button>
                   </div>
-                  <div class="template-card template-card--green" data-action="importSEOContentTemplate">
+                  <div
+                    class="template-card template-card--green"
+                    data-action="importSEOContentTemplate"
+                  >
                     <div class="template-card-header">
                       <span class="template-card-title">Contenu SEO</span>
                       <span class="template-card-badge">4 agents</span>
                     </div>
-                    <div class="template-card-desc">Articles optimisés pour le référencement.</div>
-                    <button class="template-card-btn">Charger <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+                    <div class="template-card-desc">
+                      Articles optimisés pour le référencement.
+                    </div>
+                    <button class="template-card-btn">
+                      Charger
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -171,53 +330,132 @@
             </div>
             <div class="canvas-controls">
               <button class="control-btn" id="btnZoomIn" title="Zoomer">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
               </button>
               <button class="control-btn" id="btnZoomOut" title="Dézoomer">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
               </button>
-              <button class="control-btn" id="btnToggleLayout" title="Changer le sens des liaisons (H/V)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5" class="icon-v"/><path d="M10 7l5 5-5 5" class="icon-h" style="display:none"/></svg>
+              <button
+                class="control-btn"
+                id="btnToggleLayout"
+                title="Changer le sens des liaisons (H/V)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M7 10l5 5 5-5" class="icon-v" />
+                  <path d="M10 7l5 5-5 5" class="icon-h" style="display: none" />
+                </svg>
               </button>
-              <button class="control-btn" id="btnZoomReset" title="Mode Zen (Plein écran)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              <button
+                class="control-btn"
+                id="btnZoomReset"
+                title="Mode Zen (Plein écran)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
               </button>
             </div>
           </div>
         </div>
 
         <!-- Detail Panel (right, contextual) -->
-        <div class="detail-panel" id="orchestrationDetail" style="display:none">
+        <div class="detail-panel" id="orchestrationDetail" style="display: none">
           <div class="detail-header">
             <span class="detail-header-title" id="detailTitle">Workflow</span>
             <button class="detail-close-btn" id="btnCloseDetail" title="Fermer">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
           <div class="detail-content" id="detailContent">
             <!-- Workflow view -->
-            <div class="detail-view" id="detailViewWorkflow" style="display:none">
+            <div class="detail-view" id="detailViewWorkflow" style="display: none">
               <div class="detail-section">
                 <span class="detail-label">Tâche globale à exécuter</span>
-                <textarea class="detail-textarea" id="sharedTaskText" placeholder="Décris ici l'objectif global de l'orchestration…"></textarea>
+                <textarea
+                  class="detail-textarea"
+                  id="sharedTaskText"
+                  placeholder="Décris ici l'objectif global de l'orchestration…"
+                ></textarea>
               </div>
               <details class="detail-accordion">
                 <summary class="detail-accordion-trigger">
                   <span>Instructions de l'équipe</span>
-                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg
+                    class="detail-accordion-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </summary>
                 <div class="detail-accordion-body">
-                  <textarea class="detail-textarea detail-textarea--mono" id="systemInstructionsText" placeholder="Instructions système de l'orchestrateur…"></textarea>
+                  <textarea
+                    class="detail-textarea detail-textarea--mono"
+                    id="systemInstructionsText"
+                    placeholder="Instructions système de l'orchestrateur…"
+                  ></textarea>
                 </div>
               </details>
               <details class="detail-accordion" id="consoleAccordion">
                 <summary class="detail-accordion-trigger">
                   <span>Console</span>
                   <div class="detail-accordion-actions">
-                    <button class="console-copy-btn" id="consoleCopyBtn" title="Copier la console">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <button
+                      class="console-copy-btn"
+                      id="consoleCopyBtn"
+                      title="Copier la console"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        width="12"
+                        height="12"
+                      >
+                        <rect x="9" y="9" width="13" height="13" rx="2" />
+                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                      </svg>
                     </button>
-                    <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg
+                      class="detail-accordion-chevron"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
                   </div>
                 </summary>
                 <div class="detail-accordion-body">
@@ -229,16 +467,36 @@
               <details class="detail-accordion">
                 <summary class="detail-accordion-trigger">
                   <span>Réglages</span>
-                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg
+                    class="detail-accordion-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </summary>
                 <div class="detail-accordion-body">
                   <div class="orch-setting-row">
-                    <span class="orch-setting-label">Mod&egrave;le de l'orchestrateur</span>
-                    <select class="form-select" id="orchModelSelect" style="flex:1;font-size:11px;"></select>
+                    <span class="orch-setting-label"
+                      >Mod&egrave;le de l'orchestrateur</span
+                    >
+                    <select
+                      class="form-select"
+                      id="orchModelSelect"
+                      style="flex: 1; font-size: 11px"
+                    ></select>
                   </div>
                   <div class="orch-setting-row">
-                    <span class="orch-setting-label">R&eacute;flexion (tous les agents)</span>
-                    <select class="form-select" id="orchReasoningSelect" style="flex:1;font-size:11px;">
+                    <span class="orch-setting-label"
+                      >R&eacute;flexion (tous les agents)</span
+                    >
+                    <select
+                      class="form-select"
+                      id="orchReasoningSelect"
+                      style="flex: 1; font-size: 11px"
+                    >
                       <option value="">Par d&eacute;faut (medium)</option>
                       <option value="none">Aucune</option>
                       <option value="low">Faible</option>
@@ -248,57 +506,125 @@
                       <option value="max">Maximum</option>
                     </select>
                   </div>
+                  <div class="orch-setting-row">
+                    <span class="orch-setting-label"
+                      >Adapter aux mod&egrave;les l&eacute;gers</span
+                    >
+                    <label class="switch"
+                      ><input type="checkbox" id="orchAdaptWeakModel" /><span
+                        class="switch-slider"
+                      ></span
+                    ></label>
+                  </div>
                   <div class="orch-workdir">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                    <span class="orch-workdir-label" id="orchWorkdirLabel">Dossier racine</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      width="14"
+                      height="14"
+                    >
+                      <path
+                        d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                      />
+                    </svg>
+                    <span class="orch-workdir-label" id="orchWorkdirLabel"
+                      >Dossier racine</span
+                    >
                     <span class="orch-workdir-path" id="orchWorkdirPath">—</span>
-                    <button class="btn btn--ghost" id="btnPickOrchWorkdir" style="font-size:11px;padding:2px 8px;height:auto;">Choisir</button>
+                    <button
+                      class="btn btn--ghost"
+                      id="btnPickOrchWorkdir"
+                      style="font-size: 11px; padding: 2px 8px; height: auto"
+                    >
+                      Choisir
+                    </button>
                   </div>
                 </div>
               </details>
             </div>
 
             <!-- Agent view -->
-            <div class="detail-view" id="detailViewAgent" style="display:none">
+            <div class="detail-view" id="detailViewAgent" style="display: none">
               <div class="detail-section">
-                <span class="detail-label" id="lblSelectedNodeTask">Tâche de l'agent</span>
-                <textarea class="detail-textarea" id="selectedNodeTaskText" placeholder="Consigne spécifique à donner à cet agent…"></textarea>
+                <span class="detail-label" id="lblSelectedNodeTask"
+                  >Tâche de l'agent</span
+                >
+                <textarea
+                  class="detail-textarea"
+                  id="selectedNodeTaskText"
+                  placeholder="Consigne spécifique à donner à cet agent…"
+                ></textarea>
               </div>
-              <div class="detail-section" id="agentStatusSection" style="display:none">
+              <div class="detail-section" id="agentStatusSection" style="display: none">
                 <span class="detail-label">Statut</span>
                 <div class="agent-status-row" id="agentStatusRow"></div>
               </div>
               <details class="detail-accordion">
                 <summary class="detail-accordion-trigger">
                   <span>Instructions</span>
-                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg
+                    class="detail-accordion-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </summary>
                 <div class="detail-accordion-body">
-                  <textarea class="detail-textarea detail-textarea--mono" id="selectedNodeInstructionsText" readonly placeholder="Instructions système de l'agent (lecture seule)"></textarea>
+                  <textarea
+                    class="detail-textarea detail-textarea--mono"
+                    id="selectedNodeInstructionsText"
+                    readonly
+                    placeholder="Instructions système de l'agent (lecture seule)"
+                  ></textarea>
                 </div>
               </details>
-              <details class="detail-accordion" style="display:none">
+              <details class="detail-accordion" style="display: none">
                 <summary class="detail-accordion-trigger">
                   <span>Prompt utilisateur</span>
-                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg
+                    class="detail-accordion-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </summary>
-                <div class="detail-accordion-body" style="overflow:hidden;">
+                <div class="detail-accordion-body" style="overflow: hidden">
                   <div class="orch-result-viewer" id="generatedUserPrompt"></div>
                 </div>
               </details>
               <details class="detail-accordion" id="resultAccordion">
                 <summary class="detail-accordion-trigger">
                   <span>Résultat</span>
-                  <svg class="detail-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg
+                    class="detail-accordion-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </summary>
-                <div class="detail-accordion-body" style="overflow:hidden;">
+                <div class="detail-accordion-body" style="overflow: hidden">
                   <div class="orch-result-viewer" id="orchResultViewer">
-                    <div class="orch-result-empty">Le résultat s'affichera ici après l'exécution.</div>
+                    <div class="orch-result-empty">
+                      Le résultat s'affichera ici après l'exécution.
+                    </div>
                   </div>
                 </div>
               </details>
               <div class="detail-agent-actions">
-                <button class="btn btn--secondary" id="btnEditSelectedNode">Modifier l'agent</button>
+                <button class="btn btn--secondary" id="btnEditSelectedNode">
+                  Modifier l'agent
+                </button>
               </div>
             </div>
           </div>
@@ -307,19 +633,35 @@
     </div>
 
     <!-- Modal: New/Edit Project -->
-    <div class="modal-overlay" id="modalProject" style="display:none">
+    <div class="modal-overlay" id="modalProject" style="display: none">
       <div class="modal-dialog">
         <div class="modal-header">
           <span class="modal-title" id="modalProjectTitle">Nouvel agent</span>
-          <button class="modal-close" data-action="closeModal" data-arg="modalProject" aria-label="Fermer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <button
+            class="modal-close"
+            data-action="closeModal"
+            data-arg="modalProject"
+            aria-label="Fermer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
         <div class="modal-body">
           <!-- Essential -->
           <div class="form-group">
             <span class="form-label">Nom de l'agent</span>
-            <input type="text" class="form-input" id="projName" placeholder="Nom de l'agent…" autocomplete="off" />
+            <input
+              type="text"
+              class="form-input"
+              id="projName"
+              placeholder="Nom de l'agent…"
+              autocomplete="off"
+              aria-label="Nom de l'agent"
+              maxlength="100"
+            />
           </div>
           <div class="form-group">
             <span class="form-label">Type</span>
@@ -334,7 +676,14 @@
           </div>
           <div class="form-group">
             <span class="form-label">Tâche</span>
-            <textarea class="form-textarea" id="projTask" placeholder="Décris ce que cet agent doit accomplir…" style="min-height:60px"></textarea>
+            <textarea
+              class="form-textarea"
+              id="projTask"
+              placeholder="Décris ce que cet agent doit accomplir…"
+              style="min-height: 60px"
+              aria-label="Tâche de l'agent"
+              maxlength="8000"
+            ></textarea>
           </div>
 
           <!-- Accordion: Personnaliser l'agent -->
@@ -344,7 +693,9 @@
               <div class="form-group">
                 <span class="form-label">Mod&egrave;le d'IA</span>
                 <select class="form-select" id="projModel">
-                  <option value="">— Mod&egrave;le par d&eacute;faut de l'application —</option>
+                  <option value="">
+                    — Mod&egrave;le par d&eacute;faut de l'application —
+                  </option>
                 </select>
               </div>
               <div class="form-group">
@@ -361,13 +712,33 @@
               </div>
               <div class="form-group">
                 <span class="form-label">Instructions système</span>
-                <textarea class="form-textarea" id="projInstructions" placeholder="Donne des instructions précises à l'agent…"></textarea>
+                <textarea
+                  class="form-textarea"
+                  id="projInstructions"
+                  placeholder="Donne des instructions précises à l'agent…"
+                  aria-label="Instructions système de l'agent"
+                  maxlength="8000"
+                ></textarea>
               </div>
               <div class="form-group">
                 <span class="form-label">Dossier de travail</span>
-                <div style="display:flex;gap:8px;">
-                  <input type="text" class="form-input" id="projPath" placeholder="Aucun dossier lié" readonly style="flex:1;cursor:default;opacity:0.8;">
-                  <button class="btn btn--secondary" id="btnPickPath" style="white-space:nowrap;">Choisir…</button>
+                <div style="display: flex; gap: 8px">
+                  <input
+                    type="text"
+                    class="form-input"
+                    id="projPath"
+                    placeholder="Aucun dossier lié"
+                    readonly
+                    aria-label="Dossier de travail"
+                    style="flex: 1; cursor: default; opacity: 0.8"
+                  />
+                  <button
+                    class="btn btn--secondary"
+                    id="btnPickPath"
+                    style="white-space: nowrap"
+                  >
+                    Choisir…
+                  </button>
                 </div>
               </div>
             </div>
@@ -378,68 +749,119 @@
             <summary>Options avancées</summary>
             <div class="modal-accordion-body">
               <div class="switch-row">
-                <label class="switch"><input type="checkbox" id="chkAutoSteps" checked><span class="switch-slider"></span></label>
+                <label class="switch"
+                  ><input type="checkbox" id="chkAutoSteps" checked /><span
+                    class="switch-slider"
+                  ></span
+                ></label>
                 <div class="switch-info">
                   <span class="switch-label">Découper la tâche en étapes</span>
-                  <span class="switch-help">L'orchestrateur planifie les étapes automatiquement.</span>
+                  <span class="switch-help"
+                    >L'orchestrateur planifie les étapes automatiquement.</span
+                  >
                 </div>
               </div>
               <div class="form-group" id="stepsGroup">
-                <textarea class="form-textarea" id="projSteps" placeholder="Étapes manuelles (une par bloc, séparées par ---)&#10;Exemple :&#10;Analyse le besoin&#10;---&#10;Propose une maquette" style="min-height:80px"></textarea>
-                <span class="form-hint">Si tu définis des étapes ici, elles remplacent la planification automatique.</span>
+                <textarea
+                  class="form-textarea"
+                  id="projSteps"
+                  placeholder="Étapes manuelles (une par bloc, séparées par ---)&#10;Exemple :&#10;Analyse le besoin&#10;---&#10;Propose une maquette"
+                  style="min-height: 80px"
+                  aria-label="Étapes manuelles de l'agent"
+                  maxlength="8000"
+                ></textarea>
+                <span class="form-hint"
+                  >Si tu définis des étapes ici, elles remplacent la planification
+                  automatique.</span
+                >
               </div>
               <div class="switch-row">
-                <label class="switch"><input type="checkbox" id="chkBypassMemory"><span class="switch-slider"></span></label>
+                <label class="switch"
+                  ><input type="checkbox" id="chkBypassMemory" /><span
+                    class="switch-slider"
+                  ></span
+                ></label>
                 <div class="switch-info">
                   <span class="switch-label">Ignorer la mémoire du projet</span>
-                  <span class="switch-help">L'agent travaille sans le contexte des sessions précédentes.</span>
+                  <span class="switch-help"
+                    >L'agent travaille sans le contexte des sessions précédentes.</span
+                  >
                 </div>
               </div>
               <div class="form-group" id="dependencySelectGroup">
                 <span class="form-label">Attend la fin de…</span>
                 <div class="dependency-checkbox-list" id="dependencyList"></div>
-                <span class="form-hint">Cet agent ne démarrera que quand ses prérequis auront terminé.</span>
+                <span class="form-hint"
+                  >Cet agent ne démarrera que quand ses prérequis auront terminé.</span
+                >
               </div>
             </div>
           </details>
 
           <!-- Accordion: Pilotage automatique (orchestrator only) -->
-          <details class="modal-accordion" id="orchAutoSection" style="display:none;">
+          <details class="modal-accordion" id="orchAutoSection" style="display: none">
             <summary>Pilotage automatique</summary>
             <div class="modal-accordion-body">
               <div class="switch-row">
-                <label class="switch"><input type="checkbox" id="chkAutoDistribute" checked><span class="switch-slider"></span></label>
+                <label class="switch"
+                  ><input type="checkbox" id="chkAutoDistribute" checked /><span
+                    class="switch-slider"
+                  ></span
+                ></label>
                 <div class="switch-info">
                   <span class="switch-label">Répartir la tâche entre les agents</span>
-                  <span class="switch-help">L'orchestrateur distribue le travail à chaque agent du workflow.</span>
+                  <span class="switch-help"
+                    >L'orchestrateur distribue le travail à chaque agent du
+                    workflow.</span
+                  >
                 </div>
               </div>
               <div class="switch-row">
-                <label class="switch"><input type="checkbox" id="chkCheckCoherence" checked><span class="switch-slider"></span></label>
+                <label class="switch"
+                  ><input type="checkbox" id="chkCheckCoherence" checked /><span
+                    class="switch-slider"
+                  ></span
+                ></label>
                 <div class="switch-info">
                   <span class="switch-label">Faire vérifier le travail</span>
-                  <span class="switch-help">Vérifie la cohérence globale après chaque étape.</span>
+                  <span class="switch-help"
+                    >Vérifie la cohérence globale après chaque étape.</span
+                  >
                 </div>
               </div>
               <div class="switch-row">
-                <label class="switch"><input type="checkbox" id="chkRelaunchOnError" checked><span class="switch-slider"></span></label>
+                <label class="switch"
+                  ><input type="checkbox" id="chkRelaunchOnError" checked /><span
+                    class="switch-slider"
+                  ></span
+                ></label>
                 <div class="switch-info">
                   <span class="switch-label">Réessayer en cas d'erreur</span>
-                  <span class="switch-help">Relance automatiquement un agent si sa tâche échoue.</span>
+                  <span class="switch-help"
+                    >Relance automatiquement un agent si sa tâche échoue.</span
+                  >
                 </div>
               </div>
               <div class="switch-row">
-                <label class="switch"><input type="checkbox" id="chkAdaptToWeakModel"><span class="switch-slider"></span></label>
+                <label class="switch"
+                  ><input type="checkbox" id="chkAdaptToWeakModel" /><span
+                    class="switch-slider"
+                  ></span
+                ></label>
                 <div class="switch-info">
                   <span class="switch-label">Adapter aux modèles légers</span>
-                  <span class="switch-help">Prompts compacts et plus d'itérations pour Flash, mini, Haiku…</span>
+                  <span class="switch-help"
+                    >Prompts compacts et plus d'itérations pour Flash, mini, Haiku…</span
+                  >
                 </div>
               </div>
             </div>
           </details>
         </div>
         <div class="modal-footer">
-          <button class="btn btn--ghost" data-action="closeModal" data-arg="modalProject">Annuler</button>
+          <button class="btn btn--ghost" data-action="closeModal" data-arg="modalProject">
+            Annuler
+          </button>
           <button class="btn btn--primary" id="btnSaveProjectConfirm">Enregistrer</button>
         </div>
       </div>
@@ -449,13 +871,19 @@
     <div class="mgmt-overlay" id="mgmtOverlay">
       <div class="topbar">
         <div class="topbar-back" data-action="closeManagement">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
           Retour
         </div>
         <span class="topbar-title">Gestion des workflows</span>
         <div class="topbar-actions">
-          <button class="btn btn--secondary" data-action="showAllProjectsModal">Tous les agents</button>
-          <button class="btn btn--primary" data-action="openNewProjectFromMgmt">Nouvel agent</button>
+          <button class="btn btn--secondary" data-action="showAllProjectsModal">
+            Tous les agents
+          </button>
+          <button class="btn btn--primary" data-action="openNewProjectFromMgmt">
+            Nouvel agent
+          </button>
         </div>
       </div>
       <div class="mgmt-body">
@@ -465,29 +893,65 @@
             <span class="mgmt-wf-list-count" id="mgmtWfCount">0</span>
           </div>
           <div class="mgmt-wf-items" id="mgmtWfList"></div>
-          <button class="mgmt-wf-add" data-action="createWorkflow">Nouveau workflow</button>
+          <button class="mgmt-wf-add" data-action="createWorkflow">
+            Nouveau workflow
+          </button>
         </div>
         <div class="mgmt-detail" id="mgmtDetail">
           <div class="mgmt-detail-header">
             <div class="mgmt-detail-left">
-              <div class="mgmt-detail-name" id="mgmtDetailName">Sélectionne un workflow</div>
+              <div class="mgmt-detail-name" id="mgmtDetailName">
+                Sélectionne un workflow
+              </div>
               <div class="mgmt-detail-meta" id="mgmtDetailMeta"></div>
             </div>
             <div class="mgmt-detail-actions">
-              <button class="btn btn--primary" id="mgmtOpenBtn" data-action="openWorkflowInOrch">Ouvrir</button>
+              <button
+                class="btn btn--primary"
+                id="mgmtOpenBtn"
+                data-action="openWorkflowInOrch"
+              >
+                Ouvrir
+              </button>
               <div class="mgmt-menu-wrap">
-                <button class="btn btn--ghost mgmt-menu-btn" id="mgmtMenuBtn" data-action="toggleMgmtMenu" aria-label="Plus d'options" aria-haspopup="true">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                <button
+                  class="btn btn--ghost mgmt-menu-btn"
+                  id="mgmtMenuBtn"
+                  data-action="toggleMgmtMenu"
+                  aria-label="Plus d'options"
+                  aria-haspopup="true"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <circle cx="5" cy="12" r="1.6" />
+                    <circle cx="12" cy="12" r="1.6" />
+                    <circle cx="19" cy="12" r="1.6" />
+                  </svg>
                 </button>
                 <div class="mgmt-menu" id="mgmtMenu">
-                  <div class="mgmt-menu-item" data-action="renameCurrentWorkflow">Renommer</div>
-                  <div class="mgmt-menu-item mgmt-menu-item--danger" data-action="deleteCurrentWorkflow">Supprimer</div>
+                  <div class="mgmt-menu-item" data-action="renameCurrentWorkflow">
+                    Renommer
+                  </div>
+                  <div
+                    class="mgmt-menu-item mgmt-menu-item--danger"
+                    data-action="deleteCurrentWorkflow"
+                  >
+                    Supprimer
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <div class="mgmt-detail-body" id="mgmtDetailBody">
-            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                color: var(--text-muted);
+                font-size: 13px;
+              "
+            >
               Sélectionne un workflow dans la liste pour voir ses agents.
             </div>
           </div>
@@ -496,42 +960,93 @@
     </div>
 
     <!-- Modal: Workflow Name Prompt -->
-    <div class="modal-overlay" id="modalWorkflowPrompt" style="display:none">
-      <div class="modal-dialog" style="max-width: 400px;">
+    <div class="modal-overlay" id="modalWorkflowPrompt" style="display: none">
+      <div class="modal-dialog" style="max-width: 400px">
         <div class="modal-header">
           <span class="modal-title">Renommer le workflow</span>
-          <button class="modal-close" data-action="closeModal" data-arg="modalWorkflowPrompt" aria-label="Fermer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <button
+            class="modal-close"
+            data-action="closeModal"
+            data-arg="modalWorkflowPrompt"
+            aria-label="Fermer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
-        <div class="modal-body" style="gap: 8px;">
+        <div class="modal-body" style="gap: 8px">
           <div class="form-group">
             <span class="form-label">Nom du workflow</span>
-            <input type="text" class="form-input" id="wfNameInput" placeholder="Ex: Refonte Site Web" autocomplete="off" />
+            <input
+              type="text"
+              class="form-input"
+              id="wfNameInput"
+              placeholder="Ex: Refonte Site Web"
+              autocomplete="off"
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn--ghost" data-action="closeModal" data-arg="modalWorkflowPrompt">Annuler</button>
+          <button
+            class="btn btn--ghost"
+            data-action="closeModal"
+            data-arg="modalWorkflowPrompt"
+          >
+            Annuler
+          </button>
           <button class="btn btn--primary" id="btnConfirmWorkflow">Renommer</button>
         </div>
       </div>
     </div>
 
     <!-- Modal: All Projects -->
-    <div class="modal-overlay" id="modal-all-projects" style="display:none">
-      <div class="modal-dialog" style="max-width: 560px;">
+    <div class="modal-overlay" id="modal-all-projects" style="display: none">
+      <div class="modal-dialog" style="max-width: 560px">
         <div class="modal-header">
           <span class="modal-title">Tous les agents</span>
-          <button class="modal-close" data-action="closeModal" data-arg="modal-all-projects" aria-label="Fermer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <button
+            class="modal-close"
+            data-action="closeModal"
+            data-arg="modal-all-projects"
+            aria-label="Fermer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
         <div class="modal-body" id="mgmtAllProjBody"></div>
         <div class="modal-footer">
-          <span style="font-size:11px;color:var(--text-muted);margin-right:auto;" id="mgmtAllProjCount"></span>
-          <button class="btn btn--secondary" id="btnLinkSelectedProjs" style="display:none;" data-action="linkSelectedProjects">Lier au workflow (0)</button>
-          <button class="btn btn--danger" id="btnDeleteSelectedProjs" style="display:none;" data-action="deleteSelectedProjects">Supprimer (0)</button>
-          <button class="btn btn--ghost" data-action="closeModal" data-arg="modal-all-projects">Fermer</button>
+          <span
+            style="font-size: 11px; color: var(--text-muted); margin-right: auto"
+            id="mgmtAllProjCount"
+          ></span>
+          <button
+            class="btn btn--secondary"
+            id="btnLinkSelectedProjs"
+            style="display: none"
+            data-action="linkSelectedProjects"
+          >
+            Lier au workflow (0)
+          </button>
+          <button
+            class="btn btn--danger"
+            id="btnDeleteSelectedProjs"
+            style="display: none"
+            data-action="deleteSelectedProjects"
+          >
+            Supprimer (0)
+          </button>
+          <button
+            class="btn btn--ghost"
+            data-action="closeModal"
+            data-arg="modal-all-projects"
+          >
+            Fermer
+          </button>
         </div>
       </div>
     </div>
@@ -542,10 +1057,24 @@
     <div id="modalConfirmDelete">
       <div class="confirm-dialog">
         <div class="confirm-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+          </svg>
         </div>
         <p class="confirm-title">Supprimer cet agent ?</p>
-        <p class="confirm-desc">Cette action est irréversible. Tous les liens seront supprimés.</p>
+        <p class="confirm-desc">
+          Cette action est irréversible. Tous les liens seront supprimés.
+        </p>
         <div class="confirm-actions">
           <button class="confirm-btn-cancel" id="cancelDeleteBtn">Annuler</button>
           <button class="confirm-btn-delete" id="confirmDeleteBtn">Supprimer</button>
