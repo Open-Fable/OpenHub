@@ -2,11 +2,10 @@
 
 # OpenHub — L'orchestrateur multi-agents
 
-> Référence technique détaillée de l'orchestrateur d'OpenHub : comment un objectif
-> unique devient un graphe d'agents IA qui coopèrent pour produire un vrai livrable
-> (site web, librairie de code, rapport, ebook, étude, slides…), et comment le
-> système **garantit que la sortie fonctionne vraiment** au lieu de faire confiance à
-> l'optimisme du modèle.
+> Référence technique du moteur d'orchestration. Comment un objectif devient un
+> graphe d'agents IA qui produisent un livrable (site web, librairie de code,
+> rapport, ebook, slides...), et comment le système attrape les défauts structurels
+> au lieu de faire confiance au modèle.
 
 Ce document s'adresse aux contributeurs et utilisateurs avancés qui veulent
 comprendre le moteur. Pour l'usage quotidien, voir

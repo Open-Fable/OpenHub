@@ -4,22 +4,22 @@
 
 ### Is OpenHub free?
 
-The OpenHub shell is open-source (MIT). But it **includes no AI credits**: you use
-**your own API keys** (Anthropic, OpenAI, OpenRouter, Google) or local models via
+The OpenHub shell is open-source (MIT). But it includes no AI credits: you use
+your own API keys (Anthropic, OpenAI, OpenRouter, Google) or local models via
 Ollama. Inference costs are billed by your provider, not by OpenHub.
 
 ### Does it work on Windows or Linux?
 
-No, **macOS only** (macOS 14+) for now. OpenHub depends on the macOS Keychain to
+No, macOS only (macOS 14+) for now. OpenHub depends on the macOS Keychain to
 store secrets and on Electron's `WebContentsView`. A port isn't planned in the short
 term.
 
 ### Where are my API keys stored?
 
-In the **macOS Keychain**, via `keytar`. They are never written to disk, nor to local
-storage, nor to the apps' WebViews. The local proxy loads them into RAM and injects
-them when the processes start. The 3 apps only receive a **fake local token**, never
-your real keys.
+In the macOS Keychain, via `keytar`. They are never written to disk, nor to local
+storage, nor to the apps' WebViews. The proxy loads them into RAM and injects them
+when the processes start. The 3 apps only receive a fake local token, never your real
+keys.
 
 ### Where is my data (projects, memory, chats) stored?
 
@@ -36,7 +36,7 @@ Nothing is sent to an OpenHub server — there isn't one.
 
 ### Why a local proxy on port 9999?
 
-To **centralize secrets and configuration**. Instead of pasting your keys into each of
+To centralize secrets and configuration. Instead of pasting your keys into each of
 the 3 apps, you enter them once; the proxy (`127.0.0.1:9999`, OpenAI-compatible,
 Bearer required) holds the real keys and routes calls to the right provider. It also
 serves as the injection point for web search and context enrichment.
@@ -46,7 +46,7 @@ serves as the injection point for web search and context enrichment.
 **Never.** OpenHub clones OpenWork, OpenCode, and Open Design into `apps/` and leaves
 them intact. All customization (theme, hiding settings, features) happens through
 CSS/JS injection from `electron/overrides/`. That's why upstream updates
-(`npm run update:apps`) stay painless.
+(`npm run update:apps`) don't break anything.
 
 ### Which LLM providers are supported?
 

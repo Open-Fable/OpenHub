@@ -4,23 +4,23 @@
 
 ### OpenHub est-il gratuit ?
 
-Le shell OpenHub est open-source (MIT). Mais il **n'inclut aucun crédit IA** : tu
-utilises **tes propres clés API** (Anthropic, OpenAI, OpenRouter, Google) ou des
+Le shell OpenHub est open-source (MIT). Mais il n'inclut aucun crédit IA : tu
+utilises tes propres clés API (Anthropic, OpenAI, OpenRouter, Google) ou des
 modèles locaux via Ollama. Les coûts d'inférence sont facturés par ton provider, pas
 par OpenHub.
 
 ### Ça marche sur Windows ou Linux ?
 
-Non, **macOS uniquement** (macOS 14+) pour l'instant. OpenHub dépend du Trousseau
+Non, macOS uniquement (macOS 14+) pour l'instant. OpenHub dépend du Trousseau
 macOS pour stocker les secrets et de `WebContentsView` d'Electron. Un portage n'est
 pas prévu à court terme.
 
 ### Où sont stockées mes clés API ?
 
-Dans le **Trousseau macOS (Keychain)**, via `keytar`. Elles ne sont jamais écrites sur
-disque, ni dans le stockage local, ni dans les WebViews des apps. Le proxy local les
-charge en RAM et les injecte au démarrage des process. Les 3 apps ne reçoivent qu'un
-**faux jeton local**, jamais tes vraies clés.
+Dans le Trousseau macOS (Keychain), via `keytar`. Elles ne sont jamais écrites sur
+disque, ni dans le stockage local, ni dans les WebViews des apps. Le proxy les charge
+en RAM et les injecte au démarrage des process. Les 3 apps ne reçoivent qu'un faux
+jeton local, jamais tes vraies clés.
 
 ### Où sont stockées mes données (projets, mémoire, chats) ?
 
@@ -37,7 +37,7 @@ Rien n'est envoyé à un serveur OpenHub — il n'y en a pas.
 
 ### Pourquoi un proxy local sur le port 9999 ?
 
-Pour **centraliser les secrets et la configuration**. Au lieu de coller tes clés dans
+Pour centraliser les secrets et la configuration. Au lieu de coller tes clés dans
 chacune des 3 apps, tu les saisis une fois ; le proxy (`127.0.0.1:9999`,
 OpenAI-compatible, Bearer obligatoire) détient les vraies clés et route les appels
 vers le bon provider. Il sert aussi de point d'injection pour la recherche web et
@@ -48,7 +48,7 @@ l'enrichissement de contexte.
 **Jamais.** OpenHub clone OpenWork, OpenCode et Open Design dans `apps/` et les laisse
 intacts. Toute la personnalisation (thème, masquage de settings, features) passe par
 de l'injection CSS/JS depuis `electron/overrides/`. C'est pour ça que les mises à jour
-upstream (`npm run update:apps`) restent indolores.
+upstream (`npm run update:apps`) ne cassent rien.
 
 ### Quels providers LLM sont supportés ?
 

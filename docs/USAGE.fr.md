@@ -2,13 +2,12 @@
 
 # OpenHub — Guide d'usage
 
-Ce guide explique **comment se servir d'OpenHub au quotidien**, une fois l'app
+Ce guide explique comment se servir d'OpenHub au quotidien, une fois l'app
 installée (voir [README](../README.fr.md#-installation) pour l'installation).
 
-> OpenHub est un shell : il ne réinvente pas OpenWork, OpenCode et Open Design, il
-> les réunit dans une seule fenêtre avec un chat, un orchestrateur multi-agents, une
-> mémoire persistante et un proxy LLM unique. Tes clés API sont saisies **une seule
-> fois** et partagées par les trois outils.
+> OpenHub est un shell : il emballe OpenWork, OpenCode et Open Design dans une seule
+> fenêtre, ajoute un chat et un orchestrateur par-dessus, et route tout via un seul
+> proxy LLM. Tu saisis tes clés API une fois et les trois outils les partagent.
 
 ---
 
@@ -82,8 +81,8 @@ mémoire est explicitement contournée pour ce projet).
 
 ## 4. L'orchestrateur multi-agents
 
-Le cœur d'OpenHub : décomposer un objectif en un **DAG d'agents** qui produisent
-ensemble un livrable (site, rapport, ebook, librairie de code, étude, slides…).
+Décompose un objectif en un DAG d'agents qui produisent ensemble un livrable (site,
+rapport, ebook, librairie de code, slides...).
 
 **Lancer un workflow :**
 
@@ -108,11 +107,10 @@ ensemble un livrable (site, rapport, ebook, librairie de code, étude, slides…
 - **Quality gate** — des contrôles déterministes vérifient les livrables et relancent
   les nœuds défaillants (selon le nombre de retries configuré).
 
-**Livrables** : les agents écrivent leurs fichiers dans le **workspace** du run (un
-dossier de fichiers), via des blocs `filepath:` dans leur sortie. C'est ce dossier
-que tu récupères à la fin.
+Les agents écrivent leurs fichiers dans le workspace du run (un dossier sur disque)
+via des blocs `filepath:` dans leur sortie. Ce dossier est ton livrable.
 
-Pour un deep-dive technique, voir [ORCHESTRATOR.fr.md](ORCHESTRATOR.fr.md).
+Pour la référence technique complète, voir [ORCHESTRATOR.fr.md](ORCHESTRATOR.fr.md).
 
 ---
 
@@ -159,8 +157,8 @@ npm run update:apps     # git pull + rebuild des 3 apps
 npm run check:selectors # vérifie que les sélecteurs CSS des overrides existent encore
 ```
 
-Le code source des 3 apps n'est **jamais modifié** : toutes les personnalisations
-vivent dans `electron/overrides/`, donc les mises à jour upstream restent indolores.
+Le code source des 3 apps n'est jamais modifié : toutes les personnalisations
+vivent dans `electron/overrides/`, donc les mises à jour upstream ne cassent rien.
 
 ---
 
