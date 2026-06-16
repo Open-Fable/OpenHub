@@ -1894,14 +1894,11 @@ function createActivityRequestId(): string {
 type GoogleAuth = { accessToken: string; managedProjectId: string } | null;
 
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
-// Gemini CLI public OAuth "installed app" credentials (same as upstream Gemini CLI).
-// Per Google's OAuth spec these native-app credentials are NOT confidential, so the
-// literal is shipped as a working default; env vars override it for custom deployments.
-const GEMINI_CLIENT_ID =
-  process.env.GEMINI_CLIENT_ID ??
-  "***REMOVED-CLIENT-ID***";
-const GEMINI_CLIENT_SECRET =
-  process.env.GEMINI_CLIENT_SECRET ?? "***REMOVED-SECRET***";
+// Gemini CLI "installed app" OAuth credentials. Provided only via env vars at
+// spawn time (see .env.example) — never hardcoded in source. The Gemini OAuth
+// route stays disabled (guard below) unless both are present.
+const GEMINI_CLIENT_ID = process.env.GEMINI_CLIENT_ID ?? "";
+const GEMINI_CLIENT_SECRET = process.env.GEMINI_CLIENT_SECRET ?? "";
 const AUTH_JSON_PATH = path.join(homedir(), ".local", "share", "opencode", "auth.json");
 const ACCOUNT_JSON_PATH = path.join(
   homedir(),
@@ -2018,7 +2015,11 @@ async function refreshGoogleTokenInternal(packedRefresh: string): Promise<string
 
     if (!resp.ok) {
       const errText = await resp.text().catch(() => "");
-      console.warn(`[proxy] Google token refresh failed (${resp.status}): ${errText}`);
+      // Do NOT log the raw token-endpoint body: it is untrusted external data
+      // that may echo back request parameters or other sensitive fields into our
+      // logs. The status code plus the invalid_grant special-case below are
+      // enough to diagnose without leaking the body verbatim.
+      console.warn(`[proxy] Google token refresh failed (${resp.status})`);
       if (errText.includes("invalid_grant")) {
         console.warn(
           "[proxy] Refresh token revoked — lance 'opencode auth login' pour te reconnecter",
