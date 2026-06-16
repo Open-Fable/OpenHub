@@ -25,13 +25,11 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.profile",
 ].join(" ");
 
-// Public Gemini CLI "installed app" credentials (non-confidential per Google's
-// native-app OAuth spec); identical to the proxy's working defaults.
-const GEMINI_CLIENT_ID =
-  process.env.GEMINI_CLIENT_ID ??
-  "***REMOVED-CLIENT-ID***";
-const GEMINI_CLIENT_SECRET =
-  process.env.GEMINI_CLIENT_SECRET ?? "***REMOVED-SECRET***";
+// Gemini CLI "installed app" credentials. Provided only via env vars at spawn
+// time (see .env.example) — never hardcoded in source. The OAuth login is
+// disabled unless both are present, mirroring the proxy's guard.
+const GEMINI_CLIENT_ID = process.env.GEMINI_CLIENT_ID ?? "";
+const GEMINI_CLIENT_SECRET = process.env.GEMINI_CLIENT_SECRET ?? "";
 
 const AUTH_DIR = path.join(homedir(), ".local", "share", "opencode");
 const AUTH_JSON_PATH = path.join(AUTH_DIR, "auth.json");
@@ -389,6 +387,11 @@ async function writeAuthJson(opts: {
 export async function loginWithGoogle(
   openExternal: (url: string) => Promise<void>,
 ): Promise<{ email?: string }> {
+  if (!GEMINI_CLIENT_ID || !GEMINI_CLIENT_SECRET) {
+    throw new Error(
+      "Connexion Gemini désactivée : GEMINI_CLIENT_ID / GEMINI_CLIENT_SECRET non configurés (voir .env.example)",
+    );
+  }
   const { verifier, challenge } = buildPkce();
   const state = randomBytes(32).toString("hex");
   const server = startCallbackServer(state);
