@@ -52,7 +52,9 @@ let activeWorkspaceId: string | null = "openhub-default";
 
 export function getActiveWorkspaceDir(): string {
   const ws = workspaces.find((w) => w.id === activeWorkspaceId);
-  return ws?.path ?? homedir();
+  if (!ws) return homedir();
+  if (ws.workspaceType === "remote") return homedir();
+  return ws.path ?? homedir();
 }
 
 // A local workspace path must be an absolute directory inside the user's home.
@@ -1782,14 +1784,26 @@ async function fetchWithRetry(
     const resp = await fetch(url, init);
     if (resp.status !== 429 || attempt === maxRetries) return resp;
 
+    // Honor the upstream's explicit rate-limit signal in priority order:
+    // 1. the canonical `Retry-After` response header (RFC 9110, delta-seconds),
+    // 2. an "after Ns" hint embedded in the body, then
+    // 3. exponential backoff (2s, 4s, 8s, …) capped at 60s.
+    // Respecting the upstream's own signal avoids hammering an already
+    // rate-limited provider (and getting the API key banned); the cap bounds
+    // the wait. Retries stay bounded by maxRetries — no infinite loop.
+    const retryAfterHeader = resp.headers.get("retry-after");
+    const headerSec =
+      retryAfterHeader && /^\d+$/.test(retryAfterHeader.trim())
+        ? parseInt(retryAfterHeader.trim(), 10)
+        : null;
     const body = await resp.text();
     const match = body.match(/after\s+(\d+)s/i);
-    // Honor an explicit Retry-After hint when present; otherwise back off
-    // exponentially (2s, 4s, 8s, …) capped at 60s. Exponential backoff avoids
-    // hammering an already-rate-limited upstream and the cap bounds the wait.
-    const waitSec = match
-      ? Math.min(parseInt(match[1], 10), 60)
-      : Math.min(2 ** (attempt + 1), 60);
+    const waitSec =
+      headerSec !== null
+        ? Math.min(headerSec, 60)
+        : match
+          ? Math.min(parseInt(match[1], 10), 60)
+          : Math.min(2 ** (attempt + 1), 60);
     console.warn(
       `[proxy] 429 rate-limited, retrying in ${waitSec}s (attempt ${attempt + 1}/${maxRetries})`,
     );
