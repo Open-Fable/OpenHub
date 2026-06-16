@@ -1,20 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("keytar", () => {
-  const store = new Map<string, string>();
+// Mock Electron app module (only getPath is needed)
+vi.mock("electron", () => ({
+  app: { getPath: vi.fn(() => "/tmp/openhub-test") },
+}));
+
+// Mock child_process to return a fake hardware UUID (avoid real ioreg call)
+vi.mock("child_process", async () => {
+  const actual = await vi.importActual<typeof import("child_process")>("child_process");
   return {
-    default: {
-      getPassword: vi.fn((service: string, account: string) =>
-        Promise.resolve(store.get(`${service}:${account}`) ?? null),
-      ),
-      setPassword: vi.fn((service: string, account: string, secret: string) => {
-        store.set(`${service}:${account}`, secret);
-        return Promise.resolve();
+    ...actual,
+    execFileSync: vi.fn(() =>
+      Buffer.from('  "IOPlatformUUID" = "FAKE-UUID-1234-5678-ABCDEF012345"\n'),
+    ),
+  };
+});
+
+// Mock fs to avoid real disk I/O
+let fileContent: Buffer | null = null;
+vi.mock("fs", async () => {
+  const actual = await vi.importActual<typeof import("fs")>("fs");
+  return {
+    ...actual,
+    promises: {
+      ...actual.promises,
+      readFile: vi.fn(async () => {
+        if (fileContent) return fileContent;
+        throw new Error("ENOENT");
       }),
-      deletePassword: vi.fn((service: string, account: string) => {
-        store.delete(`${service}:${account}`);
-        return Promise.resolve(true);
+      writeFile: vi.fn(async (_path: string, data: Buffer) => {
+        // saveStore writes to a temp path then renames; the single-file mock
+        // ignores the path, so the temp content becomes the committed content.
+        fileContent = Buffer.isBuffer(data) ? data : Buffer.from(data);
       }),
+      rename: vi.fn(async () => undefined),
+      rm: vi.fn(async () => undefined),
+      mkdir: vi.fn(async () => undefined),
     },
   };
 });
@@ -26,65 +47,48 @@ import {
   readAllApiKeys,
   isSafeOllamaUrl,
 } from "./keychain.js";
-import keytar from "keytar";
 
-describe("keychain", () => {
+describe("keychain (AES-256-GCM)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (keytar.getPassword as ReturnType<typeof vi.fn>).mockReset();
-    (keytar.setPassword as ReturnType<typeof vi.fn>).mockReset();
-    (keytar.deletePassword as ReturnType<typeof vi.fn>).mockReset();
+    fileContent = null;
   });
 
   describe("readSecret", () => {
-    it("delegates to keytar.getPassword", async () => {
-      (keytar.getPassword as ReturnType<typeof vi.fn>).mockResolvedValue("my-secret");
-      const result = await readSecret("openhub", "test-key");
-      expect(result).toBe("my-secret");
-      expect(keytar.getPassword).toHaveBeenCalledWith("openhub", "test-key");
-    });
-
     it("returns null when no secret exists", async () => {
-      (keytar.getPassword as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       const result = await readSecret("openhub", "missing");
       expect(result).toBeNull();
     });
   });
 
-  describe("writeSecret", () => {
-    it("delegates to keytar.setPassword", async () => {
+  describe("writeSecret + readSecret round-trip", () => {
+    it("stores and retrieves a secret", async () => {
       await writeSecret("openhub", "test-key", "secret-value");
-      expect(keytar.setPassword).toHaveBeenCalledWith(
-        "openhub",
-        "test-key",
-        "secret-value",
-      );
+      const result = await readSecret("openhub", "test-key");
+      expect(result).toBe("secret-value");
     });
   });
 
   describe("deleteSecret", () => {
-    it("delegates to keytar.deletePassword", async () => {
-      await deleteSecret("openhub", "test-key");
-      expect(keytar.deletePassword).toHaveBeenCalledWith("openhub", "test-key");
+    it("removes a stored secret", async () => {
+      await writeSecret("openhub", "del-key", "to-delete");
+      await deleteSecret("openhub", "del-key");
+      const result = await readSecret("openhub", "del-key");
+      expect(result).toBeNull();
     });
   });
 
   describe("readAllApiKeys", () => {
-    it("reads all keys in parallel", async () => {
-      (keytar.getPassword as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    it("returns defaults when store is empty", async () => {
       const result = await readAllApiKeys();
-      expect(keytar.getPassword).toHaveBeenCalledTimes(7);
+      expect(result.anthropic).toBeNull();
+      expect(result.openai).toBeNull();
       expect(result.ollamaUrl).toBe("http://127.0.0.1:11434");
     });
 
     it("returns stored values", async () => {
-      (keytar.getPassword as ReturnType<typeof vi.fn>).mockImplementation(
-        (_service: string, account: string) => {
-          if (account === "anthropic-api-key") return Promise.resolve("sk-ant-xxx");
-          if (account === "ollama-url") return Promise.resolve("http://custom:11434");
-          return Promise.resolve(null);
-        },
-      );
+      await writeSecret("openhub", "anthropic-api-key", "sk-ant-xxx");
+      await writeSecret("openhub", "ollama-url", "http://custom:11434");
       const result = await readAllApiKeys();
       expect(result.anthropic).toBe("sk-ant-xxx");
       expect(result.ollamaUrl).toBe("http://custom:11434");
@@ -122,8 +126,8 @@ describe("keychain", () => {
     });
 
     it("blocks numeric-encoded IP hosts that bypass string checks", () => {
-      expect(isSafeOllamaUrl("http://2852039166")).toBe(false); // decimal 169.254.169.254
-      expect(isSafeOllamaUrl("http://0xA9FEA9FE")).toBe(false); // hex
+      expect(isSafeOllamaUrl("http://2852039166")).toBe(false);
+      expect(isSafeOllamaUrl("http://0xA9FEA9FE")).toBe(false);
     });
   });
 });

@@ -10,6 +10,11 @@ const SESSION_TIMEOUT_MS = 5_000;
 const PROMPT_TIMEOUT_MS = 15 * 60 * 1000;
 const HEALTH_TIMEOUT_MS = 2_000;
 const MAX_CONTINUATIONS = 2;
+const SETTLE_POLL_MS = 1_000;
+const SETTLE_GRACE_MS = 12_000;
+const SETTLE_MAX_MS = 30_000;
+
+const JUNK_FILES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
 
 const CONTINUATION_PROMPT = `Tu n'as PAS encore produit les fichiers demandés. Ton message précédent contenait un plan ou une analyse, mais AUCUN fichier n'a été écrit dans le workspace.
 
@@ -17,19 +22,38 @@ ARRÊTE DE PLANIFIER. PRODUIS MAINTENANT.
 
 Utilise immédiatement les outils fichiers (write) pour créer chaque fichier demandé avec son contenu COMPLET et INTÉGRAL. Commence par le premier fichier et enchaîne sans t'arrêter.`;
 
-function buildPermissions(workspaceDir: string) {
+export function buildPermissions(
+  workspaceDir: string,
+  otherOwnedPaths?: readonly string[],
+) {
   // OpenCode's Permission.evaluate uses `findLast` — the LAST matching rule
   // wins. So the catch-all deny must come FIRST (base layer) and the specific
   // allows AFTER, otherwise the trailing `deny *` overrides every allow and
   // ALL tool writes inside the workspace are silently denied (forcing the
   // agent to fall back to emitting code blocks instead of using write/edit).
-  return [
+  //
+  // S1: bash intentionally excluded — write/edit suffice for deliverables,
+  // and bash would allow arbitrary shell execution driven by the LLM.
+  const rules: { permission: string; pattern: string; action: string }[] = [
     { permission: "*", pattern: "*", action: "deny" },
-    { permission: "write", pattern: `${workspaceDir}/**`, action: "allow" },
     { permission: "read", pattern: `${workspaceDir}/**`, action: "allow" },
+    { permission: "glob", pattern: "*", action: "allow" },
+    { permission: "grep", pattern: "*", action: "allow" },
+    { permission: "write", pattern: `${workspaceDir}/**`, action: "allow" },
     { permission: "edit", pattern: `${workspaceDir}/**`, action: "allow" },
-    { permission: "bash", pattern: `${workspaceDir}/**`, action: "allow" },
   ];
+
+  // S2: deny edit on paths owned by other agents. These specific denies come
+  // AFTER the workspace-wide allows, so they win via findLast. Only "edit" is
+  // needed — OpenCode's write tool asserts action "edit", not "write".
+  if (otherOwnedPaths !== undefined) {
+    for (const rel of otherOwnedPaths) {
+      const full = `${workspaceDir}/${rel}`;
+      rules.push({ permission: "edit", pattern: full, action: "deny" });
+    }
+  }
+
+  return rules;
 }
 
 interface OpencodeConfig {
@@ -100,38 +124,138 @@ function extractText(parts: readonly MessagePart[] | undefined): string {
     .join("\n");
 }
 
+const SNAPSHOT_EXCLUDE_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  ".next",
+  "__pycache__",
+  ".venv",
+  ".cache",
+]);
+
+export function isExcludedSegment(segment: string): boolean {
+  if (SNAPSHOT_EXCLUDE_DIRS.has(segment)) return true;
+  return segment.startsWith(".") && segment !== ".";
+}
+
 async function snapshotWorkspaceFiles(
   workspaceDir: string,
 ): Promise<ReadonlyMap<string, number>> {
   try {
-    const entries = await fs.readdir(workspaceDir, { recursive: true });
     const files = new Map<string, number>();
-    for (const entry of entries) {
-      const rel = String(entry);
-      const fullPath = path.join(workspaceDir, rel);
-      try {
-        const stat = await fs.stat(fullPath);
-        if (stat.isFile()) files.set(rel, stat.mtimeMs);
-      } catch {
-        // skip
-      }
-    }
+    await walkDir(workspaceDir, workspaceDir, files);
     return files;
   } catch {
     return new Map();
   }
 }
 
-function countChangedFiles(
+async function walkDir(
+  dir: string,
+  root: string,
+  out: Map<string, number>,
+): Promise<void> {
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (isExcludedSegment(entry.name)) continue;
+      await walkDir(fullPath, root, out);
+    } else if (entry.isFile()) {
+      if (JUNK_FILES.has(entry.name)) continue;
+      try {
+        const stat = await fs.stat(fullPath);
+        out.set(path.relative(root, fullPath), stat.mtimeMs);
+      } catch {
+        // skip
+      }
+    }
+  }
+}
+
+export function getChangedPaths(
   before: ReadonlyMap<string, number>,
   after: ReadonlyMap<string, number>,
-): number {
-  let count = 0;
+): readonly string[] {
+  const changed: string[] = [];
   for (const [file, mtime] of after) {
     const prevMtime = before.get(file);
-    if (prevMtime === undefined || mtime > prevMtime) count++;
+    if (prevMtime === undefined || mtime > prevMtime) changed.push(file);
   }
-  return count;
+  changed.sort();
+  return changed;
+}
+
+export function isSettled(
+  current: readonly string[],
+  previous: readonly string[],
+): boolean {
+  if (current.length === 0) return false;
+  if (current.length !== previous.length) return false;
+  return current.every((p, i) => p === previous[i]);
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("Aborted"));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new Error("Aborted"));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function waitForWorkspaceSettle(
+  workspaceDir: string,
+  snapshotBefore: ReadonlyMap<string, number>,
+  signal: AbortSignal | undefined,
+  tag: string,
+): Promise<readonly string[]> {
+  const startTime = Date.now();
+  let previousPaths: readonly string[] = [];
+
+  while (Date.now() - startTime < SETTLE_MAX_MS) {
+    if (signal?.aborted) break;
+    try {
+      await sleep(SETTLE_POLL_MS, signal);
+    } catch {
+      break;
+    }
+
+    const snapshot = await snapshotWorkspaceFiles(workspaceDir);
+    const currentPaths = getChangedPaths(snapshotBefore, snapshot);
+
+    if (isSettled(currentPaths, previousPaths)) {
+      console.warn(
+        `${tag} Settle: ${currentPaths.length} files stable after ${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+      );
+      return currentPaths;
+    }
+
+    previousPaths = currentPaths;
+
+    if (currentPaths.length === 0 && Date.now() - startTime > SETTLE_GRACE_MS) {
+      console.warn(`${tag} Settle: 0 files after grace period`);
+      return [];
+    }
+  }
+
+  console.warn(`${tag} Settle: timeout — returning ${previousPaths.length} files`);
+  return previousPaths;
 }
 
 function looksLikePlanOnly(text: string): boolean {
@@ -225,7 +349,7 @@ export class OpencodeBackend implements ExecutionBackend {
         method: "POST",
         body: JSON.stringify({
           title: `Orch: ${node.name}`,
-          permission: buildPermissions(workspaceDir),
+          permission: buildPermissions(workspaceDir, ctx.otherOwnedPaths),
         }),
         signal: signal
           ? AbortSignal.any([signal, AbortSignal.timeout(SESSION_TIMEOUT_MS)])
@@ -249,13 +373,18 @@ export class OpencodeBackend implements ExecutionBackend {
       tag,
     );
 
-    const snapshotAfterFirst = await snapshotWorkspaceFiles(workspaceDir);
-    const changedFiles = countChangedFiles(snapshotBefore, snapshotAfterFirst);
+    ctx.onProgress("Attente de la stabilisation du workspace…");
+    let writtenPaths = await waitForWorkspaceSettle(
+      workspaceDir,
+      snapshotBefore,
+      signal,
+      tag,
+    );
     console.warn(
-      `${tag} After first message: ${changedFiles} new/modified files, result ${resultText.length} chars`,
+      `${tag} After first message: ${writtenPaths.length} new/modified files, result ${resultText.length} chars`,
     );
 
-    if (changedFiles === 0 && looksLikePlanOnly(resultText)) {
+    if (writtenPaths.length === 0 && looksLikePlanOnly(resultText)) {
       for (let cont = 1; cont <= MAX_CONTINUATIONS; cont++) {
         if (signal?.aborted) break;
 
@@ -277,13 +406,18 @@ export class OpencodeBackend implements ExecutionBackend {
         );
         resultText += "\n\n" + contResult;
 
-        const snapshotNow = await snapshotWorkspaceFiles(workspaceDir);
-        const produced = countChangedFiles(snapshotBefore, snapshotNow);
+        ctx.onProgress("Attente de la stabilisation du workspace…");
+        writtenPaths = await waitForWorkspaceSettle(
+          workspaceDir,
+          snapshotBefore,
+          signal,
+          tag,
+        );
         console.warn(
-          `${tag} After continuation ${cont}: ${produced} new/modified files total`,
+          `${tag} After continuation ${cont}: ${writtenPaths.length} new/modified files total`,
         );
 
-        if (produced > 0) {
+        if (writtenPaths.length > 0) {
           console.warn(`${tag} ✓ Files produced after ${cont} continuation(s)`);
           break;
         }
@@ -298,15 +432,17 @@ export class OpencodeBackend implements ExecutionBackend {
       );
     }
 
-    const snapshotFinal = await snapshotWorkspaceFiles(workspaceDir);
-    const filesWritten = countChangedFiles(snapshotBefore, snapshotFinal);
-
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.warn(
-      `${tag} ✓ DONE in ${totalElapsed}s — result: ${resultText.length} chars, ${filesWritten} fichier(s) écrit(s) (preview: "${resultText.substring(0, 120)}…")`,
+      `${tag} ✓ DONE in ${totalElapsed}s — result: ${resultText.length} chars, ${writtenPaths.length} fichier(s) écrit(s) (preview: "${resultText.substring(0, 120)}…")`,
     );
 
-    return { resultText, backend: "opencode", filesWritten };
+    return {
+      resultText,
+      backend: "opencode",
+      filesWritten: writtenPaths.length,
+      writtenPaths,
+    };
   }
 
   private async sendMessage(

@@ -58,7 +58,18 @@ function resolveOdRoot(): string {
 }
 
 const OD_ROOT = resolveOdRoot();
-const OD_PROJECTS_DIR = path.join(OD_ROOT, ".od", "projects");
+
+// Resolved lazily: packaged builds set OD_DATA_DIR at daemon-spawn time (after
+// this module loads) so the daemon writes to a writable userData dir. Reading it
+// per call keeps the backend aligned with where the daemon actually writes; in
+// dev OD_DATA_DIR is unset and we fall back to the in-repo .od.
+function odProjectsDir(): string {
+  const envDir = process.env.OD_DATA_DIR;
+  if (typeof envDir === "string" && envDir.trim().length > 0) {
+    return path.join(envDir, "projects");
+  }
+  return path.join(OD_ROOT, ".od", "projects");
+}
 
 const SAFE_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -173,9 +184,11 @@ export class DesignBackend implements ExecutionBackend {
       `${tag} Resolved agent: ${agentId ?? "default"}, model: ${model ?? "default"}`,
     );
 
+    const isCorrective = node.task?.startsWith("[ITÉRATION CORRECTIVE]") === true;
+    const maxIterations = isCorrective ? 1 : MAX_DESIGN_ITERATIONS;
     let exportedFiles: readonly string[] = [];
 
-    for (let iter = 1; iter <= MAX_DESIGN_ITERATIONS; iter++) {
+    for (let iter = 1; iter <= maxIterations; iter++) {
       if (signal?.aborted) throw new Error("Aborted by user");
 
       const isFirst = iter === 1;
@@ -190,7 +203,7 @@ export class DesignBackend implements ExecutionBackend {
       }
       const iterLabel = isFirst
         ? "Génération de la maquette…"
-        : `Amélioration de la maquette (itération ${iter}/${MAX_DESIGN_ITERATIONS})…`;
+        : `Amélioration de la maquette (itération ${iter}/${maxIterations})…`;
       ctx.onProgress(iterLabel);
 
       const message = isFirst
@@ -201,7 +214,7 @@ export class DesignBackend implements ExecutionBackend {
           );
 
       console.warn(
-        `${tag} Creating run ${iter}/${MAX_DESIGN_ITERATIONS} → ${message.length} chars`,
+        `${tag} Creating run ${iter}/${maxIterations} → ${message.length} chars`,
       );
       const runId = await this.createRun(projectId, message, agentId, model);
       console.warn(`${tag} ✓ Run ${iter} created: ${runId}`);
@@ -209,7 +222,7 @@ export class DesignBackend implements ExecutionBackend {
       ctx.onProgress(
         isFirst
           ? "Génération en cours…"
-          : `Amélioration en cours (${iter}/${MAX_DESIGN_ITERATIONS})…`,
+          : `Amélioration en cours (${iter}/${maxIterations})…`,
       );
 
       const finalStatus = await this.pollRun(
@@ -246,7 +259,7 @@ export class DesignBackend implements ExecutionBackend {
       exportedFiles = await this.exportArtifacts(projectId, workspaceDir);
       console.warn(`${tag} Run ${iter}: ${exportedFiles.length} artifacts exported`);
 
-      if (iter >= MAX_DESIGN_ITERATIONS) break;
+      if (iter >= maxIterations) break;
 
       const fileContents = await this.readTextArtifacts(projectId);
       const totalSize = [...fileContents.values()].reduce((s, c) => s + c.length, 0);
@@ -270,7 +283,7 @@ export class DesignBackend implements ExecutionBackend {
       const hasPlaceholders = [...fileContents.values()].some(
         (c) => /lorem ipsum/i.test(c) || /placeholder/i.test(c) || /\bTODO\b/.test(c),
       );
-      if (hasPlaceholders && iter < MAX_DESIGN_ITERATIONS) {
+      if (hasPlaceholders && iter < maxIterations) {
         console.warn(`${tag} Placeholders detected — running refinement`);
         continue;
       }
@@ -284,10 +297,18 @@ export class DesignBackend implements ExecutionBackend {
 
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.warn(
-      `${tag} ✓ DONE in ${totalElapsed}s — ${exportedFiles.length} artifacts, ${MAX_DESIGN_ITERATIONS} max iterations`,
+      `${tag} ✓ DONE in ${totalElapsed}s — ${exportedFiles.length} artifacts, ${maxIterations} max iterations${isCorrective ? " (corrective)" : ""}`,
     );
 
-    return { resultText, backend: "open-design", filesWritten: exportedFiles.length };
+    const destSubDir = `design/${sanitizeId(node.id)}`;
+    const writtenPaths = exportedFiles.map((f) => `${destSubDir}/${f}`);
+
+    return {
+      resultText,
+      backend: "open-design",
+      filesWritten: exportedFiles.length,
+      writtenPaths,
+    };
   }
 
   private buildResultText(
@@ -314,7 +335,7 @@ export class DesignBackend implements ExecutionBackend {
   private async readTextArtifacts(
     projectId: string,
   ): Promise<ReadonlyMap<string, string>> {
-    const srcDir = path.join(OD_PROJECTS_DIR, projectId);
+    const srcDir = path.join(odProjectsDir(), projectId);
     const exists = await fs
       .access(srcDir)
       .then(() => true)
@@ -491,7 +512,7 @@ export class DesignBackend implements ExecutionBackend {
     projectId: string,
     workspaceDir: string,
   ): Promise<readonly string[]> {
-    const srcDir = path.join(OD_PROJECTS_DIR, projectId);
+    const srcDir = path.join(odProjectsDir(), projectId);
     const destDir = path.join(workspaceDir, "design", projectId);
 
     const srcExists = await fs

@@ -432,9 +432,10 @@ Exemple :
 \`\`\`
 Ne mets JAMAIS de texte explicatif entre les blocs de fichiers. Enchaîne directement les blocs.`
     : `OUTILS FICHIERS :
-Tu disposes d'outils de fichiers réels (write, edit, bash…). Écris les fichiers directement dans le workspace.
-N'utilise PAS de blocs de code markdown pour livrer des fichiers — utilise les outils à ta disposition.
-Travaille dans le répertoire courant du workspace.
+Tu disposes d'outils de fichiers réels (write, edit). Tu n'as PAS d'accès shell (bash).
+Explore avec read/glob/grep, produis avec write/edit.
+Utilise UNIQUEMENT des chemins RELATIFS depuis la racine du workspace (ex: src/api/foo.py). JAMAIS de chemins absolus (/home/…, /Users/…).
+Méthode normale = outils write/edit. DERNIER RECOURS uniquement (si un outil échoue) : bloc \`\`\`lang filepath: chemin.
 
 EXÉCUTION IMMÉDIATE (CRITIQUE) :
 - NE PLANIFIE PAS. NE LISTE PAS les étapes. NE DÉCRIS PAS ce que tu vas faire.
@@ -472,6 +473,7 @@ export function buildNodeUserPrompt(
   workspaceContext: string,
   dependencyContext: string,
   expectedFiles: readonly string[] = [],
+  opts?: { codeFenceFormat?: boolean },
 ): string {
   const task = node.task || "Aucune tâche définie.";
 
@@ -491,9 +493,11 @@ export function buildNodeUserPrompt(
     sections.push(dependencyContext);
   }
 
-  sections.push(
-    "RAPPEL CRITIQUE : Produis un livrable EXHAUSTIF et PROFESSIONNEL. Pas de placeholders, pas de résumés, pas de contenu superficiel. Chaque fichier doit être COMPLET du début à la fin — pas de raccourcis. Si ta tâche mentionne N fichiers ou N pages, produis-les TOUS en intégralité. Utilise le format ```<lang> filepath: chemin/fichier pour chaque fichier — le système extraira et écrira automatiquement les fichiers sur le disque.",
-  );
+  const useCodeFence = opts?.codeFenceFormat !== false;
+  const reminder = useCodeFence
+    ? "RAPPEL CRITIQUE : Produis un livrable EXHAUSTIF et PROFESSIONNEL. Pas de placeholders, pas de résumés, pas de contenu superficiel. Chaque fichier doit être COMPLET du début à la fin — pas de raccourcis. Si ta tâche mentionne N fichiers ou N pages, produis-les TOUS en intégralité. Utilise le format ```<lang> filepath: chemin/fichier pour chaque fichier — le système extraira et écrira automatiquement les fichiers sur le disque."
+    : "RAPPEL CRITIQUE : Produis un livrable EXHAUSTIF et PROFESSIONNEL. Pas de placeholders, pas de résumés, pas de contenu superficiel. Chaque fichier doit être COMPLET du début à la fin — pas de raccourcis. Si ta tâche mentionne N fichiers ou N pages, produis-les TOUS en intégralité. Crée les fichiers DIRECTEMENT avec les outils write/edit aux chemins RELATIFS EXACTS du CONTRAT DE FICHIERS (jamais de chemins absolus). Méthode normale = outils write/edit ; en dernier recours (outil échoué), utilise le format ```lang filepath: chemin — il sera quand même récupéré. Tu n'as pas d'accès shell (bash).";
+  sections.push(reminder);
 
   return sections.join("\n\n");
 }
