@@ -54,6 +54,12 @@ function openDetailWorkflow() {
       active.reasoningEffort || "",
     );
   }
+  var adaptWeakToggle = document.getElementById("orchAdaptWeakModel");
+  if (adaptWeakToggle) {
+    adaptWeakToggle.checked = !!(
+      active.orchSettings && active.orchSettings.adaptToWeakModel
+    );
+  }
   var workdirPath = document.getElementById("orchWorkdirPath");
   var activeWf = activeWorkflowId
     ? workflows.find(function (w) {
@@ -167,27 +173,29 @@ function autosizeTaskCard(el) {
 
 function initDetailPanel() {
   var taskCardEl = document.getElementById("taskCardText");
-  taskCardEl.oninput = function () {
-    autosizeTaskCard(this);
-    var self = this;
-    clearTimeout(_taskSaveTimer);
-    _taskSaveTimer = setTimeout(function () {
-      var active = projects.find(function (p) {
-        return p.id === selectedOrchestratorId;
-      });
-      if (!active) return;
-      active.task = self.value;
-      window.openhub.saveProject(active);
-      var shared = document.getElementById("sharedTaskText");
-      if (shared && document.activeElement !== shared) shared.value = self.value;
-    }, 400);
-  };
-  taskCardEl.onkeydown = function (e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      this.blur();
-    }
-  };
+  if (taskCardEl) {
+    taskCardEl.oninput = function () {
+      autosizeTaskCard(this);
+      var self = this;
+      clearTimeout(_taskSaveTimer);
+      _taskSaveTimer = setTimeout(function () {
+        var active = projects.find(function (p) {
+          return p.id === selectedOrchestratorId;
+        });
+        if (!active) return;
+        active.task = self.value;
+        window.openhub.saveProject(active);
+        var shared = document.getElementById("sharedTaskText");
+        if (shared && document.activeElement !== shared) shared.value = self.value;
+      }, 400);
+    };
+    taskCardEl.onkeydown = function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        this.blur();
+      }
+    };
+  }
 
   document.getElementById("sharedTaskText").oninput = function () {
     var self = this;
@@ -256,6 +264,25 @@ function initDetailPanel() {
       var updated = Object.assign({}, active, {
         reasoningEffort: this.value || undefined,
       });
+      window.openhub.saveProject(updated);
+      var idx = projects.indexOf(active);
+      if (idx !== -1) projects[idx] = updated;
+    }
+  };
+
+  document.getElementById("orchAdaptWeakModel").onchange = function () {
+    var active = projects.find(function (p) {
+      return p.id === selectedOrchestratorId;
+    });
+    if (active) {
+      // Merge: preserve the other pilot settings (orchSettings is replaced, not
+      // merged, on save) — only flip the weak-model flag.
+      var merged = Object.assign(
+        { autoDistribute: true, checkCoherence: true, relaunchOnError: true },
+        active.orchSettings || {},
+        { adaptToWeakModel: this.checked },
+      );
+      var updated = Object.assign({}, active, { orchSettings: merged });
       window.openhub.saveProject(updated);
       var idx = projects.indexOf(active);
       if (idx !== -1) projects[idx] = updated;

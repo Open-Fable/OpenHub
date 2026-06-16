@@ -141,7 +141,7 @@ function renderCanvas() {
       "</span></div>" +
       '<div class="node-link-handle" data-id="' +
       node.id +
-      '" title="Relier à un autre agent">+</div>';
+      '" title="Relier à un autre agent"></div>';
     var handle = card.querySelector(".node-link-handle");
     if (handle) {
       handle.addEventListener("mousedown", function (e) {

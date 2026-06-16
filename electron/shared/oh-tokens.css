@@ -185,11 +185,18 @@
   --error-subtle: var(--oh-color-error-subtle);
   --overlay-modal: var(--oh-color-overlay-modal);
 
-  /* Radius hérités : --radius-sm valait 4px (= --oh-radius-xs), PAS 6px.
-     Le passage des inputs à 6px se fera en Phase 5. */
-  --radius-sm: var(--oh-radius-xs);
-  --radius-md: var(--oh-radius-md);
+  /* Échelle de rondeur unifiée (douce/moderne) — source unique.
+     Règle : un contenant est toujours plus rond que son contenu.
+       contrôles (boutons, inputs, chips, items) ...... --radius-sm  6px
+       conteneurs (cartes, menus, bulles, sections) ... --radius-lg  12px
+       grands conteneurs (barre de saisie, modales) ... --radius-xl  16px
+       pills & cercles ................................ --radius-full
+     Le palier intermédiaire --radius-md (8px) n'est plus utilisé dans le shell ;
+     on le remappe sur 12px pour que tout résidu tombe sur un palier existant. */
+  --radius-sm: var(--oh-radius-sm);
+  --radius-md: var(--oh-radius-lg);
   --radius-lg: var(--oh-radius-lg);
+  --radius-xl: var(--oh-radius-xl);
   --radius-full: var(--oh-radius-full);
 
   --shadow-xs: var(--oh-shadow-xs);

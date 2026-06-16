@@ -22,7 +22,9 @@
       /* Mode clair : géré par shared/oh-tokens.css */
 
       @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
+        *,
+        *::before,
+        *::after {
           transition-duration: 0.01ms !important;
           animation-duration: 0.01ms !important;
           animation-iteration-count: 1 !important;
@@ -123,7 +125,7 @@
         position: absolute;
         height: 32px;
         background: var(--oh-color-bg-active);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         z-index: -1;
         pointer-events: none;
         opacity: 0;
@@ -132,7 +134,7 @@
           left var(--duration-250) var(--ease-default),
           opacity var(--duration-150) var(--ease-default);
       }
-      
+
       .slot-btn.active {
         color: var(--active-color, var(--oh-color-accent-primary));
         font-weight: 600;
@@ -154,7 +156,7 @@
         height: 32px;
         padding: 0 14px;
         border: none;
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         background: transparent;
         cursor: pointer;
         color: var(--oh-color-text-secondary);
@@ -240,7 +242,7 @@
         width: 32px;
         height: 32px;
         border: none;
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         background: transparent;
         cursor: pointer;
         color: var(--oh-color-text-secondary);
@@ -308,8 +310,12 @@
       }
 
       @keyframes oh-spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
       }
 
       .slot-btn.ready .status-ring {
@@ -317,7 +323,6 @@
         background: var(--oh-color-success);
         box-shadow: 0 0 4px var(--oh-color-success);
       }
-
 
       /* Tooltip (under buttons) */
       .tooltip {
@@ -445,7 +450,6 @@
         display: flex;
       }
 
-
       /* ── Config modal — System Settings layout ── */
       #config-panel {
         position: fixed;
@@ -458,7 +462,9 @@
         padding: var(--space-6);
         -webkit-app-region: no-drag;
       }
-      #config-panel.open { pointer-events: all; }
+      #config-panel.open {
+        pointer-events: all;
+      }
 
       #config-backdrop {
         position: fixed;
@@ -494,7 +500,9 @@
         transition: opacity var(--duration-250) var(--ease-out);
         -webkit-app-region: no-drag;
       }
-      #config-panel.open .config-card { opacity: 1; }
+      #config-panel.open .config-card {
+        opacity: 1;
+      }
 
       /* ── Left nav rail ── */
       .config-nav {
@@ -521,13 +529,15 @@
         padding: 7px 10px;
         border: none;
         background: transparent;
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         font: 500 13px/1.2 var(--font);
         color: var(--oh-color-text-secondary);
         cursor: pointer;
         text-align: left;
         outline: none;
-        transition: background var(--transition), color var(--transition);
+        transition:
+          background var(--transition),
+          color var(--transition);
       }
       .config-tab svg {
         width: 18px;
@@ -552,7 +562,9 @@
         outline: 2px solid var(--oh-color-accent-primary);
         outline-offset: -2px;
       }
-      .config-nav-spacer { flex: 1; }
+      .config-nav-spacer {
+        flex: 1;
+      }
       .config-nav-hint {
         display: flex;
         align-items: center;
@@ -601,7 +613,7 @@
         width: 28px;
         height: 28px;
         border: 1px solid var(--oh-color-border-subtle);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         background: transparent;
         color: var(--oh-color-text-secondary);
         cursor: pointer;
@@ -609,7 +621,9 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        transition: background var(--transition), color var(--transition);
+        transition:
+          background var(--transition),
+          color var(--transition);
       }
       .btn-close-cfg:hover {
         background: var(--oh-color-bg-surface);
@@ -632,13 +646,19 @@
         padding: 0 var(--space-6) var(--space-6);
         scrollbar-width: thin;
       }
-      .config-tab-content::-webkit-scrollbar { width: 4px; }
+      .config-tab-content::-webkit-scrollbar {
+        width: 4px;
+      }
       .config-tab-content::-webkit-scrollbar-thumb {
         background: var(--oh-color-border-subtle);
         border-radius: 2px;
       }
-      .config-pane { display: none; }
-      .config-pane.active { display: block; }
+      .config-pane {
+        display: none;
+      }
+      .config-pane.active {
+        display: block;
+      }
 
       /* ── Settings groups (fieldset cards) ── */
       .settings-group {
@@ -683,7 +703,9 @@
         display: block;
         cursor: default;
       }
-      label.setting-label { cursor: pointer; }
+      label.setting-label {
+        cursor: pointer;
+      }
       .setting-desc {
         font: 400 12px/1.4 var(--font);
         color: var(--oh-color-text-secondary);
@@ -711,8 +733,9 @@
         background: var(--oh-color-border-default);
         border: 1px solid var(--oh-color-border-default);
         border-radius: var(--radius-full);
-        transition: background var(--duration-200) var(--ease-default),
-                    border-color var(--duration-200) var(--ease-default);
+        transition:
+          background var(--duration-200) var(--ease-default),
+          border-color var(--duration-200) var(--ease-default);
       }
       .switch-slider::before {
         content: "";
@@ -743,7 +766,7 @@
         width: 100%;
         height: 32px;
         padding: 0 var(--space-3);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         border: 1px solid var(--oh-color-border-default);
         background: var(--oh-color-bg-elevated);
         color: var(--oh-color-text-primary);
@@ -768,7 +791,7 @@
       .form-select {
         height: 32px;
         padding: 0 var(--space-3);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         border: 1px solid var(--oh-color-border-default);
         background: var(--oh-color-bg-elevated);
         color: var(--oh-color-text-primary);
@@ -798,7 +821,10 @@
       .form-select--mono {
         font-family: var(--font-mono);
       }
-      .form-select--full { width: 100%; max-width: none; }
+      .form-select--full {
+        width: 100%;
+        max-width: none;
+      }
 
       /* ── Key input group ── */
       .key-input-group {
@@ -808,7 +834,9 @@
         width: 260px;
         flex-shrink: 0;
       }
-      .key-input-group .form-input { flex: 1; }
+      .key-input-group .form-input {
+        flex: 1;
+      }
 
       /* ── Icon button ── */
       .btn-icon {
@@ -823,7 +851,9 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        transition: color var(--transition), background var(--transition);
+        transition:
+          color var(--transition),
+          background var(--transition);
       }
       .btn-icon:hover {
         color: var(--oh-color-text-primary);
@@ -852,7 +882,9 @@
         flex-shrink: 0;
         padding: 0;
       }
-      .btn-reveal:hover { color: var(--oh-color-text-primary); }
+      .btn-reveal:hover {
+        color: var(--oh-color-text-primary);
+      }
       .btn-reveal svg {
         width: 16px;
         height: 16px;
@@ -880,8 +912,9 @@
         color: var(--oh-color-text-secondary);
         opacity: 0;
         transform: translateY(4px);
-        transition: opacity var(--duration-200) var(--ease-out),
-                    transform var(--duration-200) var(--ease-out);
+        transition:
+          opacity var(--duration-200) var(--ease-out),
+          transform var(--duration-200) var(--ease-out);
         pointer-events: none;
         z-index: 10;
       }
@@ -908,7 +941,9 @@
         gap: 4px;
         margin-bottom: var(--space-2);
       }
-      .fact-list::-webkit-scrollbar { width: 4px; }
+      .fact-list::-webkit-scrollbar {
+        width: 4px;
+      }
       .fact-list::-webkit-scrollbar-thumb {
         background: var(--oh-color-border-subtle);
         border-radius: 2px;
@@ -920,7 +955,7 @@
         padding: 7px 10px;
         background: var(--oh-color-bg-elevated);
         border: 1px solid var(--oh-color-border-subtle);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         font-size: 12px;
         color: var(--oh-color-text-primary);
       }
@@ -939,7 +974,9 @@
         display: flex;
         flex-shrink: 0;
       }
-      .fact-remove:hover { color: var(--oh-color-error); }
+      .fact-remove:hover {
+        color: var(--oh-color-error);
+      }
       .fact-remove svg {
         width: 12px;
         height: 12px;
@@ -952,11 +989,13 @@
         gap: var(--space-2);
         margin-top: var(--space-2);
       }
-      .add-fact-row .form-input { flex: 1; }
+      .add-fact-row .form-input {
+        flex: 1;
+      }
       .btn-add-fact {
         background: var(--oh-color-accent-subtle);
         border: 1px solid var(--oh-color-accent-subtle-hover);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         color: var(--oh-color-accent-primary);
         font-size: 12px;
         font-weight: 600;
@@ -966,7 +1005,9 @@
         white-space: nowrap;
         font-family: var(--font);
       }
-      .btn-add-fact:hover { background: var(--oh-color-accent-subtle-hover); }
+      .btn-add-fact:hover {
+        background: var(--oh-color-accent-subtle-hover);
+      }
       .memory-token-hint {
         font-size: 11px;
         color: var(--oh-color-text-secondary);
@@ -986,7 +1027,7 @@
       .update-item-icon {
         width: 28px;
         height: 28px;
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -997,7 +1038,10 @@
         color: var(--oh-color-text-secondary);
         border: 1px solid var(--oh-color-border-subtle);
       }
-      .update-item-body { flex: 1; min-width: 0; }
+      .update-item-body {
+        flex: 1;
+        min-width: 0;
+      }
       .update-item-name {
         font-size: 13px;
         font-weight: 500;
@@ -1008,14 +1052,22 @@
         color: var(--oh-color-text-secondary);
         margin-top: 1px;
       }
-      .update-item-status.latest { color: var(--oh-color-success); }
-      .update-item-status.available { color: var(--oh-color-warning); }
-      .update-item-status.error { color: var(--oh-color-error); }
-      .update-item-status.updating { color: var(--oh-color-accent-primary); }
+      .update-item-status.latest {
+        color: var(--oh-color-success);
+      }
+      .update-item-status.available {
+        color: var(--oh-color-warning);
+      }
+      .update-item-status.error {
+        color: var(--oh-color-error);
+      }
+      .update-item-status.updating {
+        color: var(--oh-color-accent-primary);
+      }
       .btn-update {
         padding: 6px 14px;
         border: 1px solid var(--oh-color-border-subtle);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         background: var(--oh-color-bg-elevated);
         color: var(--oh-color-text-primary);
         font-size: 12px;
@@ -1029,17 +1081,28 @@
         border-color: var(--oh-color-accent-primary);
         color: var(--oh-color-accent-primary);
       }
-      .btn-update:disabled { opacity: var(--oh-opacity-disabled); cursor: not-allowed; }
+      .btn-update:disabled {
+        opacity: var(--oh-opacity-disabled);
+        cursor: not-allowed;
+      }
       .btn-update.primary {
         background: var(--oh-color-accent-primary);
         border-color: var(--oh-color-accent-primary);
         color: var(--oh-color-on-accent);
       }
-      .btn-update.primary:hover { background: var(--oh-color-accent-hover); }
-      .btn-update.checking { pointer-events: none; opacity: 0.6; }
+      .btn-update.primary:hover {
+        background: var(--oh-color-accent-hover);
+      }
+      .btn-update.checking {
+        pointer-events: none;
+        opacity: 0.6;
+      }
 
       /* ── Ollama Model Manager (injected by JS) ── */
-      #ollama-model-manager { margin-top: var(--space-3); display: none; }
+      #ollama-model-manager {
+        margin-top: var(--space-3);
+        display: none;
+      }
       .ollama-model-card {
         background: var(--oh-color-bg-elevated);
         border: 1px solid var(--oh-color-border-subtle);
@@ -1075,7 +1138,10 @@
         width: 0%;
         transition: width var(--duration-200) var(--ease-default);
       }
-      .ollama-actions { display: flex; gap: var(--space-2); }
+      .ollama-actions {
+        display: flex;
+        gap: var(--space-2);
+      }
       .btn-ollama {
         flex: 1;
         padding: 6px;
@@ -1092,7 +1158,9 @@
         border-color: var(--oh-color-accent-primary);
         color: var(--oh-color-accent-primary);
       }
-      .btn-ollama.cancel { color: var(--oh-color-error); }
+      .btn-ollama.cancel {
+        color: var(--oh-color-error);
+      }
       .btn-ollama.cancel:hover {
         background: var(--oh-color-error-subtle);
         border-color: var(--oh-color-error);
@@ -1168,13 +1236,15 @@
         color: var(--oh-color-text-primary);
         border-bottom: 1px solid var(--oh-color-border-subtle);
       }
-      .cache-table tr:last-child td { border-bottom: none; }
+      .cache-table tr:last-child td {
+        border-bottom: none;
+      }
 
       /* ── Reset cache confirm ── */
       .btn-danger-ghost {
         background: transparent;
         border: 1px solid var(--oh-color-border-default);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         color: var(--oh-color-text-secondary);
         font-size: 12px;
         font-weight: 500;
@@ -1196,7 +1266,7 @@
       .btn-confirm-yes {
         background: var(--oh-color-error);
         border: none;
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         color: #fff;
         font-size: 12px;
         font-weight: 500;
@@ -1207,7 +1277,7 @@
       .btn-confirm-no {
         background: transparent;
         border: 1px solid var(--oh-color-border-default);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-sm);
         color: var(--oh-color-text-secondary);
         font-size: 12px;
         padding: 5px 12px;
@@ -1217,11 +1287,19 @@
 
       /* ── Responsive: narrow window ── */
       @media (max-width: 720px) {
-        .config-nav { width: 56px; padding: var(--space-3) var(--space-1); }
+        .config-nav {
+          width: 56px;
+          padding: var(--space-3) var(--space-1);
+        }
         .config-tab span,
         .config-nav-title,
-        .config-nav-hint { display: none; }
-        .config-tab { justify-content: center; padding: 10px; }
+        .config-nav-hint {
+          display: none;
+        }
+        .config-tab {
+          justify-content: center;
+          padding: 10px;
+        }
       }
     </style>
   </head>
@@ -1233,9 +1311,9 @@
           <div class="brand-logo">
             <svg viewBox="0 0 512 512" fill="none">
               <g stroke="currentColor" stroke-width="76" stroke-linecap="round">
-                <path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/>
-                <path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/>
-                <path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/>
+                <path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1" />
+                <path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1" />
+                <path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8" />
               </g>
             </svg>
           </div>
@@ -1250,8 +1328,11 @@
           </span>
         </button>
 
-
-        <button class="btn-config dropdown-config-btn" id="dropdown-config-btn" aria-label="Configuration">
+        <button
+          class="btn-config dropdown-config-btn"
+          id="dropdown-config-btn"
+          aria-label="Configuration"
+        >
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3" />
             <path
@@ -1340,41 +1421,123 @@
     </div>
 
     <!-- Config modal — System Settings layout -->
-    <div id="config-panel" role="dialog" aria-modal="true" aria-labelledby="config-section-title">
+    <div
+      id="config-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="config-section-title"
+    >
       <div class="config-card">
-
         <!-- Left nav rail -->
-        <nav class="config-nav" role="tablist" aria-orientation="vertical" aria-label="Sections des réglages">
+        <nav
+          class="config-nav"
+          role="tablist"
+          aria-orientation="vertical"
+          aria-label="Sections des réglages"
+        >
           <div class="config-nav-title">Réglages</div>
 
-          <button class="config-tab active" role="tab" data-tab="keys" id="cfg-tab-keys" aria-controls="pane-keys" aria-selected="true" tabindex="0">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          <button
+            class="config-tab active"
+            role="tab"
+            data-tab="keys"
+            id="cfg-tab-keys"
+            aria-controls="pane-keys"
+            aria-selected="true"
+            tabindex="0"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+              />
+            </svg>
             <span>Clés API</span>
           </button>
-          <button class="config-tab" role="tab" data-tab="models" id="cfg-tab-models" aria-controls="pane-models" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+          <button
+            class="config-tab"
+            role="tab"
+            data-tab="models"
+            id="cfg-tab-models"
+            aria-controls="pane-models"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"
+              />
+            </svg>
             <span>Modèles IA</span>
           </button>
-          <button class="config-tab" role="tab" data-tab="memory" id="cfg-tab-memory" aria-controls="pane-memory" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+          <button
+            class="config-tab"
+            role="tab"
+            data-tab="memory"
+            id="cfg-tab-memory"
+            aria-controls="pane-memory"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+              <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
+            </svg>
             <span>Mémoire</span>
           </button>
-          <button class="config-tab" role="tab" data-tab="updates" id="cfg-tab-updates" aria-controls="pane-updates" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          <button
+            class="config-tab"
+            role="tab"
+            data-tab="updates"
+            id="cfg-tab-updates"
+            aria-controls="pane-updates"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+            </svg>
             <span>Mises à jour</span>
           </button>
-          <button class="config-tab" role="tab" data-tab="notifs" id="cfg-tab-notifs" aria-controls="pane-notifs" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <button
+            class="config-tab"
+            role="tab"
+            data-tab="notifs"
+            id="cfg-tab-notifs"
+            aria-controls="pane-notifs"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
             <span>Notifications</span>
           </button>
-          <button class="config-tab" role="tab" data-tab="cache" id="cfg-tab-cache" aria-controls="pane-cache" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+          <button
+            class="config-tab"
+            role="tab"
+            data-tab="cache"
+            id="cfg-tab-cache"
+            aria-controls="pane-cache"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3v18h18" />
+              <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
+            </svg>
             <span>Cache</span>
           </button>
 
           <div class="config-nav-spacer"></div>
           <div class="config-nav-hint">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
             Keychain macOS
           </div>
         </nav>
@@ -1386,15 +1549,26 @@
               <h2 id="config-section-title">Clés API</h2>
               <p id="config-section-desc">Stockées en sécurité dans le Keychain macOS.</p>
             </div>
-            <button class="btn-close-cfg" id="close-config" aria-label="Fermer les réglages">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <button
+              class="btn-close-cfg"
+              id="close-config"
+              aria-label="Fermer les réglages"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </header>
 
           <div class="config-tab-content" id="config-scroll" tabindex="-1">
-
             <!-- Pane: Clés API -->
-            <section class="config-pane active" id="pane-keys" role="tabpanel" aria-labelledby="cfg-tab-keys">
+            <section
+              class="config-pane active"
+              id="pane-keys"
+              role="tabpanel"
+              aria-labelledby="cfg-tab-keys"
+            >
               <fieldset class="settings-group">
                 <legend class="settings-group-title">Modèles IA</legend>
                 <div class="settings-group-card">
@@ -1404,9 +1578,25 @@
                       <p class="setting-desc">Modèles Claude</p>
                     </div>
                     <div class="key-input-group">
-                      <input class="form-input form-input--mono" type="password" id="key-anthropic" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
-                      <button type="button" class="btn-reveal" data-target="key-anthropic" aria-label="Afficher la clé" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <input
+                        class="form-input form-input--mono"
+                        type="password"
+                        id="key-anthropic"
+                        placeholder="sk-ant-..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <button
+                        type="button"
+                        class="btn-reveal"
+                        data-target="key-anthropic"
+                        aria-label="Afficher la clé"
+                        aria-pressed="false"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -1416,9 +1606,25 @@
                       <p class="setting-desc">Modèles GPT</p>
                     </div>
                     <div class="key-input-group">
-                      <input class="form-input form-input--mono" type="password" id="key-openai" placeholder="sk-..." autocomplete="off" spellcheck="false" />
-                      <button type="button" class="btn-reveal" data-target="key-openai" aria-label="Afficher la clé" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <input
+                        class="form-input form-input--mono"
+                        type="password"
+                        id="key-openai"
+                        placeholder="sk-..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <button
+                        type="button"
+                        class="btn-reveal"
+                        data-target="key-openai"
+                        aria-label="Afficher la clé"
+                        aria-pressed="false"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -1428,9 +1634,25 @@
                       <p class="setting-desc">Routage multi-fournisseurs</p>
                     </div>
                     <div class="key-input-group">
-                      <input class="form-input form-input--mono" type="password" id="key-openrouter" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false" />
-                      <button type="button" class="btn-reveal" data-target="key-openrouter" aria-label="Afficher la clé" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <input
+                        class="form-input form-input--mono"
+                        type="password"
+                        id="key-openrouter"
+                        placeholder="sk-or-v1-..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <button
+                        type="button"
+                        class="btn-reveal"
+                        data-target="key-openrouter"
+                        aria-label="Afficher la clé"
+                        aria-pressed="false"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -1440,12 +1662,21 @@
                       <p class="setting-desc">Modèles locaux</p>
                     </div>
                     <div class="key-input-group">
-                      <input class="form-input form-input--mono" type="text" id="key-ollama" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false" />
+                      <input
+                        class="form-input form-input--mono"
+                        type="text"
+                        id="key-ollama"
+                        placeholder="http://localhost:11434"
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
                     </div>
                   </div>
                 </div>
                 <div id="ollama-model-manager">
-                  <div class="settings-group-title" style="margin-top: 12px;">Modèles Ollama requis</div>
+                  <div class="settings-group-title" style="margin-top: 12px">
+                    Modèles Ollama requis
+                  </div>
                   <div id="ollama-model-list"></div>
                 </div>
               </fieldset>
@@ -1459,9 +1690,25 @@
                       <p class="setting-desc">Token d'accès personnel</p>
                     </div>
                     <div class="key-input-group">
-                      <input class="form-input form-input--mono" type="password" id="key-github" placeholder="ghp_..." autocomplete="off" spellcheck="false" />
-                      <button type="button" class="btn-reveal" data-target="key-github" aria-label="Afficher la clé" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <input
+                        class="form-input form-input--mono"
+                        type="password"
+                        id="key-github"
+                        placeholder="ghp_..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <button
+                        type="button"
+                        class="btn-reveal"
+                        data-target="key-github"
+                        aria-label="Afficher la clé"
+                        aria-pressed="false"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -1471,38 +1718,76 @@
                       <p class="setting-desc">Clé API pour la recherche web</p>
                     </div>
                     <div class="key-input-group">
-                      <input class="form-input form-input--mono" type="password" id="key-brave" placeholder="BSA..." autocomplete="off" spellcheck="false" />
-                      <button type="button" class="btn-reveal" data-target="key-brave" aria-label="Afficher la clé" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <input
+                        class="form-input form-input--mono"
+                        type="password"
+                        id="key-brave"
+                        placeholder="BSA..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <button
+                        type="button"
+                        class="btn-reveal"
+                        data-target="key-brave"
+                        aria-label="Afficher la clé"
+                        aria-pressed="false"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                       </button>
                     </div>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="btn-google-login">Google Gemini</label>
+                      <label class="setting-label" for="btn-google-login"
+                        >Google Gemini</label
+                      >
                       <p class="setting-desc" id="google-login-status">Non connecté</p>
                     </div>
-                    <button type="button" class="btn-update primary" id="btn-google-login">Se connecter avec Google</button>
+                    <button
+                      type="button"
+                      class="btn-update primary"
+                      id="btn-google-login"
+                    >
+                      Se connecter avec Google
+                    </button>
                   </div>
                 </div>
               </fieldset>
             </section>
 
             <!-- Pane: Modèles IA -->
-            <section class="config-pane" id="pane-models" role="tabpanel" aria-labelledby="cfg-tab-models">
+            <section
+              class="config-pane"
+              id="pane-models"
+              role="tabpanel"
+              aria-labelledby="cfg-tab-models"
+            >
               <fieldset class="settings-group">
                 <legend class="settings-group-title">Classifieur mémoire</legend>
                 <div class="settings-group-card">
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="ai-classifier">Tri des informations</label>
-                      <p class="setting-desc">Modèle utilisé pour classer les faits mémorisés.</p>
+                      <label class="setting-label" for="ai-classifier"
+                        >Tri des informations</label
+                      >
+                      <p class="setting-desc">
+                        Modèle utilisé pour classer les faits mémorisés.
+                      </p>
                     </div>
-                    <select id="ai-classifier" class="form-select form-select--mono"></select>
+                    <select
+                      id="ai-classifier"
+                      class="form-select form-select--mono"
+                    ></select>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="default-reasoning-effort">Effort de réflexion</label>
+                      <label class="setting-label" for="default-reasoning-effort"
+                        >Effort de réflexion</label
+                      >
                       <p class="setting-desc">Niveau par défaut pour tous les modèles.</p>
                     </div>
                     <select id="default-reasoning-effort" class="form-select">
@@ -1517,8 +1802,12 @@
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="web-search-toggle">Recherche Internet</label>
-                      <p class="setting-desc">Permet aux modèles d'interroger Brave Search.</p>
+                      <label class="setting-label" for="web-search-toggle"
+                        >Recherche Internet</label
+                      >
+                      <p class="setting-desc">
+                        Permet aux modèles d'interroger Brave Search.
+                      </p>
                     </div>
                     <span class="switch">
                       <input type="checkbox" id="web-search-toggle" role="switch" />
@@ -1533,8 +1822,12 @@
                 <div class="settings-group-card">
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="vision-proxy-toggle">Vision Proxy</label>
-                      <p class="setting-desc">Ajoute la vision aux modèles qui n'en ont pas.</p>
+                      <label class="setting-label" for="vision-proxy-toggle"
+                        >Vision Proxy</label
+                      >
+                      <p class="setting-desc">
+                        Ajoute la vision aux modèles qui n'en ont pas.
+                      </p>
                     </div>
                     <span class="switch">
                       <input type="checkbox" id="vision-proxy-toggle" role="switch" />
@@ -1542,18 +1835,27 @@
                     </span>
                   </div>
                 </div>
-                <div id="vision-options-group" style="margin-top: 8px;">
+                <div id="vision-options-group" style="margin-top: 8px">
                   <div class="settings-group-card">
                     <div class="setting-row">
                       <div class="setting-row-text">
-                        <label class="setting-label" for="vision-model">Modèle de vision</label>
-                        <p class="setting-desc">Modèle Ollama local pour l'analyse d'images.</p>
+                        <label class="setting-label" for="vision-model"
+                          >Modèle de vision</label
+                        >
+                        <p class="setting-desc">
+                          Modèle Ollama local pour l'analyse d'images.
+                        </p>
                       </div>
-                      <select id="vision-model" class="form-select form-select--mono"></select>
+                      <select
+                        id="vision-model"
+                        class="form-select form-select--mono"
+                      ></select>
                     </div>
                     <div class="setting-row">
                       <div class="setting-row-text">
-                        <label class="setting-label" for="vision-detail-level">Niveau de détail</label>
+                        <label class="setting-label" for="vision-detail-level"
+                          >Niveau de détail</label
+                        >
                         <p class="setting-desc">Résolution de l'analyse.</p>
                       </div>
                       <select id="vision-detail-level" class="form-select">
@@ -1567,14 +1869,23 @@
             </section>
 
             <!-- Pane: Mémoire -->
-            <section class="config-pane" id="pane-memory" role="tabpanel" aria-labelledby="cfg-tab-memory">
+            <section
+              class="config-pane"
+              id="pane-memory"
+              role="tabpanel"
+              aria-labelledby="cfg-tab-memory"
+            >
               <fieldset class="settings-group">
                 <legend class="settings-group-title">Contrôle</legend>
                 <div class="settings-group-card">
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="memory-toggle">Mémoire long-terme</label>
-                      <p class="setting-desc">Injecte le profil et les faits dans chaque requête.</p>
+                      <label class="setting-label" for="memory-toggle"
+                        >Mémoire long-terme</label
+                      >
+                      <p class="setting-desc">
+                        Injecte le profil et les faits dans chaque requête.
+                      </p>
                     </div>
                     <span class="switch">
                       <input type="checkbox" id="memory-toggle" role="switch" checked />
@@ -1589,13 +1900,23 @@
                   <legend class="settings-group-title">Profil utilisateur</legend>
                   <div class="settings-group-card">
                     <div class="setting-row">
-                      <div class="setting-row-text" style="flex: 1;">
-                        <label class="setting-label" for="memory-profile">Instructions globales (YAML)</label>
-                        <p class="setting-desc">Définit le contexte persistant : langue, style, stack technique.</p>
+                      <div class="setting-row-text" style="flex: 1">
+                        <label class="setting-label" for="memory-profile"
+                          >Instructions globales (YAML)</label
+                        >
+                        <p class="setting-desc">
+                          Définit le contexte persistant : langue, style, stack technique.
+                        </p>
                       </div>
                     </div>
-                    <div style="padding: 0 var(--space-4) var(--space-3);">
-                      <input class="form-input" type="text" id="memory-profile" placeholder="lang:fr style:concis stack:ts,electron" />
+                    <div style="padding: 0 var(--space-4) var(--space-3)">
+                      <input
+                        class="form-input"
+                        type="text"
+                        id="memory-profile"
+                        placeholder="lang:fr style:concis stack:ts,electron"
+                        maxlength="2000"
+                      />
                     </div>
                   </div>
                 </fieldset>
@@ -1605,11 +1926,19 @@
                   <div class="settings-group-card">
                     <div class="setting-row">
                       <div class="setting-row-text">
-                        <label class="setting-label" for="memory-auto-extract-toggle">Auto-extraction de faits</label>
-                        <p class="setting-desc">Extrait automatiquement les faits via Ollama.</p>
+                        <label class="setting-label" for="memory-auto-extract-toggle"
+                          >Auto-extraction de faits</label
+                        >
+                        <p class="setting-desc">
+                          Extrait automatiquement les faits via Ollama.
+                        </p>
                       </div>
                       <span class="switch">
-                        <input type="checkbox" id="memory-auto-extract-toggle" role="switch" />
+                        <input
+                          type="checkbox"
+                          id="memory-auto-extract-toggle"
+                          role="switch"
+                        />
                         <span class="switch-slider" aria-hidden="true"></span>
                       </span>
                     </div>
@@ -1620,7 +1949,14 @@
                   <legend class="settings-group-title">Base de connaissances</legend>
                   <div class="fact-list" id="fact-list"></div>
                   <div class="add-fact-row">
-                    <input class="form-input" type="text" id="new-fact" placeholder="Ajouter un fait manuellement..." aria-label="Ajouter un fait à la mémoire" maxlength="500" />
+                    <input
+                      class="form-input"
+                      type="text"
+                      id="new-fact"
+                      placeholder="Ajouter un fait manuellement..."
+                      aria-label="Ajouter un fait à la mémoire"
+                      maxlength="500"
+                    />
                     <button class="btn-add-fact" id="btn-add-fact">+ Ajouter</button>
                   </div>
                   <div class="memory-token-hint" id="memory-token-hint"></div>
@@ -1629,14 +1965,26 @@
             </section>
 
             <!-- Pane: Mises à jour -->
-            <section class="config-pane" id="pane-updates" role="tabpanel" aria-labelledby="cfg-tab-updates">
+            <section
+              class="config-pane"
+              id="pane-updates"
+              role="tabpanel"
+              aria-labelledby="cfg-tab-updates"
+            >
               <fieldset class="settings-group">
                 <legend class="settings-group-title">Système</legend>
                 <div class="settings-group-card">
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="auto-update-toggle">Mise à jour automatique</label>
-                      <p class="setting-desc">Installe les mises à jour des apps au démarrage.</p>
+                      <label
+                        class="setting-label"
+                        for="auto-update-toggle"
+                        id="auto-update-label"
+                        >Mise à jour automatique</label
+                      >
+                      <p class="setting-desc" id="auto-update-desc">
+                        Installe les mises à jour des apps au démarrage.
+                      </p>
                     </div>
                     <span class="switch">
                       <input type="checkbox" id="auto-update-toggle" role="switch" />
@@ -1646,15 +1994,71 @@
                 </div>
               </fieldset>
 
+              <!-- Self-update row (packaged mode only) -->
+              <fieldset
+                class="settings-group"
+                id="self-update-section"
+                style="display: none"
+              >
+                <legend class="settings-group-title">OpenHub</legend>
+                <div class="settings-group-card">
+                  <div class="setting-row" style="align-items: center">
+                    <div class="setting-row-text" style="flex: 1">
+                      <span class="setting-label" id="self-update-version"></span>
+                      <p class="setting-desc" id="self-update-status">Vérification…</p>
+                    </div>
+                    <button class="btn-update" id="self-update-btn" style="display: none">
+                      Installer
+                    </button>
+                  </div>
+                  <div id="self-update-progress" style="display: none; margin-top: 8px">
+                    <div
+                      style="
+                        height: 4px;
+                        border-radius: 2px;
+                        background: var(--oh-color-bg-deeper);
+                        overflow: hidden;
+                      "
+                    >
+                      <div
+                        id="self-update-bar"
+                        style="
+                          height: 100%;
+                          width: 0%;
+                          background: var(--oh-color-accent);
+                          transition: width 0.3s ease;
+                        "
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <!-- Bundled app versions (read-only, packaged mode only) -->
+              <fieldset
+                class="settings-group"
+                id="bundled-versions-section"
+                style="display: none"
+              >
+                <legend class="settings-group-title">Applications incluses</legend>
+                <div class="settings-group-card" id="bundled-versions-list"></div>
+              </fieldset>
+
               <fieldset class="settings-group">
                 <legend class="settings-group-title">Apparence</legend>
                 <div class="settings-group-card">
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="nav-mode-select">Style de navigation</label>
+                      <label class="setting-label" for="nav-mode-select"
+                        >Style de navigation</label
+                      >
                       <p class="setting-desc">Barre d'onglets ou menu déroulant.</p>
                     </div>
-                    <select id="nav-mode-select" class="form-select" style="-webkit-app-region: no-drag;">
+                    <select
+                      id="nav-mode-select"
+                      class="form-select"
+                      style="-webkit-app-region: no-drag"
+                    >
                       <option value="topbar">Barre d'onglets</option>
                       <option value="dropdown">Menu déroulant</option>
                     </select>
@@ -1662,20 +2066,27 @@
                 </div>
               </fieldset>
 
-              <fieldset class="settings-group">
+              <fieldset class="settings-group" id="git-update-section">
                 <legend class="settings-group-title">Applications</legend>
                 <div class="settings-group-card" id="update-list"></div>
               </fieldset>
             </section>
 
             <!-- Pane: Notifications -->
-            <section class="config-pane" id="pane-notifs" role="tabpanel" aria-labelledby="cfg-tab-notifs">
+            <section
+              class="config-pane"
+              id="pane-notifs"
+              role="tabpanel"
+              aria-labelledby="cfg-tab-notifs"
+            >
               <fieldset class="settings-group">
                 <legend class="settings-group-title">Comportement</legend>
                 <div class="settings-group-card">
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="notify-mode">Quand notifier</label>
+                      <label class="setting-label" for="notify-mode"
+                        >Quand notifier</label
+                      >
                       <p class="setting-desc">Notifications de fin de tâche.</p>
                     </div>
                     <select id="notify-mode" class="form-select">
@@ -1697,7 +2108,13 @@
                       <label class="setting-label" for="notify-src-chat">Chat</label>
                     </div>
                     <span class="switch">
-                      <input type="checkbox" id="notify-src-chat" data-notify-source="chat" role="switch" checked />
+                      <input
+                        type="checkbox"
+                        id="notify-src-chat"
+                        data-notify-source="chat"
+                        role="switch"
+                        checked
+                      />
                       <span class="switch-slider" aria-hidden="true"></span>
                     </span>
                   </div>
@@ -1706,7 +2123,13 @@
                       <label class="setting-label" for="notify-src-code">Code</label>
                     </div>
                     <span class="switch">
-                      <input type="checkbox" id="notify-src-code" data-notify-source="code" role="switch" checked />
+                      <input
+                        type="checkbox"
+                        id="notify-src-code"
+                        data-notify-source="code"
+                        role="switch"
+                        checked
+                      />
                       <span class="switch-slider" aria-hidden="true"></span>
                     </span>
                   </div>
@@ -1715,7 +2138,13 @@
                       <label class="setting-label" for="notify-src-work">Work</label>
                     </div>
                     <span class="switch">
-                      <input type="checkbox" id="notify-src-work" data-notify-source="work" role="switch" checked />
+                      <input
+                        type="checkbox"
+                        id="notify-src-work"
+                        data-notify-source="work"
+                        role="switch"
+                        checked
+                      />
                       <span class="switch-slider" aria-hidden="true"></span>
                     </span>
                   </div>
@@ -1724,16 +2153,30 @@
                       <label class="setting-label" for="notify-src-design">Design</label>
                     </div>
                     <span class="switch">
-                      <input type="checkbox" id="notify-src-design" data-notify-source="design" role="switch" checked />
+                      <input
+                        type="checkbox"
+                        id="notify-src-design"
+                        data-notify-source="design"
+                        role="switch"
+                        checked
+                      />
                       <span class="switch-slider" aria-hidden="true"></span>
                     </span>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="notify-src-orchestrator">Orchestrateur</label>
+                      <label class="setting-label" for="notify-src-orchestrator"
+                        >Orchestrateur</label
+                      >
                     </div>
                     <span class="switch">
-                      <input type="checkbox" id="notify-src-orchestrator" data-notify-source="orchestrator" role="switch" checked />
+                      <input
+                        type="checkbox"
+                        id="notify-src-orchestrator"
+                        data-notify-source="orchestrator"
+                        role="switch"
+                        checked
+                      />
                       <span class="switch-slider" aria-hidden="true"></span>
                     </span>
                   </div>
@@ -1742,12 +2185,27 @@
             </section>
 
             <!-- Pane: Cache Dashboard -->
-            <section class="config-pane" id="pane-cache" role="tabpanel" aria-labelledby="cfg-tab-cache">
+            <section
+              class="config-pane"
+              id="pane-cache"
+              role="tabpanel"
+              aria-labelledby="cfg-tab-cache"
+            >
               <fieldset class="settings-group">
-                <legend class="settings-group-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <legend
+                  class="settings-group-title"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    width: 100%;
+                  "
+                >
                   <span>Efficacité du caching</span>
                   <span id="cache-reset-area">
-                    <button class="btn-danger-ghost" id="btn-reset-cache">Réinitialiser</button>
+                    <button class="btn-danger-ghost" id="btn-reset-cache">
+                      Réinitialiser
+                    </button>
                   </span>
                 </legend>
 
@@ -1756,18 +2214,24 @@
                     <div class="cache-stat-label">Ratio cache hit global</div>
                     <div class="cache-stat-value" id="cache-hit-ratio">0.0%</div>
                     <div class="cache-stat-bar-container">
-                      <div class="cache-stat-bar" id="cache-hit-ratio-bar" style="width: 0%;"></div>
+                      <div
+                        class="cache-stat-bar"
+                        id="cache-hit-ratio-bar"
+                        style="width: 0%"
+                      ></div>
                     </div>
                   </div>
                   <div class="cache-stat-card">
                     <div class="cache-stat-label">Tokens économisés</div>
                     <div class="cache-stat-value" id="cache-saved-tokens">0</div>
-                    <div class="cache-stat-sub">sur <span id="cache-total-tokens">0</span> analysés au total</div>
+                    <div class="cache-stat-sub">
+                      sur <span id="cache-total-tokens">0</span> analysés au total
+                    </div>
                   </div>
                 </div>
               </fieldset>
 
-              <div id="cache-details-container" style="display:none;">
+              <div id="cache-details-container" style="display: none">
                 <fieldset class="settings-group">
                   <legend class="settings-group-title">Gains par modèle</legend>
                   <div class="cache-table-wrapper">
@@ -1775,9 +2239,9 @@
                       <thead>
                         <tr>
                           <th>Modèle</th>
-                          <th style="text-align: right;">Requêtes</th>
-                          <th style="text-align: right;">Gains</th>
-                          <th style="text-align: right;">Ratio</th>
+                          <th style="text-align: right">Requêtes</th>
+                          <th style="text-align: right">Gains</th>
+                          <th style="text-align: right">Ratio</th>
                         </tr>
                       </thead>
                       <tbody id="cache-model-table-body"></tbody>
@@ -1786,15 +2250,17 @@
                 </fieldset>
 
                 <fieldset class="settings-group">
-                  <legend class="settings-group-title">Gains par espace de travail</legend>
+                  <legend class="settings-group-title">
+                    Gains par espace de travail
+                  </legend>
                   <div class="cache-table-wrapper">
                     <table class="cache-table">
                       <thead>
                         <tr>
                           <th>Workspace</th>
-                          <th style="text-align: right;">Requêtes</th>
-                          <th style="text-align: right;">Gains</th>
-                          <th style="text-align: right;">Ratio</th>
+                          <th style="text-align: right">Requêtes</th>
+                          <th style="text-align: right">Gains</th>
+                          <th style="text-align: right">Ratio</th>
                         </tr>
                       </thead>
                       <tbody id="cache-workspace-table-body"></tbody>
@@ -1803,20 +2269,57 @@
                 </fieldset>
               </div>
 
-              <div id="cache-empty-state" style="text-align: center; padding: 40px 20px; color: var(--oh-color-text-secondary);">
-                <svg viewBox="0 0 24 24" style="width: 42px; height: 42px; stroke: currentColor; fill: none; stroke-width: 1.5; margin-bottom: 12px; opacity: 0.5;" aria-hidden="true">
+              <div
+                id="cache-empty-state"
+                style="
+                  text-align: center;
+                  padding: 40px 20px;
+                  color: var(--oh-color-text-secondary);
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  style="
+                    width: 42px;
+                    height: 42px;
+                    stroke: currentColor;
+                    fill: none;
+                    stroke-width: 1.5;
+                    margin-bottom: 12px;
+                    opacity: 0.5;
+                  "
+                  aria-hidden="true"
+                >
                   <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                 </svg>
-                <div style="font-size: 13px; font-weight: 500; color: var(--oh-color-text-primary); margin-bottom: 4px;">Aucune statistique disponible</div>
-                <div style="font-size: 12px;">Envoyez des requêtes pour mesurer vos gains de prompt caching.</div>
+                <div
+                  style="
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: var(--oh-color-text-primary);
+                    margin-bottom: 4px;
+                  "
+                >
+                  Aucune statistique disponible
+                </div>
+                <div style="font-size: 12px">
+                  Envoyez des requêtes pour mesurer vos gains de prompt caching.
+                </div>
               </div>
             </section>
-
           </div>
 
           <!-- Save toast -->
-          <div class="config-toast" id="config-toast" role="status" aria-live="polite" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <div
+            class="config-toast"
+            id="config-toast"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
             <span id="config-toast-text">Enregistré</span>
           </div>
         </div>

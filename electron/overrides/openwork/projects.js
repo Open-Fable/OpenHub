@@ -52,23 +52,23 @@
         <button class="oh-modal-close">×</button>
       </div>
       <div class="oh-modal-field">
-        <label>Nom du projet</label>
-        <input type="text" id="oh-modal-name-input" placeholder="Ex: Assistant Marketing" value="${editing ? escapeHtml(editing.name) : ""}">
+        <label for="oh-modal-name-input">Nom du projet</label>
+        <input type="text" id="oh-modal-name-input" placeholder="Ex: Assistant Marketing" maxlength="120" value="${editing ? escapeHtml(editing.name) : ""}">
       </div>
       <div class="oh-modal-field">
         <label>Couleur</label>
         <div class="oh-color-row" id="oh-modal-color-row"></div>
       </div>
       <div class="oh-modal-field">
-        <label>Dossier lié</label>
+        <label for="oh-modal-path-input">Dossier lié</label>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="oh-modal-path-input" placeholder="Aucun dossier lié" value="${editing ? escapeHtml(editing.path || "") : ""}" readonly style="flex: 1; cursor: default; opacity: 0.8;">
           <button class="oh-btn oh-btn-ghost" id="oh-modal-pick-path" style="border: 1px solid var(--border-default); white-space: nowrap; background: var(--bg-surface, #1e1e1e); color: var(--text-primary, #ececec); font-weight: 500;">Choisir...</button>
         </div>
       </div>
       <div class="oh-modal-field oh-modal-field-grow">
-        <label>Instructions</label>
-        <textarea id="oh-modal-instr-input" placeholder="Instructions pour l'IA...">${editing ? escapeHtml(editing.instructions) : ""}</textarea>
+        <label for="oh-modal-instr-input">Instructions</label>
+        <textarea id="oh-modal-instr-input" placeholder="Instructions pour l'IA..." maxlength="8000">${editing ? escapeHtml(editing.instructions) : ""}</textarea>
       </div>
       <div class="oh-modal-footer">
         <div style="flex:1"></div>

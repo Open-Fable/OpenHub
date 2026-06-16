@@ -9,12 +9,24 @@
   let selectMode = false;
   const selectedIds = new Set();
   let cachedProjects = [];
+  let orchSectionOpen = false;
 
   function escapeHtml(str) {
     if (!str) return "";
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // Un projet "orchestrateur" (agent de workflow, nœud de canvas ou sous-agent généré)
+  // possède toujours une empreinte qu'un projet autonome de Work n'a jamais : le flag
+  // generated, un type d'agent, ou des coordonnées de canvas.
+  function isOrchestratorProject(p) {
+    return (
+      p.generated === true ||
+      (typeof p.type === "string" && p.type.length > 0) ||
+      typeof p.x === "number"
+    );
   }
 
   // ── HTML Structure ──
@@ -61,7 +73,7 @@
                 <div class="oh-context-grid">
                     <div class="oh-panel">
                         <div style="font-weight: 600; margin-bottom: 8px;">Instructions</div>
-                        <textarea class="oh-textarea" id="oh-detail-instructions"></textarea>
+                        <textarea class="oh-textarea" id="oh-detail-instructions" aria-label="Instructions du projet" maxlength="8000"></textarea>
                         <div style="margin-top: 16px; text-align: right;">
                             <button class="oh-btn-primary" id="oh-save-instructions">Enregistrer</button>
                         </div>
@@ -205,56 +217,109 @@
   });
 
   // ── Logic ──
+  const ORCH_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 9 6 9-6"/><path d="M3 10v6l9 6 9-6v-6"/><path d="m3 10 9 6 9-6"/></svg>';
+  const PROJECT_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>';
+
+  function buildCard(p) {
+    const card = document.createElement("div");
+    card.className =
+      "oh-project-card" + (selectedIds.has(p.id) ? " oh-card-selected" : "");
+    card.id = "oh-card-" + p.id;
+
+    const isOrch = isOrchestratorProject(p);
+    const icon = isOrch ? ORCH_ICON : PROJECT_ICON;
+    const type = p.type || (isOrch ? "orchestrator" : "projet");
+    const date = new Date(p.updatedAt || Date.now()).toLocaleDateString("fr-FR");
+
+    const checkboxHtml = selectMode
+      ? `<div class="oh-card-checkbox" aria-hidden="true">${selectedIds.has(p.id) ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>' : ""}</div>`
+      : "";
+
+    card.innerHTML = `
+        ${checkboxHtml}
+        <div class="oh-project-card-top">
+            <div class="oh-project-card-icon-wrap" data-type="${isOrch ? "orchestrator" : "code"}">${icon}</div>
+            <div class="oh-project-card-name">${escapeHtml(p.name)}</div>
+        </div>
+        <div class="oh-project-card-meta">
+            <div class="oh-project-meta-row">Type: ${escapeHtml(type)}</div>
+            <div class="oh-project-meta-row">Dernière modif: ${escapeHtml(date)}</div>
+        </div>
+      `;
+
+    card.onclick = (e) => {
+      e.stopPropagation();
+      if (selectMode) {
+        toggleCardSelect(p.id);
+      } else {
+        showDetail(p);
+      }
+    };
+    return card;
+  }
+
+  function buildOrchToggle(count) {
+    const toggle = document.createElement("div");
+    toggle.className = "oh-gen-toggle";
+    toggle.tabIndex = 0;
+    toggle.setAttribute("role", "button");
+    toggle.setAttribute("aria-expanded", orchSectionOpen ? "true" : "false");
+    toggle.setAttribute("aria-label", "Projets de l'orchestrateur");
+    toggle.innerHTML =
+      '<svg class="oh-gen-chevron" style="transform:rotate(' +
+      (orchSectionOpen ? "0" : "-90") +
+      'deg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>' +
+      '<span class="oh-gen-label">Projets de l\'orchestrateur</span>' +
+      '<span class="oh-gen-count">' +
+      count +
+      "</span>";
+    const onToggle = () => {
+      orchSectionOpen = !orchSectionOpen;
+      renderGrid();
+    };
+    toggle.addEventListener("click", onToggle);
+    toggle.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onToggle();
+      }
+    });
+    return toggle;
+  }
+
   function renderGrid() {
     const grid = document.getElementById("oh-hub-grid");
     if (!grid) return;
     grid.innerHTML = "";
 
-    if (!cachedProjects || cachedProjects.length === 0) {
+    const all = cachedProjects || [];
+    const userProjects = all.filter((p) => !isOrchestratorProject(p));
+    const orchProjects = all.filter(isOrchestratorProject);
+
+    if (userProjects.length === 0 && orchProjects.length === 0) {
       grid.innerHTML =
         '<div style="grid-column:1/-1; text-align:center; padding:48px; color:#666666;">Aucun projet trouvé.</div>';
       return;
     }
 
-    cachedProjects.forEach((p) => {
-      const card = document.createElement("div");
-      card.className =
-        "oh-project-card" + (selectedIds.has(p.id) ? " oh-card-selected" : "");
-      card.id = "oh-card-" + p.id;
+    if (userProjects.length === 0) {
+      const empty = document.createElement("div");
+      empty.style.cssText =
+        "grid-column:1/-1; text-align:center; padding:32px; color:#666666;";
+      empty.textContent = "Aucun projet personnel.";
+      grid.appendChild(empty);
+    } else {
+      userProjects.forEach((p) => grid.appendChild(buildCard(p)));
+    }
 
-      const isOrchestrator = p.name.includes("(g") || p.name.includes("Orchestra");
-      const icon = isOrchestrator
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 9 6 9-6"/><path d="M3 10v6l9 6 9-6v-6"/><path d="m3 10 9 6 9-6"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>';
-      const type = isOrchestrator ? "orchestrator" : "code";
-      const date = new Date(p.updatedAt || Date.now()).toLocaleDateString("fr-FR");
-
-      const checkboxHtml = selectMode
-        ? `<div class="oh-card-checkbox" aria-hidden="true">${selectedIds.has(p.id) ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>' : ""}</div>`
-        : "";
-
-      card.innerHTML = `
-        ${checkboxHtml}
-        <div class="oh-project-card-top">
-            <div class="oh-project-card-icon-wrap" data-type="${type}">${icon}</div>
-            <div class="oh-project-card-name">${escapeHtml(p.name)}</div>
-        </div>
-        <div class="oh-project-card-meta">
-            <div class="oh-project-meta-row">Type: ${type}</div>
-            <div class="oh-project-meta-row">Dernière modif: ${date}</div>
-        </div>
-      `;
-
-      card.onclick = (e) => {
-        e.stopPropagation();
-        if (selectMode) {
-          toggleCardSelect(p.id);
-        } else {
-          showDetail(p);
-        }
-      };
-      grid.appendChild(card);
-    });
+    if (orchProjects.length > 0) {
+      grid.appendChild(buildOrchToggle(orchProjects.length));
+      if (orchSectionOpen) {
+        orchProjects.forEach((p) => grid.appendChild(buildCard(p)));
+      }
+    }
   }
 
   async function showHub() {

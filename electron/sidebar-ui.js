@@ -73,7 +73,8 @@ function updateDropdownTrigger(slot) {
 
 dropdownTrigger.addEventListener("click", function () {
   var rect = dropdownTrigger.getBoundingClientRect();
-  window.openhub.showNavMenu(Math.round(rect.left), Math.round(rect.bottom + 4));
+  var centerX = rect.left + rect.width / 2;
+  window.openhub.showNavMenu(Math.round(centerX), Math.round(rect.bottom + 4));
 });
 
 document.getElementById("dropdown-config-btn").addEventListener("click", function () {
@@ -411,9 +412,37 @@ function openConfig() {
   }
   loadModelsUI();
   loadMemoryUI();
-  loadUpdateStatus();
   loadCacheMetrics();
   loadGeminiAuthStatus();
+  // Adapt updates pane based on packaged vs dev mode
+  if (window.openhub.getAppMode) {
+    window.openhub
+      .getAppMode()
+      .then(function (mode) {
+        if (mode && mode.isPackaged) {
+          // Packaged: hide git-based app updates, show self-update
+          var gitSection = document.getElementById("git-update-section");
+          if (gitSection) gitSection.style.display = "none";
+          var selfSection = document.getElementById("self-update-section");
+          if (selfSection) selfSection.style.display = "";
+          var lbl = document.getElementById("auto-update-label");
+          if (lbl) lbl.textContent = "Vérifier les mises à jour au démarrage";
+          var desc = document.getElementById("auto-update-desc");
+          if (desc)
+            desc.textContent =
+              "Vérifie si une nouvelle version est disponible (l'installation reste manuelle).";
+          initSelfUpdateUI();
+          loadBundledVersions();
+        } else {
+          loadUpdateStatus();
+        }
+      })
+      .catch(function () {
+        loadUpdateStatus();
+      });
+  } else {
+    loadUpdateStatus();
+  }
   if (window.openhub.getAutoUpdate) {
     window.openhub
       .getAutoUpdate()
@@ -589,9 +618,9 @@ async function loadModelsUI() {
     const data = await res.json();
     const allModels = data.data || [];
 
-    const ollamaModels = allModels.filter((m) => m.source === "ollama");
+    const ollamaModels = allModels.filter((m) => m.source === "local");
     const cloudModels = allModels.filter(
-      (m) => m.source !== "ollama" && m.source !== "workflow",
+      (m) => m.source !== "local" && m.source !== "workflow",
     );
 
     function populate(select, current) {
@@ -820,6 +849,138 @@ async function runUpdate(appId) {
   }
 }
 
+// ── Bundled app versions (read-only, packaged mode) ──
+function loadBundledVersions() {
+  var section = document.getElementById("bundled-versions-section");
+  var list = document.getElementById("bundled-versions-list");
+  if (!section || !list || !window.openhub.getBundledVersions) return;
+  var apps = [
+    { id: "openwork", label: "OpenWork" },
+    { id: "opencode", label: "OpenCode" },
+    { id: "open-design", label: "Open Design" },
+  ];
+  window.openhub
+    .getBundledVersions()
+    .then(function (versions) {
+      if (!versions) return;
+      list.innerHTML = "";
+      for (var i = 0; i < apps.length; i++) {
+        var a = apps[i];
+        var ver = versions[a.id] || "?";
+        var item = document.createElement("div");
+        item.className = "setting-row";
+        var text = document.createElement("div");
+        text.className = "setting-row-text";
+        var nameEl = document.createElement("span");
+        nameEl.className = "setting-label";
+        nameEl.textContent = a.label;
+        text.appendChild(nameEl);
+        var verEl = document.createElement("span");
+        verEl.className = "setting-desc";
+        verEl.style.margin = "0";
+        // textContent (not innerHTML): the version comes from a bundled file, but
+        // building DOM nodes keeps this XSS-proof regardless of the value.
+        verEl.textContent = "v" + ver;
+        item.appendChild(text);
+        item.appendChild(verEl);
+        list.appendChild(item);
+      }
+      section.style.display = "";
+    })
+    .catch(function () {});
+}
+
+// ── Self-update UI (packaged mode) ──
+function initSelfUpdateUI() {
+  var versionEl = document.getElementById("self-update-version");
+  var statusEl = document.getElementById("self-update-status");
+  var btnEl = document.getElementById("self-update-btn");
+  var progressEl = document.getElementById("self-update-progress");
+  var barEl = document.getElementById("self-update-bar");
+  if (!statusEl || !btnEl) return;
+
+  if (window.openhub.onSelfUpdateStatus) {
+    window.openhub.onSelfUpdateStatus(function (s) {
+      applySelfUpdateStatus(s, versionEl, statusEl, btnEl, progressEl, barEl);
+    });
+  }
+
+  if (window.openhub.selfUpdateCheck) {
+    statusEl.textContent = "Vérification…";
+    window.openhub
+      .selfUpdateCheck()
+      .then(function (info) {
+        if (info && info.version) {
+          applySelfUpdateStatus(
+            { stage: "available", version: info.version },
+            versionEl,
+            statusEl,
+            btnEl,
+            progressEl,
+            barEl,
+          );
+        } else {
+          statusEl.textContent = "Vous utilisez la dernière version.";
+        }
+      })
+      .catch(function () {
+        statusEl.textContent = "Impossible de vérifier les mises à jour.";
+      });
+  }
+
+  btnEl.addEventListener("click", function () {
+    if (window.openhub.selfUpdateInstall) {
+      btnEl.disabled = true;
+      btnEl.textContent = "…";
+      window.openhub.selfUpdateInstall().catch(function () {});
+    }
+  });
+}
+
+function applySelfUpdateStatus(s, versionEl, statusEl, btnEl, progressEl, barEl) {
+  if (!s || !s.stage) return;
+  switch (s.stage) {
+    case "idle":
+      statusEl.textContent = "Vous utilisez la dernière version.";
+      btnEl.style.display = "none";
+      if (progressEl) progressEl.style.display = "none";
+      break;
+    case "checking":
+      statusEl.textContent = "Vérification…";
+      btnEl.style.display = "none";
+      if (progressEl) progressEl.style.display = "none";
+      break;
+    case "available":
+      if (versionEl) versionEl.textContent = "v" + s.version + " disponible";
+      statusEl.textContent = "Une nouvelle version est prête à être installée.";
+      btnEl.textContent = "Installer";
+      btnEl.disabled = false;
+      btnEl.style.display = "";
+      btnEl.className = "btn-update primary";
+      if (progressEl) progressEl.style.display = "none";
+      break;
+    case "downloading":
+      statusEl.textContent = "Téléchargement… " + (s.percent || 0) + " %";
+      btnEl.style.display = "none";
+      if (progressEl) progressEl.style.display = "";
+      if (barEl) barEl.style.width = (s.percent || 0) + "%";
+      break;
+    case "ready":
+      statusEl.textContent = "Installation en cours…";
+      btnEl.style.display = "none";
+      if (progressEl) progressEl.style.display = "none";
+      break;
+    case "error":
+      statusEl.textContent = "Erreur : " + (s.message || "inconnue");
+      btnEl.textContent = "Réessayer";
+      btnEl.disabled = false;
+      btnEl.style.display = "";
+      btnEl.className = "btn-update";
+      if (progressEl) progressEl.style.display = "none";
+      break;
+  }
+}
+
 function renderFacts(facts) {
   factListEl.innerHTML = "";
   for (var i = 0; i < facts.length; i++) {
@@ -879,14 +1040,16 @@ function updateTokenHint(mem) {
   }
 
   var totalTokens = parts.length > 0 ? approxTokens(parts.join("\n")) : 0;
+  // Estimation par budget seul. À l'exécution, les faits sont en plus filtrés par
+  // pertinence à la requête, donc l'injection réelle est ≤ ce maximum.
   tokenHint.textContent =
     "~" +
     totalTokens +
-    " tokens injectés · " +
+    " tokens max · " +
     includedFacts +
     "/" +
     (mem.facts || []).length +
-    " faits · " +
+    " faits candidats (selon la requête) · " +
     (mem.facts || []).length +
     "/50 max";
 }

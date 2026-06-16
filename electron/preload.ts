@@ -215,6 +215,22 @@ contextBridge.exposeInMainWorld("openhub", {
   runAppUpdate: (appName: string) => ipcRenderer.invoke("run-app-update", appName),
   getAutoUpdate: () => ipcRenderer.invoke("get-auto-update"),
   setAutoUpdate: (enabled: boolean) => ipcRenderer.invoke("set-auto-update", enabled),
+
+  getAppMode: () => ipcRenderer.invoke("get-app-mode"),
+  getBundledVersions: () => ipcRenderer.invoke("get-bundled-versions"),
+  selfUpdateCheck: () => ipcRenderer.invoke("self-update-check"),
+  selfUpdateInstall: () => ipcRenderer.invoke("self-update-install"),
+  dismissUpdateToast: () => ipcRenderer.invoke("dismiss-update-toast"),
+  onUpdateAvailable: (cb: (version: string) => void) => {
+    const handler = (_e: unknown, version: string) => cb(version);
+    ipcRenderer.on("self-update-available", handler);
+    return () => ipcRenderer.removeListener("self-update-available", handler);
+  },
+  onSelfUpdateStatus: (cb: (status: unknown) => void) => {
+    const handler = (_e: unknown, status: unknown) => cb(status);
+    ipcRenderer.on("self-update-status", handler);
+    return () => ipcRenderer.removeListener("self-update-status", handler);
+  },
   runGraphifyUpdate: (dir?: string) => ipcRenderer.invoke("run-graphify-update", dir),
   getWebSearchEnabled: () => ipcRenderer.invoke("get-web-search-enabled"),
   setWebSearchEnabled: (enabled: boolean) =>
