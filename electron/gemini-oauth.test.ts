@@ -106,7 +106,10 @@ describe("buildAuthUrl", () => {
     expect(p.get("state")).toBe("STATE_Y");
     expect(p.get("access_type")).toBe("offline");
     expect(p.get("prompt")).toBe("consent");
-    expect(p.get("client_id")).toBeTruthy();
+    // client_id is sourced from the GEMINI_CLIENT_ID env var at module load
+    // (no longer hardcoded). In tests the var is unset, so the param is present
+    // but empty — assert it is wired into the URL, not that it has a value.
+    expect(p.has("client_id")).toBe(true);
     expect(p.get("scope")).toContain("https://www.googleapis.com/auth/cloud-platform");
   });
 });
