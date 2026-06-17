@@ -68,17 +68,6 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/Open-Fable/
 
 See the [Usage guide](docs/USAGE.md) for how to use the chat, projects, and orchestrator day-to-day.
 
-### Build from source
-
-For contributors or if you want to run the development version:
-
-```bash
-git clone https://github.com/Open-Fable/OpenHub.git
-cd OpenHub
-bash scripts/setup.sh
-npm run dev
-```
-
 ---
 
 ## Architecture
@@ -98,17 +87,9 @@ For the full spec — ports, security model, config cascade, and overlay system 
 
 ---
 
-## Development
+## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow. Quick reference:
-
-| Command             | Description               |
-| ------------------- | ------------------------- |
-| `npm run dev`       | Start in development mode |
-| `npm run build`     | Build the `.dmg`          |
-| `npm run typecheck` | TypeScript check          |
-| `npm run lint`      | ESLint                    |
-| `npm test`          | Unit tests (Vitest)       |
+Want to build from source, fix a bug, or add a feature? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
