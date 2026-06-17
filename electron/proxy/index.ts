@@ -1736,18 +1736,34 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
     }
   });
 
-  await new Promise<void>((resolve) => {
-    const server = app.listen(PROXY_PORT, PROXY_HOST, () => resolve());
-    server.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        console.warn(`[proxy] Port ${PROXY_PORT} in use, assuming ghost proxy is ok.`);
-        resolve();
-      } else {
-        console.error("[proxy] server error:", err);
-        resolve();
-      }
+  const MAX_BIND_RETRIES = 5;
+  const BIND_RETRY_DELAY_MS = 800;
+
+  for (let attempt = 1; attempt <= MAX_BIND_RETRIES; attempt++) {
+    const bound = await new Promise<boolean>((resolve) => {
+      const server = app.listen(PROXY_PORT, PROXY_HOST, () => resolve(true));
+      server.on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE") {
+          console.warn(
+            `[proxy] Port ${PROXY_PORT} in use (attempt ${attempt}/${MAX_BIND_RETRIES}), retrying...`,
+          );
+          server.close();
+          resolve(false);
+        } else {
+          console.error("[proxy] server error:", err);
+          server.close();
+          resolve(false);
+        }
+      });
     });
-  });
+    if (bound) break;
+    if (attempt === MAX_BIND_RETRIES) {
+      throw new Error(
+        `[proxy] Failed to bind to ${PROXY_HOST}:${PROXY_PORT} after ${MAX_BIND_RETRIES} attempts`,
+      );
+    }
+    await new Promise((r) => setTimeout(r, BIND_RETRY_DELAY_MS));
+  }
 
   console.warn(`[proxy] listening on ${PROXY_HOST}:${PROXY_PORT}`);
 

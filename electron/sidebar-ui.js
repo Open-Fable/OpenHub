@@ -966,6 +966,7 @@ function initSelfUpdateUI() {
 
   if (window.openhub.selfUpdateCheck) {
     statusEl.textContent = t("common.checking");
+    statusEl.removeAttribute("data-i18n");
     window.openhub
       .selfUpdateCheck()
       .then(function (info) {

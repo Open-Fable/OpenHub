@@ -33,6 +33,7 @@ export type UpdateStatus =
 export interface UpdaterDeps {
   getProcessManager: () => { stopAll: () => void } | null;
   onStatusChange: (status: UpdateStatus) => void;
+  githubToken?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,8 +144,14 @@ function isNewer(remote: string, local: string): boolean {
 }
 
 async function fetchLatestRelease(): Promise<UpdateInfo | null> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+  };
+  if (deps?.githubToken) {
+    headers["Authorization"] = `Bearer ${deps.githubToken}`;
+  }
   const resp = await fetch(GITHUB_RELEASES_URL, {
-    headers: { Accept: "application/vnd.github+json" },
+    headers,
     signal: AbortSignal.timeout(15_000),
   });
   if (!resp.ok) return null;

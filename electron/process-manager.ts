@@ -133,15 +133,29 @@ exec "\$REAL_PATH" "\${args[@]}"
   async ensureRunning(
     slot: Exclude<SlotName, "config" | "chat" | "projects">,
   ): Promise<number | null> {
-    if (this.running.has(slot)) return this.running.get(slot)!.port;
+    const t0 = Date.now();
+    if (this.running.has(slot)) {
+      console.warn(`[pm-timing] ${slot} already running → +${Date.now() - t0}ms`);
+      return this.running.get(slot)!.port;
+    }
 
     // Deduplicate concurrent calls — only one spawn per slot at a time
-    if (this.starting.has(slot)) return this.starting.get(slot)!;
+    if (this.starting.has(slot)) {
+      console.warn(
+        `[pm-timing] ${slot} already starting (dedup) → +${Date.now() - t0}ms`,
+      );
+      return this.starting.get(slot)!;
+    }
 
+    console.warn(`[pm-timing] ${slot} doStart begin → +${Date.now() - t0}ms`);
     const promise = this.doStart(slot);
     this.starting.set(slot, promise);
     try {
-      return await promise;
+      const port = await promise;
+      console.warn(
+        `[pm-timing] ${slot} doStart done → port=${port} +${Date.now() - t0}ms`,
+      );
+      return port;
     } finally {
       this.starting.delete(slot);
     }
@@ -150,23 +164,35 @@ exec "\$REAL_PATH" "\${args[@]}"
   private async doStart(
     slot: Exclude<SlotName, "config" | "chat" | "projects">,
   ): Promise<number | null> {
+    const t0 = Date.now();
     // Use localhost (not 127.0.0.1) — Vite/opencode bind to ::1 on modern macOS
     const knownUrls: Partial<Record<string, string>> = {
       work: "http://localhost:5173",
     };
     const knownUrl = knownUrls[slot];
-    if (knownUrl !== undefined && (await this.isAlreadyHealthy(knownUrl))) {
-      const port = parseInt(new URL(knownUrl).port);
-      console.warn(`[${slot}] reusing existing process on :${port}`);
-      this.running.set(slot, {
-        processes: [],
-        staticServers: [],
-        port,
-        healthy: true,
-      });
-      return port;
+    if (knownUrl !== undefined) {
+      console.warn(
+        `[pm-timing] ${slot} isAlreadyHealthy(${knownUrl}) check start +${Date.now() - t0}ms`,
+      );
+      const healthy = await this.isAlreadyHealthy(knownUrl);
+      console.warn(
+        `[pm-timing] ${slot} isAlreadyHealthy=${healthy} +${Date.now() - t0}ms`,
+      );
+      if (healthy) {
+        const port = parseInt(new URL(knownUrl).port);
+        this.running.set(slot, {
+          processes: [],
+          staticServers: [],
+          port,
+          healthy: true,
+        });
+        return port;
+      }
     }
 
+    console.warn(
+      `[pm-timing] ${slot} start${slot.charAt(0).toUpperCase() + slot.slice(1)}() begin +${Date.now() - t0}ms`,
+    );
     switch (slot) {
       case "work":
         return this.startOpenWork();
@@ -238,43 +264,13 @@ exec "\$REAL_PATH" "\${args[@]}"
     this.running.clear();
   }
 
-  private static readonly ENV_ALLOWLIST = [
-    "PATH",
-    "HOME",
-    "USER",
-    "LOGNAME",
-    "SHELL",
-    "LANG",
-    "LC_ALL",
-    "LC_CTYPE",
-    "TMPDIR",
-    "XDG_CONFIG_HOME",
-    "XDG_DATA_HOME",
-    "XDG_CACHE_HOME",
-    "TERM",
-    "TERM_PROGRAM",
-    "COLORTERM",
-    "SSH_AUTH_SOCK",
-    "NO_PROXY",
-    "HTTP_PROXY",
-    "HTTPS_PROXY",
-    "ALL_PROXY",
-    "ELECTRON_RUN_AS_NODE",
-  ] as const;
-
   private sharedEnv(): NodeJS.ProcessEnv {
-    const env: NodeJS.ProcessEnv = {};
-    for (const key of ProcessManager.ENV_ALLOWLIST) {
-      if (process.env[key] !== undefined) env[key] = process.env[key];
-    }
-    env.OPENHUB_TOKEN = this.proxyToken;
-    env.OPENHUB_BUNDLED_OPENCODE = path.join(this.ctx.resourcesPath, "bin", "opencode");
-    env.OPENHUB_FALLBACK_OPENCODE = path.join(
-      os.homedir(),
-      ".opencode",
-      "bin",
-      "opencode",
-    );
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      OPENHUB_TOKEN: this.proxyToken,
+      OPENHUB_BUNDLED_OPENCODE: path.join(this.ctx.resourcesPath, "bin", "opencode"),
+      OPENHUB_FALLBACK_OPENCODE: path.join(os.homedir(), ".opencode", "bin", "opencode"),
+    };
     if (
       this.apiKeys.googleAiKey !== null &&
       this.apiKeys.googleAiKey !== undefined &&
@@ -337,8 +333,13 @@ exec "\$REAL_PATH" "\${args[@]}"
   }
 
   private async startOpenWork(): Promise<number> {
+    const t0 = Date.now();
+    const t = (label: string) =>
+      console.warn(`[pm-timing] work ${label} +${Date.now() - t0}ms`);
     const port = 5173;
+    t("killPort start");
     this.killPort(port);
+    t("killPort done");
 
     // Packaged: serve the prebuilt static SPA (vite build) over loopback instead
     // of running the Vite dev server, which isn't shipped.
@@ -352,11 +353,11 @@ exec "\$REAL_PATH" "\${args[@]}"
         port,
         healthy: true,
       });
-      console.warn(`[work] healthy ✓ (static)`);
+      t("healthy (static)");
       return port;
     }
 
-    console.warn(`[work] killing port ${port} and spawning pnpm dev:ui...`);
+    t("spawn pnpm dev:ui");
     const proc = spawn("pnpm", ["dev:ui"], {
       cwd: path.join(this.ctx.appsDir, "openwork"),
       env: {
@@ -367,22 +368,26 @@ exec "\$REAL_PATH" "\${args[@]}"
       stdio: ["ignore", "pipe", "pipe"],
     });
     this.pipeOutput("work", proc, "work");
-    // Only add to running AFTER health check — prevents premature port access
-    console.warn(`[work] waiting for health on localhost:${port}...`);
+    t("waitForHealth start");
     await this.waitForHealth(`http://localhost:${port}`);
+    t("waitForHealth done → healthy");
     this.running.set("work", {
       processes: [proc],
       staticServers: [],
       port,
       healthy: true,
     });
-    console.warn(`[work] healthy ✓`);
     return port;
   }
 
   private async startOpenCode(): Promise<number> {
+    const t0 = Date.now();
+    const t = (label: string) =>
+      console.warn(`[pm-timing] code ${label} +${Date.now() - t0}ms`);
     const port = 4096;
+    t("killPort start");
     this.killPort(port);
+    t("killPort done");
     console.warn(`[code] spawning opencode serve on 127.0.0.1:${port}...`);
     // "serve" starts the server + web UI without opening the system browser
     // ("web" = serve + browser open, which we don't want inside Electron)
@@ -399,28 +404,55 @@ exec "\$REAL_PATH" "\${args[@]}"
       },
     );
     this.pipeOutput("code", proc, "code");
-    console.warn(`[code] waiting for health on 127.0.0.1:${port}...`);
+    t("waitForHealth start");
     await this.waitForHealth(`http://127.0.0.1:${port}`);
+    t("waitForHealth done → healthy");
     this.running.set("code", {
       processes: [proc],
       staticServers: [],
       port,
       healthy: true,
     });
-    console.warn(`[code] healthy ✓`);
     return port;
   }
 
   private async startOpenDesign(): Promise<number> {
+    const t0 = Date.now();
+    const t = (label: string) =>
+      console.warn(`[pm-timing] design ${label} +${Date.now() - t0}ms`);
     const odCwd = path.join(this.ctx.appsDir, "open-design");
     const webCwd = path.join(odCwd, "apps", "web");
     const webPort = 3456;
+    t("killPort start");
     this.killPort(7456);
     this.killPort(webPort);
+    t("killPort done");
 
     const daemonProc = this.spawnDesignDaemon(odCwd, webPort);
     const staticServers: StaticServerHandle[] = [];
     const processes: ChildProcess[] = [daemonProc];
+
+    // Dev fast path: when a production web build exists, the daemon itself serves
+    // it (apps/web/out) together with /api on its own port (:7456). Loading the
+    // view from the daemon skips `next dev`, whose Turbopack cold-compiles the
+    // route on first navigation (20-40s black screen). The view loads :7456
+    // directly; no separate web server. Packaged keeps its dedicated static
+    // server below. Falls back to `next dev` when no build is present.
+    const hasWebBuild = fs.existsSync(path.join(webCwd, "out", "index.html"));
+    t(`hasWebBuild=${hasWebBuild} isPackaged=${this.ctx.isPackaged}`);
+    if (!this.ctx.isPackaged && hasWebBuild) {
+      const daemonPort = 7456;
+      t("daemon fast-path: waitForHealth start");
+      await this.waitForHealth(`http://127.0.0.1:${daemonPort}/api/health`);
+      t("daemon fast-path: waitForHealth done → healthy");
+      this.running.set("design", {
+        processes,
+        staticServers,
+        port: daemonPort,
+        healthy: true,
+      });
+      return daemonPort;
+    }
 
     if (this.ctx.isPackaged) {
       // Serve the prebuilt Next.js static export over loopback (no dev server).
@@ -529,13 +561,28 @@ exec "\$REAL_PATH" "\${args[@]}"
   }
 
   private async waitForHealth(url: string): Promise<void> {
+    const t0 = Date.now();
+    let polls = 0;
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
     while (Date.now() < deadline) {
+      polls++;
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(1000) });
-        if (res.ok || res.status < 500) return;
-      } catch {
-        /* not ready */
+        if (res.ok || res.status < 500) {
+          console.warn(
+            `[pm-timing] waitForHealth(${url}) OK after ${polls} polls +${Date.now() - t0}ms`,
+          );
+          return;
+        }
+        console.warn(
+          `[pm-timing] waitForHealth(${url}) poll#${polls} status=${res.status} +${Date.now() - t0}ms`,
+        );
+      } catch (err) {
+        if (polls <= 3 || polls % 10 === 0) {
+          console.warn(
+            `[pm-timing] waitForHealth(${url}) poll#${polls} err=${(err as NodeJS.ErrnoException).code ?? (err as Error).message} +${Date.now() - t0}ms`,
+          );
+        }
       }
       await new Promise((r) => setTimeout(r, HEALTH_POLL_MS));
     }
