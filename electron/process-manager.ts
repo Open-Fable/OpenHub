@@ -14,6 +14,11 @@ const DEV_APPS_DIR = path.join(__dirname, "..", "..", "apps");
 const HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_POLL_MS = 500;
 
+// Grace period after SIGTERM before a stubborn child is force-killed with
+// SIGKILL. Prevents zombies when a daemon ignores SIGTERM (the timer is
+// unref'd so it never keeps the event loop — and the process — alive).
+const KILL_GRACE_MS = 3_000;
+
 interface RunningApp {
   // Array of child processes associated with this slot
   readonly processes: ChildProcess[];
@@ -180,15 +185,31 @@ exec "\$REAL_PATH" "\${args[@]}"
     return out;
   }
 
+  // Send SIGTERM, then escalate to SIGKILL after a grace period if the child is
+  // still alive. The fallback timer is unref'd so it never blocks app exit.
+  private terminateProcess(proc: ChildProcess): void {
+    try {
+      proc.kill("SIGTERM");
+    } catch {
+      /* already dead */
+    }
+    const timer = setTimeout(() => {
+      if (proc.exitCode === null && proc.signalCode === null) {
+        try {
+          proc.kill("SIGKILL");
+        } catch {
+          /* already dead */
+        }
+      }
+    }, KILL_GRACE_MS);
+    timer.unref();
+  }
+
   stop(slot: Exclude<SlotName, "config" | "chat" | "projects">): void {
     const app = this.running.get(slot);
     if (!app) return;
     for (const proc of app.processes) {
-      try {
-        proc.kill("SIGTERM");
-      } catch {
-        /* already dead */
-      }
+      this.terminateProcess(proc);
     }
     for (const srv of app.staticServers) {
       void srv.close();
@@ -202,11 +223,7 @@ exec "\$REAL_PATH" "\${args[@]}"
   stopAll(): void {
     for (const [slot, app] of this.running) {
       for (const proc of app.processes) {
-        try {
-          proc.kill("SIGTERM");
-        } catch {
-          /* already dead */
-        }
+        this.terminateProcess(proc);
       }
       for (const srv of app.staticServers) {
         void srv.close();
