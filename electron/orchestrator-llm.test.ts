@@ -5,7 +5,19 @@ import {
   callLLM,
   callLLMWithTools,
   callLLMStreaming,
+  callLLMStructured,
+  type StructuredTool,
 } from "./orchestrator-llm.js";
+
+const VERDICT_TOOL: StructuredTool = {
+  name: "report_verdict",
+  description: "Report a verdict.",
+  parameters: {
+    type: "object",
+    properties: { pass: { type: "boolean" } },
+    required: ["pass"],
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -250,6 +262,89 @@ describe("callLLMWithTools", () => {
     await expect(callLLMWithTools(makeNode(), [], [])).rejects.toThrow(
       /Crédits insuffisants/,
     );
+  });
+
+  it("forwards tool_choice when provided, omits it otherwise", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [{}] }));
+    await callLLMWithTools(
+      makeNode(),
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      "required",
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tool_choice).toBe("required");
+
+    fetchMock.mockClear();
+    await callLLMWithTools(makeNode(), [], []);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tool_choice).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// callLLMStructured
+// ---------------------------------------------------------------------------
+
+describe("callLLMStructured", () => {
+  it("forces the single tool via tool_choice:required", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [{}] }));
+
+    await callLLMStructured(makeNode(), "sys", "user", VERDICT_TOOL);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.tool_choice).toBe("required");
+    expect(body.tools).toHaveLength(1);
+    expect(body.tools[0].function.name).toBe("report_verdict");
+    expect(body.messages[0]).toEqual({ role: "system", content: "sys" });
+    expect(body.messages[1]).toEqual({ role: "user", content: "user" });
+  });
+
+  it("returns the tool-call arguments as a JSON string", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                {
+                  id: "c1",
+                  type: "function",
+                  function: { name: "report_verdict", arguments: '{"pass":true}' },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    const raw = await callLLMStructured(makeNode(), "s", "u", VERDICT_TOOL);
+
+    expect(JSON.parse(raw)).toEqual({ pass: true });
+  });
+
+  it("falls back to plain text content when the provider ignores the forcing", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        choices: [{ message: { role: "assistant", content: '{"pass":false}' } }],
+      }),
+    );
+
+    const raw = await callLLMStructured(makeNode(), "s", "u", VERDICT_TOOL);
+
+    expect(raw).toBe('{"pass":false}');
+  });
+
+  it("returns empty string when there is neither a tool call nor content", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [{}] }));
+
+    const raw = await callLLMStructured(makeNode(), "s", "u", VERDICT_TOOL);
+
+    expect(raw).toBe("");
   });
 });
 

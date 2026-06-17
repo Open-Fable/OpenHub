@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   OrchestratorRunner,
   mapWithConcurrency,
+  resolveMaxParallelNodes,
+  resolveFallbackModel,
+} from "./orchestrator-runner.js";
+import {
   parseFilepathBlocks,
   parseEditBlocks,
   applyEdits,
   detectTruncation,
-} from "./orchestrator-runner.js";
+} from "./orchestrator-files.js";
 import type { Project } from "./project-store.js";
 
 function makeNode(id: string, deps: string[] = []): Project {
@@ -25,61 +32,167 @@ function runner(): OrchestratorRunner {
   return new OrchestratorRunner(() => {});
 }
 
-describe("resolveDAGWaves", () => {
-  it("places independent nodes in a single wave", () => {
-    const a = makeNode("a");
-    const b = makeNode("b");
-    const c = makeNode("c");
-    const waves = runner().resolveDAGWaves([a, b, c]);
-    expect(waves).toHaveLength(1);
-    expect(waves[0].map((n) => n.id).sort()).toEqual(["a", "b", "c"]);
+// Private surface used by the concurrency tests below.
+type WritableRunner = {
+  extractAndWriteFiles: (
+    resultText: string,
+    workspaceDir: string,
+    pathFilter: (relPath: string) => boolean,
+    nodeId: string,
+    skipPaths?: ReadonlySet<string>,
+  ) => Promise<string[]>;
+  fileOwner: Map<string, string>;
+  nodeWorkspaces: Map<string, string>;
+  resetPerRunState: () => void;
+  correctiveNodeIds: ReadonlySet<string> | null;
+  buildNodePathFilter: (
+    nodeId: string,
+    expectedFiles: readonly string[],
+  ) => (relPath: string) => boolean;
+};
+
+function fileBlock(relPath: string, content: string): string {
+  return "```js filepath: " + relPath + "\n" + content + "\n```";
+}
+
+describe("resolveMaxParallelNodes", () => {
+  const orch = (max?: number): Project => ({
+    ...makeNode("orch"),
+    type: "orchestrator",
+    orchSettings: {
+      autoDistribute: false,
+      checkCoherence: false,
+      relaunchOnError: false,
+      maxParallelNodes: max,
+    },
   });
 
-  it("chains dependent nodes into separate waves", () => {
-    const a = makeNode("a");
-    const b = makeNode("b", ["a"]);
-    const c = makeNode("c", ["b"]);
-    const waves = runner().resolveDAGWaves([a, b, c]);
-    expect(waves).toHaveLength(3);
-    expect(waves[0].map((n) => n.id)).toEqual(["a"]);
-    expect(waves[1].map((n) => n.id)).toEqual(["b"]);
-    expect(waves[2].map((n) => n.id)).toEqual(["c"]);
+  it("defaults to 3 when unset", () => {
+    expect(resolveMaxParallelNodes(makeNode("o"))).toBe(3);
+    expect(resolveMaxParallelNodes(orch(undefined))).toBe(3);
   });
 
-  it("groups nodes with shared dependency in one wave", () => {
-    //   a
-    //  / \
-    // b   c
-    //  \ /
-    //   d
-    const a = makeNode("a");
-    const b = makeNode("b", ["a"]);
-    const c = makeNode("c", ["a"]);
-    const d = makeNode("d", ["b", "c"]);
-    const waves = runner().resolveDAGWaves([a, b, c, d]);
-    expect(waves).toHaveLength(3);
-    expect(waves[0].map((n) => n.id)).toEqual(["a"]);
-    expect(waves[1].map((n) => n.id).sort()).toEqual(["b", "c"]);
-    expect(waves[2].map((n) => n.id)).toEqual(["d"]);
+  it("clamps to the [1, 4] range", () => {
+    expect(resolveMaxParallelNodes(orch(0))).toBe(1);
+    expect(resolveMaxParallelNodes(orch(-5))).toBe(1);
+    expect(resolveMaxParallelNodes(orch(2))).toBe(2);
+    expect(resolveMaxParallelNodes(orch(99))).toBe(4);
   });
 
-  it("throws on circular dependency", () => {
-    const a = makeNode("a", ["b"]);
-    const b = makeNode("b", ["a"]);
-    expect(() => runner().resolveDAGWaves([a, b])).toThrow("Dépendance circulaire");
+  it("floors fractional values and rejects NaN", () => {
+    expect(resolveMaxParallelNodes(orch(2.9))).toBe(2);
+    expect(resolveMaxParallelNodes(orch(Number.NaN))).toBe(3);
+  });
+});
+
+describe("resetPerRunState", () => {
+  it("clears per-run state so a reused singleton runner starts clean", () => {
+    const r = runner() as unknown as WritableRunner;
+    r.fileOwner.set("a.js", "node-1");
+    r.nodeWorkspaces.set("node-1", "/tmp/wt");
+
+    r.resetPerRunState();
+
+    expect(r.fileOwner.size).toBe(0);
+    expect(r.nodeWorkspaces.size).toBe(0);
+  });
+});
+
+describe("buildNodePathFilter — corrective rerun guard", () => {
+  it("opens free paths on a first run (no corrective set, no ownership)", () => {
+    const r = runner() as unknown as WritableRunner;
+    const filter = r.buildNodePathFilter("n1", []);
+    expect(filter("brand-new.js")).toBe(true);
   });
 
-  it("ignores dependencies on nodes outside the input set", () => {
-    const a = makeNode("a", ["external"]);
-    const b = makeNode("b", ["a"]);
-    const waves = runner().resolveDAGWaves([a, b]);
-    expect(waves).toHaveLength(2);
-    expect(waves[0].map((n) => n.id)).toEqual(["a"]);
-    expect(waves[1].map((n) => n.id)).toEqual(["b"]);
+  it("refuses new free paths for a node in the corrective set, deterministically", () => {
+    const r = runner() as unknown as WritableRunner;
+    // No fileOwner entry for "n1" — the old logic would treat it as a first run
+    // and allow free paths. The corrective set must override that.
+    r.correctiveNodeIds = new Set(["n1"]);
+    const filter = r.buildNodePathFilter("n1", ["allowed.js"]);
+    expect(filter("brand-new.js")).toBe(false); // free path refused (anti-parasitic)
+    expect(filter("allowed.js")).toBe(true); // its declared deliverable is fine
+    expect(filter("WORKSPACE_INDEX.md")).toBe(true); // shared path always allowed
+  });
+});
+
+describe("extractAndWriteFiles — concurrent ownership", () => {
+  async function withWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+    const dir = await fs.mkdtemp(path.join(tmpdir(), "oh-orch-"));
+    try {
+      return await fn(dir);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("lets only one node win a contested free path, no silent clobber", async () => {
+    await withWorkspace(async (dir) => {
+      const r = runner() as unknown as WritableRunner;
+      const accept = (): boolean => true;
+
+      // Both nodes try to write the SAME free path concurrently.
+      const [wroteA, wroteB] = await Promise.all([
+        r.extractAndWriteFiles(fileBlock("app.js", "from-A"), dir, accept, "A"),
+        r.extractAndWriteFiles(fileBlock("app.js", "from-B"), dir, accept, "B"),
+      ]);
+
+      const owner = r.fileOwner.get("app.js");
+      expect(owner).toBeDefined();
+      const disk = await fs.readFile(path.join(dir, "app.js"), "utf-8");
+
+      // Exactly one node wrote the file; the disk content matches the owner.
+      const winners = [
+        { id: "A", wrote: wroteA },
+        { id: "B", wrote: wroteB },
+      ].filter((w) => w.wrote.includes("app.js"));
+      expect(winners).toHaveLength(1);
+      expect(winners[0].id).toBe(owner);
+      expect(disk).toBe(`from-${owner}`);
+    });
   });
 
-  it("returns empty array for empty input", () => {
-    expect(runner().resolveDAGWaves([])).toEqual([]);
+  it("lets each node write its own distinct path in parallel", async () => {
+    await withWorkspace(async (dir) => {
+      const r = runner() as unknown as WritableRunner;
+      const accept = (): boolean => true;
+
+      await Promise.all([
+        r.extractAndWriteFiles(fileBlock("a.js", "AAA"), dir, accept, "A"),
+        r.extractAndWriteFiles(fileBlock("b.js", "BBB"), dir, accept, "B"),
+      ]);
+
+      expect(await fs.readFile(path.join(dir, "a.js"), "utf-8")).toBe("AAA");
+      expect(await fs.readFile(path.join(dir, "b.js"), "utf-8")).toBe("BBB");
+      expect(r.fileOwner.get("a.js")).toBe("A");
+      expect(r.fileOwner.get("b.js")).toBe("B");
+    });
+  });
+
+  it("does NOT block isolated worktree nodes writing the same relative path", async () => {
+    // Two backend agents in separate worktrees writing the same path is not a
+    // conflict — the shared-ownership refusal must be bypassed for isolated nodes.
+    await withWorkspace(async (dirA) => {
+      await withWorkspace(async (dirB) => {
+        const r = runner() as unknown as WritableRunner;
+        r.nodeWorkspaces.set("A", dirA);
+        r.nodeWorkspaces.set("B", dirB);
+        const accept = (): boolean => true;
+
+        const [wa, wb] = await Promise.all([
+          r.extractAndWriteFiles(fileBlock("app.js", "AAA"), dirA, accept, "A"),
+          r.extractAndWriteFiles(fileBlock("app.js", "BBB"), dirB, accept, "B"),
+        ]);
+
+        expect(wa).toContain("app.js");
+        expect(wb).toContain("app.js");
+        expect(await fs.readFile(path.join(dirA, "app.js"), "utf-8")).toBe("AAA");
+        expect(await fs.readFile(path.join(dirB, "app.js"), "utf-8")).toBe("BBB");
+        // Isolated nodes never pollute the shared ownership map.
+        expect(r.fileOwner.has("app.js")).toBe(false);
+      });
+    });
   });
 });
 
@@ -391,5 +504,33 @@ describe("detectTruncation", () => {
   it("does not flag a heading or list item as truncated", () => {
     expect(detectTruncation("## Une section sans ponctuation finale")).toBeNull();
     expect(detectTruncation("- un point de liste de longueur correcte ici")).toBeNull();
+  });
+});
+
+describe("resolveFallbackModel", () => {
+  it("prefers the orchestrator's global model over any agent model", () => {
+    const orch = { model: "global/x" };
+    const agents = [{ model: undefined }, { model: "agent/y" }];
+    expect(resolveFallbackModel(orch, agents)).toBe("global/x");
+  });
+
+  it("falls back to the first agent with a model when the orchestrator has none", () => {
+    const orch = { model: undefined };
+    const agents = [{ model: undefined }, { model: "agent/y" }, { model: "agent/z" }];
+    expect(resolveFallbackModel(orch, agents)).toBe("agent/y");
+  });
+
+  it("returns undefined when no model is configured anywhere", () => {
+    expect(
+      resolveFallbackModel({ model: undefined }, [{ model: undefined }]),
+    ).toBeUndefined();
+  });
+
+  it("resolves identically for first-run and resume inputs (no model drift)", () => {
+    const orch = { model: "global/x" };
+    const agents = [{ model: "agent/y" }];
+    // Both call sites now share this helper, so the two resolutions must match.
+    expect(resolveFallbackModel(orch, agents)).toBe(resolveFallbackModel(orch, agents));
+    expect(resolveFallbackModel(orch, agents)).toBe("global/x");
   });
 });

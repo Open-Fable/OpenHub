@@ -39,7 +39,9 @@ import {
   callLLM,
   callLLMWithTools,
   callLLMStreaming,
+  callLLMStructured,
   type ChatMessage,
+  type StructuredTool,
 } from "./orchestrator-llm.js";
 
 import { planIterationFixes, buildFixTask } from "./orchestrator-iterate.js";
@@ -88,11 +90,101 @@ import {
   MAX_AUTO_QUALITY_LOOPS,
 } from "./orchestrator-quality.js";
 import { findRenderProblems } from "./orchestrator-render.js";
+import { resolveDAG, resolveDAGWaves, findFailedDependency } from "./orchestrator-dag.js";
+import {
+  parseFilepathBlocks,
+  parseEditBlocks,
+  applyEdits,
+  detectTruncation,
+} from "./orchestrator-files.js";
+import {
+  isScratchWorkspaceReal,
+  isGitAvailable,
+  ensureGitBaseline,
+  addWorktree,
+  commitWorktree,
+  mergeWorktree,
+  removeWorktree,
+  type WorktreeHandle,
+} from "./orchestrator-worktree.js";
 
-// Parallel execution: how many pure-LLM nodes can run concurrently within a
-// wave. Set to 1 = strictly sequential (identical to the legacy behavior).
-// Backend nodes always run in a separate serial lane (size 1).
-const MAX_PARALLEL_NODES = 1;
+// Parallel execution: how many nodes can run concurrently within a DAG wave.
+// Configured per-orchestrator via orchSettings.maxParallelNodes; 1 = strictly
+// sequential (legacy behavior). Backend nodes (code/design) only parallelize
+// with git-worktree isolation on a scratch workspace (see runBackendWaveIsolated);
+// otherwise they fall back to a serial lane.
+const DEFAULT_MAX_PARALLEL_NODES = 3;
+const MAX_PARALLEL_NODES_CAP = 4;
+export const resolveMaxParallelNodes = (orchestrator: Project): number => {
+  const raw = orchestrator.orchSettings?.maxParallelNodes ?? DEFAULT_MAX_PARALLEL_NODES;
+  if (!Number.isFinite(raw)) return DEFAULT_MAX_PARALLEL_NODES;
+  return Math.min(Math.max(Math.floor(raw), 1), MAX_PARALLEL_NODES_CAP);
+};
+
+// Forced-tool schemas for verifier verdicts. Asking the model to CALL one of
+// these (tool_choice:"required") yields clean JSON arguments instead of free
+// text we have to scrape. callLLMStructured falls back to text if the provider
+// ignores the forcing, so the existing JSON parsers stay as the safety net.
+const QUALITY_VERDICT_TOOL: StructuredTool = {
+  name: "report_quality_verdict",
+  description: "Rapporter le verdict qualité global de l'orchestration.",
+  parameters: {
+    type: "object",
+    properties: {
+      pass: { type: "boolean", description: "true si la qualité globale est acceptable" },
+      issues: {
+        type: "array",
+        description: "Problèmes bloquants à corriger (vide si pass).",
+        items: {
+          type: "object",
+          properties: {
+            agent: { type: "string", description: "Nom de l'agent concerné" },
+            issue: { type: "string", description: "Problème constaté" },
+            fix: { type: "string", description: "Correction attendue" },
+          },
+          required: ["agent", "issue", "fix"],
+        },
+      },
+    },
+    required: ["pass", "issues"],
+  },
+};
+
+const PROMPT_VERDICT_TOOL: StructuredTool = {
+  name: "report_prompt_verdict",
+  description: "Indiquer si les tâches assignées aux agents sont valides et cohérentes.",
+  parameters: {
+    type: "object",
+    properties: {
+      valid: { type: "boolean", description: "true si les prompts/tâches sont valides" },
+    },
+    required: ["valid"],
+  },
+};
+
+const OUTPUT_VERDICT_TOOL: StructuredTool = {
+  name: "report_output_verdict",
+  description: "Rapporter si la sortie d'un agent est valide.",
+  parameters: {
+    type: "object",
+    properties: {
+      valid: { type: "boolean", description: "true si la sortie est valide" },
+      reason: { type: "string", description: "Raison synthétique si invalide" },
+      issues: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            severity: { type: "string", enum: ["critical", "warning", "info"] },
+            description: { type: "string" },
+          },
+          required: ["severity", "description"],
+        },
+      },
+    },
+    required: ["valid"],
+  },
+};
 
 const MAX_SUBSTEPS = 8;
 const MAX_PLANNING_ITERATIONS = 20;
@@ -108,6 +200,19 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_NODE_RETRIES = 5;
 const clampRetries = (n: number | undefined): number =>
   Math.min(Math.max(n ?? 3, 1), MAX_NODE_RETRIES);
+
+/**
+ * Modèle de repli pour les nœuds sans modèle propre.
+ * Priorité : modèle global de l'orchestrateur, puis premier agent qui en a un.
+ * Doit rester identique entre le premier run et chaque reprise/itération, sinon
+ * un workflow change de modèle en cours de route sans que l'UI ne le reflète.
+ */
+export function resolveFallbackModel(
+  orchestrator: Pick<Project, "model">,
+  linkedProjects: readonly Pick<Project, "model">[],
+): string | undefined {
+  return orchestrator.model || linkedProjects.find((p) => p.model)?.model || undefined;
+}
 
 // ── Concurrency helper ──────────────────────────────────────────────────────
 export async function mapWithConcurrency<T, R>(
@@ -128,200 +233,6 @@ export async function mapWithConcurrency<T, R>(
   const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
   await Promise.all(workers);
   return results;
-}
-
-// ── Extraction des fichiers depuis la sortie LLM ─────────────────────────────
-/**
- * Parse les blocs ```lang filepath: chemin … ``` d'une réponse d'agent.
- *
- * Robuste aux fences imbriquées de même longueur : un fichier dont le CONTENU
- * contient ses propres ``` (un README avec des exemples de code, un JSDoc
- * `@example`) ne doit pas être tronqué. La regex naïve `([\s\S]*?)```` se ferme
- * sur la PREMIÈRE fence interne et coupe le fichier en plein milieu. Ici, le
- * contenu d'un bloc va jusqu'à la DERNIÈRE fence de fermeture (longueur ≥ celle
- * de l'ouverture) avant le prochain marqueur `filepath:` ou la fin du texte —
- * les fences internes sont donc préservées comme contenu.
- *
- * Parsing ligne par ligne (pas de méga-regex) → linéaire, sans backtracking
- * catastrophique sur une sortie LLM adverse dans le process principal.
- */
-export function parseFilepathBlocks(
-  text: string,
-): ReadonlyArray<{ path: string; content: string }> {
-  const lines = text.split("\n");
-  // `(?![Ee][Dd][Ii][Tt]…)` reserves ```edit filepath: for surgical SEARCH/REPLACE
-  // blocks (parseEditBlocks) — otherwise this would parse them as a full-file write
-  // and dump the raw SEARCH/REPLACE markers into the file. Case-INSENSITIVE on
-  // "edit": a ```Edit / ```EDIT fence must be excluded here too, exactly matching
-  // parseEditBlocks' case-insensitive opener, or the markers corrupt the file.
-  const openerRe =
-    /^(`{3,})(?![Ee][Dd][Ii][Tt][ \t]+filepath:)[\w-]*[ \t]+filepath:[ \t]*(.+?)[ \t]*$/;
-  const openers: Array<{ line: number; filePath: string; fence: number }> = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m = openerRe.exec(lines[i]);
-    if (m) openers.push({ line: i, filePath: m[2].trim(), fence: m[1].length });
-  }
-
-  const blocks: Array<{ path: string; content: string }> = [];
-  for (let k = 0; k < openers.length; k++) {
-    const { line: openLine, filePath, fence } = openers[k];
-    const start = openLine + 1;
-    const boundary = k + 1 < openers.length ? openers[k + 1].line : lines.length;
-    const closeRe = new RegExp("^`{" + fence + ",}[ \\t]*$");
-    let end = boundary;
-    for (let j = boundary - 1; j >= start; j--) {
-      if (closeRe.test(lines[j])) {
-        end = j;
-        break;
-      }
-    }
-    blocks.push({ path: filePath, content: lines.slice(start, end).join("\n") });
-  }
-  return blocks;
-}
-
-// ── Édition chirurgicale (SEARCH/REPLACE) ────────────────────────────────────
-export interface SearchReplaceEdit {
-  readonly search: string;
-  readonly replace: string;
-}
-
-const EDIT_SEARCH_MARK = "<<<<<<< SEARCH";
-const EDIT_DIVIDER_MARK = "=======";
-const EDIT_REPLACE_MARK = ">>>>>>> REPLACE";
-
-function parseSearchReplacePairs(lines: readonly string[]): SearchReplaceEdit[] {
-  const edits: SearchReplaceEdit[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    if (lines[i].trim() !== EDIT_SEARCH_MARK) {
-      i++;
-      continue;
-    }
-    i++;
-    const search: string[] = [];
-    while (i < lines.length && lines[i].trim() !== EDIT_DIVIDER_MARK)
-      search.push(lines[i++]);
-    if (i >= lines.length) break; // malformed: no divider
-    i++;
-    const replace: string[] = [];
-    while (i < lines.length && lines[i].trim() !== EDIT_REPLACE_MARK)
-      replace.push(lines[i++]);
-    if (i >= lines.length) break; // malformed: no closing marker
-    i++;
-    edits.push({ search: search.join("\n"), replace: replace.join("\n") });
-  }
-  return edits;
-}
-
-/**
- * Parse les blocs ```edit filepath: chemin … ``` dont le contenu est une suite de
- * paires SEARCH/REPLACE. Permet à un agent de MODIFIER quelques lignes d'un fichier
- * existant sans le réémettre en entier :
- *
- *   ```edit filepath: index.html
- *   <<<<<<< SEARCH
- *   <h1>Ancien</h1>
- *   =======
- *   <h1>Nouveau</h1>
- *   >>>>>>> REPLACE
- *   ```
- *
- * Parsing ligne par ligne (pas de méga-regex) → linéaire, sans backtracking
- * catastrophique sur sortie LLM adverse.
- */
-export function parseEditBlocks(
-  text: string,
-): ReadonlyArray<{ path: string; edits: readonly SearchReplaceEdit[] }> {
-  const lines = text.split("\n");
-  // Case-insensitive on "edit"/"filepath" so ```Edit / ```EDIT are still routed
-  // here (and excluded from parseFilepathBlocks) instead of corrupting the file.
-  const openerRe = /^(`{3,})edit[ \t]+filepath:[ \t]*(.+?)[ \t]*$/i;
-  const openers: Array<{ line: number; filePath: string; fence: number }> = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m = openerRe.exec(lines[i]);
-    if (m) openers.push({ line: i, filePath: m[2].trim(), fence: m[1].length });
-  }
-
-  const blocks: Array<{ path: string; edits: readonly SearchReplaceEdit[] }> = [];
-  for (let k = 0; k < openers.length; k++) {
-    const { line: openLine, filePath, fence } = openers[k];
-    const start = openLine + 1;
-    const boundary = k + 1 < openers.length ? openers[k + 1].line : lines.length;
-    const closeRe = new RegExp("^`{" + fence + ",}[ \\t]*$");
-    let end = boundary;
-    for (let j = boundary - 1; j >= start; j--) {
-      if (closeRe.test(lines[j])) {
-        end = j;
-        break;
-      }
-    }
-    const edits = parseSearchReplacePairs(lines.slice(start, end));
-    if (edits.length > 0) blocks.push({ path: filePath, edits });
-  }
-  return blocks;
-}
-
-/**
- * Applique une suite de paires SEARCH/REPLACE à un contenu. ALL-OR-NOTHING : chaque
- * SEARCH doit correspondre EXACTEMENT une seule fois ; sinon l'édition entière
- * échoue et le contenu d'origine est renvoyé inchangé (l'appelant retombe alors
- * sur la réémission complète du fichier). Le match unique évite d'éditer la
- * mauvaise occurrence ; `replace` est traité comme littéral (pas de motif $).
- */
-export function applyEdits(
-  original: string,
-  edits: readonly SearchReplaceEdit[],
-): { ok: boolean; content: string; failedSearch?: string } {
-  let content = original;
-  for (const { search, replace } of edits) {
-    if (search.length === 0)
-      return { ok: false, content: original, failedSearch: search };
-    const first = content.indexOf(search);
-    const last = content.lastIndexOf(search);
-    if (first === -1 || first !== last) {
-      return { ok: false, content: original, failedSearch: search };
-    }
-    content = content.slice(0, first) + replace + content.slice(first + search.length);
-  }
-  return { ok: true, content };
-}
-
-// ── Détecteur déterministe de troncature ─────────────────────────────────────
-/**
- * Returns a short reason when a file's content looks cut off, else null.
- *
- * The output verifier used to GUESS truncation from a chat preview, and the
- * audit's own display cap was mistaken for disk truncation — wrongly failing
- * complete files and triggering destructive corrective cycles. This is the
- * factual signal that replaces the guess. Deliberately CONSERVATIVE (only
- * high-confidence cases) so it never raises a false alarm on a legitimately
- * short, clean deliverable.
- */
-export function detectTruncation(content: string): string | null {
-  const trimmed = content.replace(/\s+$/, "");
-  if (trimmed.length === 0) return "fichier vide";
-
-  // An odd number of ``` fences means a code block was opened but never closed.
-  const fenceCount = trimmed.split("```").length - 1;
-  if (fenceCount % 2 !== 0) return "bloc de code non fermé";
-
-  // HTML that opens <html> but never closes it.
-  if (/<html[\s>]/i.test(trimmed) && !/<\/html\s*>/i.test(trimmed)) {
-    return "balise </html> manquante";
-  }
-
-  // Ends mid-sentence: the last non-empty line is prose that stops on a letter
-  // or comma, with no terminal punctuation and no structural marker. Conservative
-  // length/shape guards avoid flagging headers, list items, table rows or files
-  // that simply close on a bracket/quote.
-  const lastLine = trimmed.slice(trimmed.lastIndexOf("\n") + 1).trim();
-  const endsClean = /[.!?:;)\]}>"\x60*|_]$/.test(lastLine) || /^[#\-*|>]/.test(lastLine);
-  if (!endsClean && lastLine.length > 30 && /[\p{L},]$/u.test(lastLine)) {
-    return `se termine en milieu de phrase : « …${lastLine.slice(-40)} »`;
-  }
-
-  return null;
 }
 
 // ── Tier « modèle léger » ────────────────────────────────────────────────────
@@ -618,12 +529,20 @@ export class OrchestratorRunner {
   // This is what stops the research/design agents from clobbering everyone else's
   // files with short rewrites. Shared paths (index, reports/) are never claimed.
   private readonly fileOwner = new Map<string, string>();
-  // Set for the duration of a node's execution so EVERY extractAndWriteFiles call
-  // it triggers (final write + multi-turn intermediate writes) is scoped.
-  private activeNodePathFilter: ((relPath: string) => boolean) | undefined;
+  // Serializes writes to the same relative path across concurrent nodes so two
+  // agents in the same wave can never interleave a read-modify-write on one file.
+  private readonly pathWriteLocks = new Map<string, Promise<unknown>>();
+  // nodeId → isolated git-worktree dir, set for backend nodes running in the
+  // parallel-code lane and cleared after the wave merges back.
+  private readonly nodeWorkspaces = new Map<string, string>();
+  // Set during a corrective cycle (iterate/auto-quality) to the ids being
+  // re-run, so the anti-parasitic free-path guard fires deterministically.
+  private correctiveNodeIds: ReadonlySet<string> | null = null;
   private fallbackModel: string | undefined = undefined;
   private fallbackReasoningEffort: string | undefined = undefined;
   private tierProfile: TierProfile = STRONG_TIER;
+  // Resolved once per run/iterate from orchSettings.maxParallelNodes.
+  private maxParallelNodes = 1;
 
   constructor(
     private sendStatus: (update: StatusUpdate) => void,
@@ -638,6 +557,20 @@ export class OrchestratorRunner {
     if (this.abortController) {
       this.abortController.abort();
     }
+  }
+
+  // Per-run state must not survive across run()/iterate() calls — the runner is a
+  // singleton (see ensureRunner in main.ts). A stale fileOwner would, on a second
+  // orchestration, mark every node as a "rerun" and silently refuse new free-path
+  // writes; stale backend counters would defeat trivial-result detection.
+  private resetPerRunState(): void {
+    this.fileOwner.clear();
+    this.pathWriteLocks.clear();
+    this.backendFilesWritten.clear();
+    this.backendWrittenPaths.clear();
+    this.nodeWorkspaces.clear();
+    this.correctiveNodeIds = null;
+    this.indexWriteLock = Promise.resolve();
   }
 
   /**
@@ -656,6 +589,7 @@ export class OrchestratorRunner {
     this.isRunning = true;
     this.currentOrchestratorId = orchestratorId;
     this.abortController = new AbortController();
+    this.resetPerRunState();
 
     try {
       let allProjects = await getProjects();
@@ -688,8 +622,7 @@ export class OrchestratorRunner {
       );
 
       // Resolve a fallback model: orchestrator's model first, then first agent with a model
-      this.fallbackModel =
-        orchestrator.model || linkedProjects.find((p) => p.model)?.model || undefined;
+      this.fallbackModel = resolveFallbackModel(orchestrator, linkedProjects);
       // Fail fast: with no model anywhere, getModel would fall back to a paid/likely
       // unreachable default and every node (planning, exec, verif) would fail with an
       // opaque proxy error. Surface a clear, actionable message before any LLM call.
@@ -711,6 +644,9 @@ export class OrchestratorRunner {
         ? WEAK_TIER
         : STRONG_TIER;
       console.warn(`[orchestrator] Tier: ${this.tierProfile.tier}`);
+
+      this.maxParallelNodes = resolveMaxParallelNodes(orchestrator);
+      console.warn(`[orchestrator] Max parallel nodes: ${this.maxParallelNodes}`);
 
       this.sendStatus({ projectId: orchestratorId, status: "running", workspaceDir });
       for (const p of linkedProjects) {
@@ -830,7 +766,7 @@ export class OrchestratorRunner {
       }
 
       // Step 4: Resolve Topological Order (DAG)
-      const executionOrder = this.resolveDAG(linkedProjects);
+      const executionOrder = resolveDAG(linkedProjects);
       console.warn(
         "[orchestrator] Execution order:",
         executionOrder.map((n) => n.name),
@@ -838,7 +774,7 @@ export class OrchestratorRunner {
 
       // Step 5: Execute each node
       const executeNodes =
-        MAX_PARALLEL_NODES > 1
+        this.maxParallelNodes > 1
           ? this.executeNodesWaves.bind(this)
           : this.executeNodesSequence.bind(this);
       const executionStatuses = await executeNodes(
@@ -994,12 +930,7 @@ export class OrchestratorRunner {
         throw new Error("Orchestration annulée par l'utilisateur.");
       }
 
-      const deps = node.dependencies || [];
-      const failedDep = deps.find(
-        (depId) =>
-          executionStatuses[depId] === "error" || executionStatuses[depId] === "skipped",
-      );
-
+      const failedDep = findFailedDependency(node, executionStatuses);
       if (failedDep) {
         console.warn(
           `[orchestrator] Skipping "${node.name}" — dependency "${failedDep}" is ${executionStatuses[failedDep]}`,
@@ -1028,7 +959,7 @@ export class OrchestratorRunner {
 
   /**
    * Execute nodes by wave (Kahn levels). Within each wave, pure-LLM nodes run
-   * with bounded concurrency (MAX_PARALLEL_NODES) while backend nodes run in a
+   * with bounded concurrency (this.maxParallelNodes) while backend nodes run in a
    * serial lane. Each node writes only its own key in executionStatuses /
    * executionResults — safe under concurrency.
    */
@@ -1044,7 +975,7 @@ export class OrchestratorRunner {
     checksMap: ChecksMap = {},
   ): Promise<Record<string, "done" | "error" | "skipped">> {
     const executionStatuses: Record<string, "done" | "error" | "skipped"> = {};
-    const waves = this.resolveDAGWaves(executionOrder);
+    const waves = resolveDAGWaves(executionOrder);
     console.warn(
       `[orchestrator] DAG resolved into ${waves.length} wave(s): ${waves.map((w, i) => `W${i}[${w.map((n) => n.name).join(", ")}]`).join(" → ")}`,
     );
@@ -1057,12 +988,7 @@ export class OrchestratorRunner {
       // Split wave: skip nodes whose deps failed, then partition by lane.
       const runnable: Project[] = [];
       for (const node of wave) {
-        const deps = node.dependencies || [];
-        const failedDep = deps.find(
-          (depId) =>
-            executionStatuses[depId] === "error" ||
-            executionStatuses[depId] === "skipped",
-        );
+        const failedDep = findFailedDependency(node, executionStatuses);
         if (failedDep) {
           console.warn(
             `[orchestrator] Skipping "${node.name}" — dependency "${failedDep}" is ${executionStatuses[failedDep]}`,
@@ -1074,8 +1000,7 @@ export class OrchestratorRunner {
         }
       }
 
-      // Two lanes: backend nodes run serially (lane size 1), LLM nodes
-      // run with bounded concurrency (MAX_PARALLEL_NODES).
+      // Lane split: pure-LLM nodes vs backend (code/design) nodes.
       const backendNodes = runnable.filter((n) => selectBackend(n.type) !== null);
       const llmNodes = runnable.filter((n) => selectBackend(n.type) === null);
 
@@ -1093,14 +1018,130 @@ export class OrchestratorRunner {
           checksMap,
         );
 
-      // Run both lanes concurrently; each lane internally bounded.
-      await Promise.all([
-        mapWithConcurrency(backendNodes, 1, runNode),
-        mapWithConcurrency(llmNodes, MAX_PARALLEL_NODES, runNode),
-      ]);
+      // ≥2 backend agents can run concurrently ONLY with git-worktree isolation
+      // on a scratch workspace — their tools write the same dir otherwise and
+      // would clobber each other. Without it, the backend lane stays serial.
+      const useWorktrees =
+        this.maxParallelNodes > 1 &&
+        backendNodes.length > 1 &&
+        (await isScratchWorkspaceReal(workspaceDir)) &&
+        (await isGitAvailable());
+
+      if (useWorktrees) {
+        // LLM lane first (to completion) so the main workspace is stable while we
+        // snapshot it into git and merge worktrees back — no concurrent writes.
+        await mapWithConcurrency(llmNodes, this.maxParallelNodes, runNode);
+        try {
+          await this.runBackendWaveIsolated(
+            backendNodes,
+            workspaceDir,
+            runNode,
+            executionStatuses,
+          );
+        } catch (err: unknown) {
+          // A user cancel must still abort. But an infra failure setting up git
+          // isolation should DEGRADE to the serial lane, not kill the whole run.
+          if (this.abortController?.signal.aborted) throw err;
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(
+            `[orchestrator] Worktree isolation failed (${msg}) — backend lane falling back to serial.`,
+          );
+          await mapWithConcurrency(backendNodes, 1, runNode);
+        }
+      } else {
+        if (this.maxParallelNodes > 1 && backendNodes.length > 1) {
+          console.warn(
+            `[orchestrator] ${backendNodes.length} backend nodes can't be isolated (non-scratch workspace or git unavailable) — running them serially.`,
+          );
+        }
+        await Promise.all([
+          mapWithConcurrency(backendNodes, 1, runNode),
+          mapWithConcurrency(llmNodes, this.maxParallelNodes, runNode),
+        ]);
+      }
     }
 
     return executionStatuses;
+  }
+
+  /**
+   * Run a wave's backend nodes concurrently, each in its own git worktree, then
+   * merge results back into the main workspace sequentially. A merge conflict
+   * downgrades the node to "error" and is surfaced — never silently dropped.
+   */
+  private async runBackendWaveIsolated(
+    backendNodes: readonly Project[],
+    workspaceDir: string,
+    runNode: (node: Project) => Promise<void>,
+    executionStatuses: Record<string, "done" | "error" | "skipped">,
+  ): Promise<void> {
+    await ensureGitBaseline(workspaceDir);
+    const handles = new Map<string, WorktreeHandle>();
+    // If creating any worktree fails partway, tear down the ones already created
+    // so we never leak git state or leave stale nodeWorkspaces entries (which
+    // would poison later waves — runOneNode would resolve a deleted dir).
+    try {
+      for (const node of backendNodes) {
+        const h = await addWorktree(workspaceDir, node.id);
+        handles.set(node.id, h);
+        this.nodeWorkspaces.set(node.id, h.dir);
+      }
+    } catch (err: unknown) {
+      for (const [id, h] of handles) {
+        this.nodeWorkspaces.delete(id);
+        await removeWorktree(workspaceDir, h);
+      }
+      throw err;
+    }
+    console.warn(
+      `[orchestrator] Parallel-code lane: ${backendNodes.length} agents in isolated worktrees.`,
+    );
+
+    try {
+      await mapWithConcurrency(backendNodes, this.maxParallelNodes, runNode);
+    } finally {
+      for (const node of backendNodes) this.nodeWorkspaces.delete(node.id);
+    }
+
+    // If the user cancelled mid-wave, don't apply any merges (that would mutate
+    // the workspace after a stop request) — just clean up the worktrees.
+    if (this.abortController?.signal.aborted) {
+      for (const h of handles.values()) await removeWorktree(workspaceDir, h);
+      return;
+    }
+
+    // Merge sequentially — each merge mutates the shared repo.
+    for (const node of backendNodes) {
+      const h = handles.get(node.id);
+      if (!h) continue;
+      try {
+        if (executionStatuses[node.id] === "done" && (await commitWorktree(h))) {
+          const res = await mergeWorktree(workspaceDir, h);
+          if (res.ok) {
+            // Register the merged deliverables in the shared ownership map so a
+            // later (non-isolated) node can't clobber them and a corrective
+            // rerun is correctly treated as a rerun, not a free-path first run.
+            this.claimOwnership(node.id, this.backendWrittenPaths.get(node.id) ?? []);
+          } else {
+            executionStatuses[node.id] = "error";
+            const detail = `Conflit de fusion (${res.conflicts.join(", ") || "fichiers inconnus"})`;
+            console.error(`[orchestrator] Merge conflict for "${node.name}": ${detail}`);
+            this.sendStatus({ projectId: node.id, status: "error", error: detail });
+          }
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[orchestrator] Worktree merge failed for "${node.name}": ${msg}`);
+        executionStatuses[node.id] = "error";
+        this.sendStatus({
+          projectId: node.id,
+          status: "error",
+          error: `Fusion worktree échouée — ${msg.substring(0, 160)}`,
+        });
+      } finally {
+        await removeWorktree(workspaceDir, h);
+      }
+    }
   }
 
   private async runOneNode(
@@ -1111,7 +1152,7 @@ export class OrchestratorRunner {
     executionStatuses: Record<string, "done" | "error" | "skipped">,
     workspaceContext: string,
     plannedSteps: Record<string, SubStep[]>,
-    workspaceDir: string,
+    mainWorkspaceDir: string,
     expectedFilesMap: Record<string, readonly string[]>,
     checksMap: ChecksMap,
   ): Promise<void> {
@@ -1120,6 +1161,11 @@ export class OrchestratorRunner {
     );
     console.warn(`[orchestrator]   Task: "${(node.task || "").substring(0, 120)}"`);
     this.sendStatus({ projectId: node.id, status: "running" });
+
+    // A backend node running in an isolated git worktree (parallel-code lane)
+    // does ALL its disk work in that worktree; everything else uses the main
+    // workspace. The shared WORKSPACE_INDEX.md always stays in the main dir.
+    const workspaceDir = this.nodeWorkspaces.get(node.id) ?? mainWorkspaceDir;
 
     const nodeExpectedFiles = expectedFilesMap[node.id] ?? [];
     const declaredNodeChecks: Record<string, FileChecks> = {};
@@ -1133,14 +1179,18 @@ export class OrchestratorRunner {
     );
     // Scope every write this node makes (final + multi-turn intermediate) to its
     // own files, so a corrective relaunch can't clobber siblings' deliverables.
-    const nodePathFilter = this.buildNodePathFilter(node.id, nodeExpectedFiles);
-    this.activeNodePathFilter = nodePathFilter;
+    // An isolated worktree node skips this scoping — it owns its whole checkout,
+    // and isValidFilePath (in extractAndWriteFiles) still blocks path escapes.
+    const nodePathFilter = this.nodeWorkspaces.has(node.id)
+      ? () => true
+      : this.buildNodePathFilter(node.id, nodeExpectedFiles);
     try {
       let resultText = await this.executeNode(
         node,
         allProjects,
         executionResults,
         workspaceContext,
+        nodePathFilter,
         plannedSteps[node.id],
         workspaceDir,
         expectedFilesMap[node.id],
@@ -1166,6 +1216,7 @@ export class OrchestratorRunner {
         resultText,
         workspaceDir,
         nodePathFilter,
+        node.id,
         bwp.length > 0 ? new Set(bwp) : undefined,
       );
       this.claimOwnership(node.id, writtenFiles);
@@ -1209,6 +1260,7 @@ export class OrchestratorRunner {
                   text,
                   workspaceDir,
                   nodePathFilter,
+                  node.id,
                   bwp.length > 0 ? new Set(bwp) : undefined,
                 );
                 this.claimOwnership(node.id, w);
@@ -1309,14 +1361,12 @@ export class OrchestratorRunner {
       executionStatuses[node.id] = "done";
       executionResults.set(node.id, resultText);
       this.sendStatus({ projectId: node.id, status: "done", result: resultText });
-      await this.updateWorkspaceIndex(node, resultText, workspaceDir);
+      await this.updateWorkspaceIndex(node, resultText, mainWorkspaceDir);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[orchestrator] Node "${node.name}" failed:`, msg);
       executionStatuses[node.id] = "error";
       this.sendStatus({ projectId: node.id, status: "error", error: msg });
-    } finally {
-      this.activeNodePathFilter = undefined;
     }
   }
 
@@ -1337,6 +1387,7 @@ export class OrchestratorRunner {
     this.isRunning = true;
     this.currentOrchestratorId = orchestratorId;
     this.abortController = new AbortController();
+    this.resetPerRunState();
 
     try {
       const allProjects = await getProjects();
@@ -1350,9 +1401,15 @@ export class OrchestratorRunner {
       const linkedIds = orchestrator.linked || [];
       const linkedProjects = allProjects.filter((p) => linkedIds.includes(p.id));
 
-      const agentWithModel = linkedProjects.find((p) => p.model);
-      this.fallbackModel = agentWithModel?.model ?? undefined;
+      // Same precedence as run() — keeps the resolved model stable across resume.
+      this.fallbackModel = resolveFallbackModel(orchestrator, linkedProjects);
       this.fallbackReasoningEffort = orchestrator.reasoningEffort || undefined;
+      this.maxParallelNodes = resolveMaxParallelNodes(orchestrator);
+      // Resolve the tier here too — without this the singleton runner would reuse
+      // whatever tier the previous run() set (e.g. WEAK from another orchestrator).
+      this.tierProfile = orchestrator.orchSettings?.adaptToWeakModel
+        ? WEAK_TIER
+        : STRONG_TIER;
 
       const workspaceDir = this.resolveWorkspaceDir(orchestrator, workDir, workflowName);
       const wsExists = await fs
@@ -1467,23 +1524,32 @@ export class OrchestratorRunner {
     }
 
     const subset = refreshedLinked.filter((p) => fixes[p.id]);
-    const executionOrder = this.resolveDAG(subset);
+    const executionOrder = resolveDAG(subset);
 
     const executeNodes =
-      MAX_PARALLEL_NODES > 1
+      this.maxParallelNodes > 1
         ? this.executeNodesWaves.bind(this)
         : this.executeNodesSequence.bind(this);
-    const statuses = await executeNodes(
-      orchestrator,
-      executionOrder,
-      allProjects,
-      executionResults,
-      wsContext,
-      {},
-      workspaceDir,
-      expectedFilesMap,
-      checksMap,
-    );
+    // These nodes ARE reruns by definition (corrective relaunch). Mark them so
+    // buildNodePathFilter applies the anti-parasitic guard deterministically,
+    // without depending on stale fileOwner state carried across run()/iterate().
+    this.correctiveNodeIds = new Set(fixedIds);
+    let statuses: Record<string, "done" | "error" | "skipped">;
+    try {
+      statuses = await executeNodes(
+        orchestrator,
+        executionOrder,
+        allProjects,
+        executionResults,
+        wsContext,
+        {},
+        workspaceDir,
+        expectedFilesMap,
+        checksMap,
+      );
+    } finally {
+      this.correctiveNodeIds = null;
+    }
 
     return { statuses, results: executionResults };
   }
@@ -1592,12 +1658,12 @@ export class OrchestratorRunner {
       brokenAssetsReport,
     });
 
-    const response = await callLLM(
+    const response = await callLLMStructured(
       verifier,
       systemPrompt,
       userPrompt,
+      QUALITY_VERDICT_TOOL,
       this.abortSignal,
-      true,
       this.fallbackModel,
       this.fallbackReasoningEffort,
     );
@@ -1821,99 +1887,6 @@ export class OrchestratorRunner {
         executionResults.set(id, result);
       }
     }
-  }
-
-  private resolveDAG(nodes: Project[]): Project[] {
-    const visited = new Set<string>();
-    const tempVisited = new Set<string>();
-    const order: Project[] = [];
-
-    const visit = (node: Project) => {
-      if (visited.has(node.id)) return;
-      if (tempVisited.has(node.id)) {
-        const cycle = [...tempVisited, node.id];
-        const names = cycle.map((id) => {
-          const n = nodes.find((p) => p.id === id);
-          return n ? `"${n.name}" (${id})` : id;
-        });
-        console.error(
-          `[orchestrator] Circular dependency detected: ${names.join(" → ")}`,
-        );
-        throw new Error("Dépendance circulaire détectée dans le graphe de projets.");
-      }
-
-      tempVisited.add(node.id);
-
-      const deps = node.dependencies || [];
-      for (const depId of deps) {
-        const depNode = nodes.find((n) => n.id === depId);
-        if (depNode) visit(depNode);
-      }
-
-      tempVisited.delete(node.id);
-      visited.add(node.id);
-      order.push(node);
-    };
-
-    for (const node of nodes) {
-      visit(node);
-    }
-
-    return order;
-  }
-
-  /**
-   * Kahn-based topological sort that groups nodes into execution waves.
-   * Wave N contains only nodes whose dependencies all completed in waves < N.
-   * Stable intra-wave order (insertion order preserved).
-   */
-  resolveDAGWaves(nodes: readonly Project[]): Project[][] {
-    const nodeMap = new Map<string, Project>();
-    for (const n of nodes) nodeMap.set(n.id, n);
-
-    const inDegree = new Map<string, number>();
-    for (const n of nodes) {
-      if (!inDegree.has(n.id)) inDegree.set(n.id, 0);
-      for (const depId of n.dependencies ?? []) {
-        if (!nodeMap.has(depId)) continue;
-        inDegree.set(n.id, (inDegree.get(n.id) ?? 0) + 1);
-      }
-    }
-
-    const waves: Project[][] = [];
-    const remaining = new Set(nodes.map((n) => n.id));
-
-    while (remaining.size > 0) {
-      const wave: Project[] = [];
-      for (const id of remaining) {
-        if ((inDegree.get(id) ?? 0) === 0) {
-          wave.push(nodeMap.get(id)!);
-        }
-      }
-
-      if (wave.length === 0) {
-        const stuck = [...remaining].map((id) => {
-          const n = nodeMap.get(id);
-          return n ? `"${n.name}" (${id})` : id;
-        });
-        console.error(
-          `[orchestrator] Circular dependency detected among: ${stuck.join(", ")}`,
-        );
-        throw new Error("Dépendance circulaire détectée dans le graphe de projets.");
-      }
-
-      waves.push(wave);
-      for (const n of wave) {
-        remaining.delete(n.id);
-        for (const other of nodes) {
-          if ((other.dependencies ?? []).includes(n.id)) {
-            inDegree.set(other.id, (inDegree.get(other.id) ?? 1) - 1);
-          }
-        }
-      }
-    }
-
-    return waves;
   }
 
   private resolveDepRef(
@@ -2362,12 +2335,12 @@ export class OrchestratorRunner {
       promptsMap,
       linkedProjects,
     );
-    const response = await callLLM(
+    const response = await callLLMStructured(
       verifier,
       systemPrompt,
       userPrompt,
+      PROMPT_VERDICT_TOOL,
       this.abortSignal,
-      true,
       this.fallbackModel,
       this.fallbackReasoningEffort,
     );
@@ -2419,12 +2392,12 @@ export class OrchestratorRunner {
     console.warn(
       `[orchestrator:verify] Verifying output for "${node.name}" (disk evidence: ${diskEvidence.length} chars, result preview: ${resultText.substring(0, 80)}...)`,
     );
-    const response = await callLLM(
+    const response = await callLLMStructured(
       verifier,
       systemPrompt,
       userPrompt,
+      OUTPUT_VERDICT_TOOL,
       this.abortSignal,
-      true,
       this.fallbackModel,
       this.fallbackReasoningEffort,
     );
@@ -2597,6 +2570,7 @@ export class OrchestratorRunner {
     allProjects: readonly Project[],
     executionResults: ReadonlyMap<string, string>,
     workspaceContext: string,
+    pathFilter: (relPath: string) => boolean,
     plannedSteps?: readonly SubStep[],
     workspaceDir?: string,
     expectedFiles?: readonly string[],
@@ -2689,9 +2663,14 @@ export class OrchestratorRunner {
           appUserPrompt = `${appUserPrompt}\n\n${WEAK_BACKEND_DIRECTIVE}`;
         }
 
+        // In an isolated worktree the agent has its own full checkout, so it must
+        // NOT be denied edits to sibling files — that deny-list is a shared-workspace
+        // guard only. Conflicts are caught at merge time instead.
         const otherOwnedPaths: string[] = [];
-        for (const [relPath, ownerId] of this.fileOwner) {
-          if (ownerId !== node.id) otherOwnedPaths.push(relPath);
+        if (!this.nodeWorkspaces.has(node.id)) {
+          for (const [relPath, ownerId] of this.fileOwner) {
+            if (ownerId !== node.id) otherOwnedPaths.push(relPath);
+          }
         }
 
         const pm = this.getProcessManager?.();
@@ -2764,6 +2743,7 @@ export class OrchestratorRunner {
         workspaceContext,
         depContext,
         systemPrompt,
+        pathFilter,
         plannedSteps,
         workspaceDir,
       );
@@ -2776,6 +2756,7 @@ export class OrchestratorRunner {
         workspaceContext,
         depContext,
         systemPrompt,
+        pathFilter,
         undefined,
         workspaceDir,
       );
@@ -2793,6 +2774,7 @@ export class OrchestratorRunner {
           workspaceContext,
           depContext,
           systemPrompt,
+          pathFilter,
           undefined,
           workspaceDir,
         );
@@ -2803,6 +2785,7 @@ export class OrchestratorRunner {
           workspaceContext,
           depContext,
           systemPrompt,
+          pathFilter,
           workspaceDir,
           targetWords,
         );
@@ -2816,6 +2799,7 @@ export class OrchestratorRunner {
         workspaceContext,
         depContext,
         systemPrompt,
+        pathFilter,
         workspaceDir,
         targetWords,
       );
@@ -2942,6 +2926,7 @@ export class OrchestratorRunner {
     workspaceContext: string,
     depContext: string,
     systemPrompt: string,
+    pathFilter: (relPath: string) => boolean,
     workspaceDir: string,
     targetWords = 0,
   ): Promise<string> {
@@ -2985,7 +2970,12 @@ export class OrchestratorRunner {
       );
       accumulated += (iter > 1 ? "\n\n" : "") + response;
 
-      const writtenFiles = await this.extractAndWriteFiles(response, workspaceDir);
+      const writtenFiles = await this.extractAndWriteFiles(
+        response,
+        workspaceDir,
+        pathFilter,
+        node.id,
+      );
       if (writtenFiles.length > 0) {
         console.warn(
           `[orchestrator:multi] ${node.name} — iter ${iter}: wrote ${writtenFiles.length} files: ${writtenFiles.join(", ")}`,
@@ -3054,6 +3044,7 @@ export class OrchestratorRunner {
     workspaceContext: string,
     depContext: string,
     systemPrompt: string,
+    pathFilter: (relPath: string) => boolean,
     preDefinedSteps?: readonly SubStep[],
     workspaceDir?: string,
   ): Promise<string> {
@@ -3089,6 +3080,7 @@ export class OrchestratorRunner {
             workspaceContext,
             depContext,
             systemPrompt,
+            pathFilter,
             workspaceDir,
           )
         : await this.executeSingleCall(node, workspaceContext, depContext, systemPrompt);
@@ -3123,6 +3115,7 @@ export class OrchestratorRunner {
               workspaceContext,
               depContext,
               systemPrompt,
+              pathFilter,
               workspaceDir,
             )
           : await this.executeSubStepSingle(
@@ -3237,6 +3230,7 @@ export class OrchestratorRunner {
     workspaceContext: string,
     depContext: string,
     systemPrompt: string,
+    pathFilter: (relPath: string) => boolean,
     workspaceDir: string,
   ): Promise<string> {
     const MAX_ITER = this.tierProfile.maxSubStepIterations;
@@ -3281,7 +3275,12 @@ export class OrchestratorRunner {
       );
       accumulated += (iter > 1 ? "\n\n" : "") + response;
 
-      const writtenFiles = await this.extractAndWriteFiles(response, workspaceDir);
+      const writtenFiles = await this.extractAndWriteFiles(
+        response,
+        workspaceDir,
+        pathFilter,
+        node.id,
+      );
       if (writtenFiles.length > 0) {
         console.warn(
           `[orchestrator:multi] ${node.name} step ${step.index + 1} iter ${iter}: wrote ${writtenFiles.join(", ")}`,
@@ -3450,10 +3449,13 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
     nodeId: string,
     nodeExpectedFiles: readonly string[],
   ): (relPath: string) => boolean {
-    // A node that already owns files is on a corrective relaunch: it may rewrite
-    // ITS files but must NOT mint new free paths (that's how a parasitic public/
-    // site got spawned). On the first run (no ownership yet) free paths are open.
-    const isRerun = [...this.fileOwner.values()].includes(nodeId);
+    // A node on a corrective relaunch may rewrite ITS files but must NOT mint new
+    // free paths (that's how a parasitic public/ site got spawned). On a first run
+    // free paths are open. The corrective set is authoritative when present;
+    // otherwise fall back to ownership (covers within-run reruns).
+    const isRerun =
+      this.correctiveNodeIds?.has(nodeId) ??
+      [...this.fileOwner.values()].includes(nodeId);
     return (p: string): boolean => {
       if (OrchestratorRunner.isSharedPath(p)) return true;
       if (nodeExpectedFiles.includes(p)) return true;
@@ -3466,6 +3468,10 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
 
   // First writer of a non-shared path claims ownership for its node.
   private claimOwnership(nodeId: string, written: readonly string[]): void {
+    // Isolated worktree nodes opt out of the shared-workspace ownership map: the
+    // worktree IS their isolation and merge resolves conflicts, so claiming paths
+    // here would only mislead later (non-isolated) nodes.
+    if (this.nodeWorkspaces.has(nodeId)) return;
     for (const p of written) {
       if (OrchestratorRunner.isSharedPath(p)) continue;
       if (!this.fileOwner.has(p)) this.fileOwner.set(p, nodeId);
@@ -3475,7 +3481,8 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
   private async extractAndWriteFiles(
     resultText: string,
     workspaceDir: string,
-    pathFilter?: (relPath: string) => boolean,
+    pathFilter: (relPath: string) => boolean,
+    nodeId: string,
     skipPaths?: ReadonlySet<string>,
   ): Promise<string[]> {
     const written: string[] = [];
@@ -3492,11 +3499,10 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
         if (full !== null) seen.add(full);
       }
     }
-    // Explicit filter wins; otherwise fall back to the executing node's scope so
-    // intermediate (multi-turn) writes are gated too, not just the final write.
-    const filter = pathFilter ?? this.activeNodePathFilter;
+    // The node's path filter scopes every write (final + multi-turn intermediate)
+    // to files it owns, so a concurrent sibling can't be clobbered.
     const accept = (p: string): boolean =>
-      OrchestratorRunner.isValidFilePath(p) && (!filter || filter(p));
+      OrchestratorRunner.isValidFilePath(p) && pathFilter(p);
 
     // Pre-pass: surgical ```edit filepath: SEARCH/REPLACE blocks. Patch the file
     // ON DISK instead of rewriting it whole. ALL-OR-NOTHING per file — a failed
@@ -3529,6 +3535,7 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
         res.content,
         written,
         seen,
+        nodeId,
       );
     }
 
@@ -3546,7 +3553,14 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
         continue;
       }
       if (written.length >= MAX_WRITTEN_FILES) break;
-      await this.tryWriteWorkspaceFile(workspaceDir, filePath, content, written, seen);
+      await this.tryWriteWorkspaceFile(
+        workspaceDir,
+        filePath,
+        content,
+        written,
+        seen,
+        nodeId,
+      );
     }
 
     // Secondary: match **Fichier: `path/to/file`** then ```...``` pattern. Runs
@@ -3559,7 +3573,14 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
       const content = match[2];
       if (!content || !accept(filePath)) continue;
       if (written.length >= MAX_WRITTEN_FILES) break;
-      await this.tryWriteWorkspaceFile(workspaceDir, filePath, content, written, seen);
+      await this.tryWriteWorkspaceFile(
+        workspaceDir,
+        filePath,
+        content,
+        written,
+        seen,
+        nodeId,
+      );
     }
 
     // Tertiary: inline path comments (// filepath: ..., <!-- filepath: ... -->).
@@ -3573,7 +3594,14 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
       if (curPath === null) return;
       const content = buf.join("\n");
       if (content.trim() && accept(curPath) && written.length < MAX_WRITTEN_FILES) {
-        await this.tryWriteWorkspaceFile(workspaceDir, curPath, content, written, seen);
+        await this.tryWriteWorkspaceFile(
+          workspaceDir,
+          curPath,
+          content,
+          written,
+          seen,
+          nodeId,
+        );
       }
     };
     for (const line of lines) {
@@ -3593,12 +3621,29 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
 
   // Centralizes the mkdir+write for an LLM-emitted file, enforcing the per-file
   // size cap and the workspace containment check. Pushes to `written` on success.
+  // Serialize physical writes to one path (mirror of indexWriteLock, keyed by
+  // path) so a shared path or an edit's read-modify-write can't interleave
+  // between two concurrent writers. Errors don't poison the chain.
+  private withPathLock<T>(fullPath: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.pathWriteLocks.get(fullPath) ?? Promise.resolve();
+    const run = prev.then(fn, fn);
+    this.pathWriteLocks.set(
+      fullPath,
+      run.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return run;
+  }
+
   private async tryWriteWorkspaceFile(
     workspaceDir: string,
     filePath: string,
     content: string,
     written: string[],
-    seen?: Set<string>,
+    seen: Set<string>,
+    nodeId: string,
   ): Promise<void> {
     if (Buffer.byteLength(content, "utf-8") > MAX_FILE_BYTES) {
       console.warn(
@@ -3613,25 +3658,46 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
       );
       return;
     }
-    if (seen?.has(fullPath)) return; // already written this call (first-writer-wins)
-    try {
-      await fs.mkdir(path.dirname(fullPath), { recursive: true });
-      // The lexical check above can be defeated by a symlink planted inside the
-      // workspace. Re-confirm the realpath of the parent dir is still inside the
-      // workspace, and refuse to follow a symlinked target file.
-      if (!(await isContainedRealPath(workspaceDir, fullPath))) {
+    if (seen.has(fullPath)) return; // already written this call (first-writer-wins)
+
+    // Atomic cross-node ownership claim. The check-and-set runs synchronously
+    // (no await before it), so two nodes in the same wave can't both claim the
+    // same free path — the first to reach here wins, the loser is refused rather
+    // than silently clobbering the file on disk. Shared paths (reports/, index)
+    // are exempt and rely on their own serialization (e.g. indexWriteLock).
+    // Isolated worktree nodes are exempt too: the same relative path in two
+    // separate worktrees is NOT a conflict (merge resolves it later).
+    if (!OrchestratorRunner.isSharedPath(filePath) && !this.nodeWorkspaces.has(nodeId)) {
+      const owner = this.fileOwner.get(filePath);
+      if (owner !== undefined && owner !== nodeId) {
         console.warn(
-          `[orchestrator:files] Rejected symlink-escaping path: ${filePath.substring(0, 80)}`,
+          `[orchestrator:files] Refus d'écriture concurrente sur ${filePath.substring(0, 80)} — appartient à "${owner}"`,
         );
         return;
       }
-      await fs.writeFile(fullPath, content, { encoding: "utf-8", flag: "w" });
-      seen?.add(fullPath);
-      written.push(filePath);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[orchestrator:files] Failed to write ${filePath}: ${msg}`);
+      if (owner === undefined) this.fileOwner.set(filePath, nodeId);
     }
+
+    await this.withPathLock(fullPath, async () => {
+      try {
+        await fs.mkdir(path.dirname(fullPath), { recursive: true });
+        // The lexical check above can be defeated by a symlink planted inside the
+        // workspace. Re-confirm the realpath of the parent dir is still inside the
+        // workspace, and refuse to follow a symlinked target file.
+        if (!(await isContainedRealPath(workspaceDir, fullPath))) {
+          console.warn(
+            `[orchestrator:files] Rejected symlink-escaping path: ${filePath.substring(0, 80)}`,
+          );
+          return;
+        }
+        await fs.writeFile(fullPath, content, { encoding: "utf-8", flag: "w" });
+        seen.add(fullPath);
+        written.push(filePath);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[orchestrator:files] Failed to write ${filePath}: ${msg}`);
+      }
+    });
   }
 
   private async updateWorkspaceIndex(

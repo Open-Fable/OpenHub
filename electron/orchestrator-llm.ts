@@ -108,6 +108,7 @@ export async function callLLMWithTools(
   signal?: AbortSignal,
   fallbackModel?: string,
   fallbackReasoningEffort?: string,
+  toolChoice?: "auto" | "required",
 ): Promise<ToolCallResponse> {
   const body: Record<string, unknown> = {
     model: getModel(node, fallbackModel),
@@ -118,6 +119,7 @@ export async function callLLMWithTools(
     stream: false,
     bypassInjection: true,
   };
+  if (toolChoice) body.tool_choice = toolChoice;
   const effort = getReasoningEffort(node, fallbackReasoningEffort);
   if (effort) body.reasoning_effort = effort;
 
@@ -156,6 +158,46 @@ export async function callLLMWithTools(
     tool_calls: choice?.message?.tool_calls,
   };
   return { message: msg, finishReason: choice?.finish_reason ?? "stop" };
+}
+
+export interface StructuredTool {
+  readonly name: string;
+  readonly description: string;
+  readonly parameters: Record<string, unknown>;
+}
+
+/**
+ * Ask the model for a structured verdict by forcing a single tool call. Returns
+ * the tool-call arguments as a JSON string. If the provider ignores the forcing
+ * and replies in plain text, the raw content is returned instead so the caller's
+ * existing JSON extractor can still salvage it. Empty string if nothing usable —
+ * callers treat that as fail-closed.
+ */
+export async function callLLMStructured(
+  node: Project,
+  systemPrompt: string,
+  userPrompt: string,
+  tool: StructuredTool,
+  signal?: AbortSignal,
+  fallbackModel?: string,
+  fallbackReasoningEffort?: string,
+): Promise<string> {
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
+  const { message } = await callLLMWithTools(
+    node,
+    messages,
+    [{ type: "function", function: tool }],
+    signal,
+    fallbackModel,
+    fallbackReasoningEffort,
+    "required",
+  );
+  const args = message.tool_calls?.[0]?.function?.arguments;
+  if (args !== undefined && args.trim().length > 0) return args;
+  return message.content ?? "";
 }
 
 export async function callLLMStreaming(
