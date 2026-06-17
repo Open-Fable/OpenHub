@@ -68,7 +68,6 @@ import {
   findCsvColumnProblems,
   findPlaceholderDeliverables,
   findUnreferencedModules,
-  findModuleGraphProblems,
   findOrphanStylesheets,
   findServedHtmlPlaceholders,
   findStructuredDataMismatch,
@@ -89,6 +88,7 @@ import {
   MIN_RESULT_CHARS,
   MAX_AUTO_QUALITY_LOOPS,
 } from "./orchestrator-quality.js";
+import { findModuleGraphProblems } from "./orchestrator-module-graph.js";
 import { findRenderProblems } from "./orchestrator-render.js";
 import { resolveDAG, resolveDAGWaves, findFailedDependency } from "./orchestrator-dag.js";
 import {

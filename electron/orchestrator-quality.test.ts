@@ -22,7 +22,6 @@ import {
   findCsvColumnProblems,
   findPlaceholderDeliverables,
   findUnreferencedModules,
-  findModuleGraphProblems,
   findOrphanStylesheets,
   findServedHtmlPlaceholders,
   findStructuredDataMismatch,
@@ -39,6 +38,7 @@ import {
   MIN_RESULT_CHARS,
   MIN_FILE_BYTES,
 } from "./orchestrator-quality.js";
+import { findModuleGraphProblems } from "./orchestrator-module-graph.js";
 import type { Project } from "./project-store.js";
 
 function makeProject(overrides: Partial<Project> = {}): Project {
