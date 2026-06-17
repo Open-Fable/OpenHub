@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tools — OpenHub</title>
+    <meta name="description" content="Chat, Orchestrator, Code, Design, Work, and Memory. Everything OpenHub does, explained in depth: what each tool is for and exactly what you can do with it." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M 20.27 6.41 A 10.5 10.5 0 0 1 26.44 17.10'/%3E%3Cpath d='M 22.17 24.49 A 10.5 10.5 0 0 1 9.83 24.49'/%3E%3Cpath d='M 5.56 17.10 A 10.5 10.5 0 0 1 11.73 6.41'/%3E%3C/g%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <header class="nav">
+      <div class="container nav-inner">
+        <a href="index.html" class="nav-logo">
+          <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+          OpenHub
+        </a>
+        <nav class="nav-links">
+          <a href="tools.html" class="hide-sm" aria-current="page">Tools</a>
+          <a href="how-it-works.html" class="hide-sm">How it works</a>
+          <a href="privacy.html" class="hide-sm">Privacy</a>
+          <a href="faq.html" class="hide-sm">FAQ</a>
+          <a href="tools.fr.html" class="nav-lang">FR</a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-sm btn-secondary">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ── Page hero ────────────────────────────────────────────── -->
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">Tools</div>
+        <h1>Five tools. One window. Shared everything.</h1>
+        <p class="lead">
+          Two of these are built into OpenHub: the chat and the orchestrator.
+          Three are mature open-source tools, OpenCode, Open Design, and OpenWork,
+          wrapped without touching a line of their source. Whichever you open, it
+          uses the same API keys, the same theme, the same memory, and the same
+          project context. Here's exactly what each one does.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── Tools ────────────────────────────────────────────────── -->
+    <section class="section--tight">
+      <div class="container">
+
+        <!-- Chat -->
+        <div class="feature" id="chat">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+              <span class="feature-kicker">Built into OpenHub</span>
+            </div>
+            <h2>Chat</h2>
+            <p class="one-liner">Talk to any model, without opening a second app.</p>
+            <div class="body">
+              <p>
+                A full chat built into the sidebar. Switch models mid-conversation,
+                attach images and files, turn on web search when you need fresh
+                facts, and pull a project's instructions into the thread. Every
+                conversation is saved and backed up to disk, not trapped in a
+                browser tab.
+              </p>
+            </div>
+          </div>
+          <div class="feature-media">
+            <ul class="spec">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Any model.</strong> Anthropic, OpenAI, OpenRouter, Google Gemini, or local Ollama, picked from a menu at the bottom of the input.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Reasoning effort.</strong> For models that support it, set how hard the model thinks, remembered per model.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Attachments.</strong> Drop in images (PNG, JPEG, GIF, WebP) or text files.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Web search.</strong> Flip it on and the proxy enriches the context with live results.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Project context.</strong> Link a project to inject its custom instructions into the conversation.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>History you keep.</strong> Saved automatically, backed up to disk, and pinnable to the top of the list.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Orchestrator -->
+        <div class="feature feature--flip" id="orchestrator">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+              <span class="feature-kicker">Built into OpenHub · the flagship</span>
+            </div>
+            <h2>Orchestrator</h2>
+            <p class="one-liner">One goal in. A team of agents. A folder of real files out.</p>
+            <div class="body">
+              <p>
+                Describe what you want in plain language, "a pricing site with a
+                checkout demo," "a Python library with tests," "a market research
+                report." OpenHub breaks it into a graph of specialized agents,
+                runs them in the right order, and writes the result to a folder on
+                disk. You get a deliverable, not a transcript.
+              </p>
+              <p>
+                What makes it different is what happens after. A
+                <strong>deterministic quality gate</strong>, plain code, no model,
+                statically checks the output for broken imports, missing files,
+                dead asset links, unstyled pages, and APIs that don't line up
+                between two agents' files. Defects force a fail no matter what the
+                verifier model claims, and only the agent that owns the broken file
+                gets relaunched.
+              </p>
+            </div>
+            <div style="margin-top:22px;">
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.md" class="btn-link">Read the engine reference
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
+            </div>
+          </div>
+          <div class="feature-media">
+            <ul class="spec">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Specialized agents.</strong> Research, work (content & design system), design (mockups), code, and a report-only verifier, each with its own rules.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>It plans itself.</strong> A planning loop decomposes the goal, spawns sub-agents, and declares a file contract for each one.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Dependency graph.</strong> Agents declare what they depend on; upstream results feed downstream as context.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>The model doesn't grade itself.</strong> Structural defects are caught by static analysis and force a fail, even if the verifier says it passed.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Self-correcting.</strong> When the gate fails, only the responsible agent is re-run, then the work is re-audited.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>You can steer it.</strong> Give feedback on a finished run and it re-enters the corrective cycle with your notes.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Code -->
+        <div class="feature" id="code">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+              <span class="feature-kicker">OpenCode · by SST · wrapped unmodified</span>
+            </div>
+            <h2>Code</h2>
+            <p class="one-liner">A terminal-grade coding agent, in its own sandboxed view.</p>
+            <div class="body">
+              <p>
+                OpenCode is a serious code agent. It reads and writes files across
+                your project and runs commands to get the job done. Inside OpenHub
+                it runs as a local server in a sandboxed view, themed to match the
+                rest of the app, configured by the same proxy as everything else.
+              </p>
+              <p>
+                It's also the engine underneath. All three integrated tools drive
+                OpenCode, which is why one config file can set them all up at once.
+              </p>
+            </div>
+          </div>
+          <div class="feature-media">
+            <ul class="spec">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Reads & writes files.</strong> Works directly on your project on disk, not on pasted snippets.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Runs commands.</strong> Drives the toolchain to build, test, and verify, inside its own view.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Same keys, same models.</strong> Routed through the shared proxy, so it inherits whatever you configured once.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>State is preserved.</strong> Switch to another tool and back; your session is right where you left it.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Design -->
+        <div class="feature feature--flip" id="design">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+              <span class="feature-kicker">Open Design · by nexu-io · wrapped unmodified</span>
+            </div>
+            <h2>Design</h2>
+            <p class="one-liner">Generate and refine visual mockups, no terminal in sight.</p>
+            <div class="body">
+              <p>
+                Open Design produces interface mockups in HTML, CSS, and SVG and
+                refines them across iterations. Normally it runs as a command-line
+                daemon. OpenHub launches it for you, captures it, and puts it behind
+                a graphical view, so a designer who never opens a terminal can use
+                it like any other app.
+              </p>
+              <p>
+                In an orchestration, the design agent receives the design system
+                from the work agent and turns it into faithful mockups, which the
+                code agent then reproduces.
+              </p>
+            </div>
+          </div>
+          <div class="feature-media">
+            <ul class="spec">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>HTML, CSS & SVG mockups.</strong> Real markup you can hand straight to a developer.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Iterative refinement.</strong> Reruns to fix thin or placeholder output until the mockup holds together.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>No command line.</strong> The app starts the daemon and manages it. You just describe the screen.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Feeds the orchestrator.</strong> Mockups are written to disk and passed to the code agent to build for real.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Work -->
+        <div class="feature" id="work">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+              <span class="feature-kicker">OpenWork · by different-ai · wrapped unmodified</span>
+            </div>
+            <h2>Work</h2>
+            <p class="one-liner">Structured work and documents, tied to your projects.</p>
+            <div class="body">
+              <p>
+                OpenWork handles the structured side of building: content,
+                documents, and organized work that isn't code or pixels. In OpenHub
+                it shares the same projects as everything else, so the instructions
+                and context you set once follow you into Work and back out again.
+              </p>
+              <p>
+                In an orchestration it runs as the content engine, and it owns the
+                design system: palette, typography, and the look the designer and
+                coder then have to honor.
+              </p>
+            </div>
+          </div>
+          <div class="feature-media">
+            <ul class="spec">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Documents & structured data.</strong> Writing and organized output in Markdown, JSON, and CSV.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Shared projects.</strong> The same project instructions used by Chat and the orchestrator apply here too.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Defines the design system.</strong> As an orchestrator agent, Work sets the colors and type the others must follow.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Native web search.</strong> OpenHub adds search to Work through the proxy, not a built-in cloud key.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Memory -->
+        <div class="feature feature--flip" id="memory">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="22" x2="15" y2="22"/></svg></div>
+              <span class="feature-kicker">Built into OpenHub · shared across tools</span>
+            </div>
+            <h2>Memory</h2>
+            <p class="one-liner">Stop re-explaining who you are and what you're building.</p>
+            <div class="body">
+              <p>
+                Memory is a profile plus a set of short, tagged facts. The profile
+                describes you, your role, your stack, your preferences. The facts
+                are reusable details. On each request, only the facts relevant to
+                what you're asking get injected, inside a token budget, so the
+                prompt stays lean instead of dragging your whole history along.
+              </p>
+              <p>
+                You stay in control. A global switch turns memory off entirely, and
+                any single project can opt out on its own.
+              </p>
+            </div>
+          </div>
+          <div class="feature-media">
+            <ul class="spec">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Profile.</strong> Free-form text about you, injected to personalize answers.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Tagged facts.</strong> Short, reusable notes; only the relevant ones enter a given request.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Auto-extraction.</strong> Optionally let a model pull new facts out of your conversations.</span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><strong>Off whenever you want.</strong> A global kill switch, plus per-project opt-out.</span></li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Projects ─────────────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container container--prose">
+        <div class="section-head">
+          <div class="eyebrow">The glue</div>
+          <h2 class="section-title">Projects tie it all together.</h2>
+          <p class="section-sub">A project bundles instructions, a type, a preferred model, and context. It's how one setup reaches every tool.</p>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>Standalone projects</h3>
+            <p>Tied to a single tool: Code, Design, or Work. Open the tool and the project's instructions are injected into the AI context. A standalone project can also become a building block inside an orchestration.</p>
+          </div>
+          <div class="card">
+            <h3>Orchestrator projects</h3>
+            <p>These don't run alone, they coordinate several agents. They define the overall goal, the agents to chain together, and settings like auto-distribution, consistency checking, and retry-on-error.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Cross-links ──────────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container">
+        <div class="crosslinks">
+          <a href="how-it-works.html" class="crosslink">
+            <div class="k">Next</div>
+            <h3>How it works</h3>
+            <p>The proxy, the single config, and why upstream updates never break the app.</p>
+          </a>
+          <a href="privacy.html" class="crosslink">
+            <div class="k">Trust</div>
+            <h3>Privacy & security</h3>
+            <p>Where your keys live, what leaves your Mac (nothing), and why it's auditable.</p>
+          </a>
+          <a href="faq.html" class="crosslink">
+            <div class="k">Questions</div>
+            <h3>FAQ</h3>
+            <p>Costs, data, macOS-only, updates, and the rest of the practical questions.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Final CTA ────────────────────────────────────────────── -->
+    <section class="cta-band section--divide">
+      <div class="container">
+        <h2>Download it. Add your keys. Create.</h2>
+        <p>Drag OpenHub to your Applications folder, then add your API keys in the Config panel. Apple Silicon, macOS 14 and up.</p>
+        <div class="hero-cta">
+          <a href="https://github.com/Open-Fable/OpenHub/releases/latest" class="btn btn-md btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+          </a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-md btn-secondary">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Footer ───────────────────────────────────────────────── -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="index.html" class="nav-logo">
+              <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+              OpenHub
+            </a>
+            <p>A macOS shell that brings your AI tools into one window. Open source, MIT.</p>
+          </div>
+          <div class="footer-cols">
+            <div class="footer-col">
+              <h4>Product</h4>
+              <a href="tools.html">Tools</a>
+              <a href="how-it-works.html">How it works</a>
+              <a href="privacy.html">Privacy</a>
+              <a href="faq.html">FAQ</a>
+            </div>
+            <div class="footer-col">
+              <h4>Resources</h4>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.md">Usage guide</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.md">Orchestrator docs</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/ARCHITECTURE.md">Architecture</a>
+              <a href="https://github.com/Open-Fable/OpenHub/releases/latest">Download</a>
+            </div>
+            <div class="footer-col">
+              <h4>Project</h4>
+              <a href="https://github.com/Open-Fable/OpenHub">GitHub</a>
+              <a href="https://github.com/Open-Fable/OpenHub/issues">Issues</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/CONTRIBUTING.md">Contributing</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/LICENSE">MIT License</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>OpenHub is a shell, not a fork. The AI tools belong to their respective creators.</span>
+          <a href="tools.fr.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">Français</a>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>

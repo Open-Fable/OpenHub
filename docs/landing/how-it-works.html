@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How it works — OpenHub</title>
+    <meta name="description" content="How OpenHub works: one local proxy holds your keys, a single config sets up every tool, and a CSS/JS override layer wraps three open-source apps without touching their source. No Docker, no cloud." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M 20.27 6.41 A 10.5 10.5 0 0 1 26.44 17.10'/%3E%3Cpath d='M 22.17 24.49 A 10.5 10.5 0 0 1 9.83 24.49'/%3E%3Cpath d='M 5.56 17.10 A 10.5 10.5 0 0 1 11.73 6.41'/%3E%3C/g%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <header class="nav">
+      <div class="container nav-inner">
+        <a href="index.html" class="nav-logo">
+          <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+          OpenHub
+        </a>
+        <nav class="nav-links">
+          <a href="tools.html" class="hide-sm">Tools</a>
+          <a href="how-it-works.html" class="hide-sm" aria-current="page">How it works</a>
+          <a href="privacy.html" class="hide-sm">Privacy</a>
+          <a href="faq.html" class="hide-sm">FAQ</a>
+          <a href="how-it-works.fr.html" class="nav-lang">FR</a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-sm btn-secondary">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ── Page hero ────────────────────────────────────────────── -->
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">How it works</div>
+        <h1>A shell around your tools, not a fork of them.</h1>
+        <p class="lead">
+          OpenHub doesn't rebuild three open-source apps and it doesn't ship a
+          cloud. It runs them as native processes, routes their AI calls through
+          one local proxy, and styles them with an injection layer that survives
+          every upstream update. Here's the whole machine.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── Diagram ──────────────────────────────────────────────── -->
+    <section class="section--tight">
+      <div class="container">
+        <div class="diagram"><span class="ac">ELECTRON</span>  (the shell — the only holder of your real keys)
+│
+├─ <span class="ac">Sidebar</span>   Chat · Code · Work · Design · Orchestrator · Config
+│
+├─ <span class="ac">Views</span>     three tools, each in its own native process,
+│             state preserved when you switch
+│               Work    → openwork
+│               Code    → opencode
+│               Design  → open-design
+│
+├─ <span class="ac">One config</span>  ~/.config/opencode/opencode.json
+│             points every tool at the local proxy
+│
+├─ <span class="ac">Proxy :9999</span>  127.0.0.1 only · Bearer required
+│             holds the real keys · routes to your provider
+│             injects project context + memory + web search
+│
+└─ <span class="ac">Secrets</span>   Keychain → memory → env vars at spawn
+              (never written to disk)</div>
+      </div>
+    </section>
+
+    <!-- ── The four ideas ───────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Four ideas</div>
+          <h2 class="section-title">Everything follows from four decisions.</h2>
+          <p class="section-sub">Each one is there to remove a specific kind of friction, not to look clever.</p>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num"></div>
+            <div>
+              <h3>One window holds everything, with state intact</h3>
+              <p>
+                Each tool opens in its own isolated view. Switch from Code to
+                Design and back, and your session is exactly where you left it,
+                nothing reloads, nothing resets. The shell is built so a tool can
+                stay alive in the background instead of restarting every time you
+                glance at it.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num"></div>
+            <div>
+              <h3>One config sets up all three tools at once</h3>
+              <p>
+                The three integrated tools all run on the same underlying engine
+                (OpenCode). So a single config file cascades to every one of them.
+                You don't configure Work, then Code, then Design, you configure
+                once, and they inherit it. Add a provider and every tool can reach
+                it immediately.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num"></div>
+            <div>
+              <h3>One proxy holds the keys; the tools only see a token</h3>
+              <p>
+                A small server runs on <code>127.0.0.1:9999</code>. It holds your
+                real API keys, reads from the macOS Keychain, and exposes a single
+                OpenAI-compatible endpoint that requires a Bearer token. The tools
+                are handed a fake local token, never your real keys. The proxy
+                routes each call to the right provider and is the one place where
+                web search and context injection happen.
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num"></div>
+            <div>
+              <h3>One override layer customizes apps without forking them</h3>
+              <p>
+                OpenHub never edits a tool's source. The unified theme, the hidden
+                native settings, the added features, all of it is CSS and JS
+                injected at runtime. The overrides target stable, semantic
+                selectors and re-apply themselves as the apps navigate, so a
+                <code>git pull</code> upstream lands cleanly instead of starting a
+                merge fight.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Providers ────────────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <div class="eyebrow">Bring your own models</div>
+          <h2 class="section-title">Five providers. Mix cloud and local freely.</h2>
+          <p class="section-sub">One proxy speaks to all of them. Use a frontier model for hard work and a local one for the rest, switched per request.</p>
+        </div>
+        <div class="pills">
+          <span class="pill">Anthropic</span>
+          <span class="pill">OpenAI</span>
+          <span class="pill">OpenRouter</span>
+          <span class="pill">Ollama (local)</span>
+          <span class="pill">Google Gemini</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── No Docker ────────────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container container--prose">
+        <div class="section-head">
+          <div class="eyebrow">Native, not containerized</div>
+          <h2 class="section-title">No Docker. No daemon zoo. Just macOS.</h2>
+        </div>
+        <div class="prose">
+          <p>
+            The tools need to read and write your real files, that's the point of a
+            code agent and a design tool. So they run as native macOS processes,
+            not inside containers. OpenHub starts them, pins the right runtime for
+            each, captures their ports, and shuts them down with the app.
+          </p>
+          <p>
+            There's no virtualization layer to install, no compose file to babysit,
+            and no background fleet left running after you quit. You download one
+            <code>.dmg</code>, drag it to Applications, and everything it needs it
+            manages itself.
+          </p>
+        </div>
+        <div class="callout" style="margin-top:28px;">
+          Want the frozen, verified-against-source spec, ports, security model,
+          config cascade, and the override catalog? Read
+          <a href="https://github.com/Open-Fable/OpenHub/blob/main/ARCHITECTURE.md" style="color:var(--accent-primary); font-weight:600;">ARCHITECTURE.md</a>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Cross-links ──────────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container">
+        <div class="crosslinks">
+          <a href="tools.html" class="crosslink">
+            <div class="k">Back</div>
+            <h3>The five tools</h3>
+            <p>Chat, Orchestrator, Code, Design, Work, and Memory, each explained in depth.</p>
+          </a>
+          <a href="privacy.html" class="crosslink">
+            <div class="k">Trust</div>
+            <h3>Privacy & security</h3>
+            <p>The security model in plain language: keys, the proxy, sandboxing, and what leaves your Mac.</p>
+          </a>
+          <a href="faq.html" class="crosslink">
+            <div class="k">Questions</div>
+            <h3>FAQ</h3>
+            <p>Costs, data location, macOS-only, and what to do after an upstream update.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Final CTA ────────────────────────────────────────────── -->
+    <section class="cta-band section--divide">
+      <div class="container">
+        <h2>Download it. Add your keys. Create.</h2>
+        <p>Drag OpenHub to your Applications folder, then add your API keys in the Config panel. Apple Silicon, macOS 14 and up.</p>
+        <div class="hero-cta">
+          <a href="https://github.com/Open-Fable/OpenHub/releases/latest" class="btn btn-md btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+          </a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-md btn-secondary">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Footer ───────────────────────────────────────────────── -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="index.html" class="nav-logo">
+              <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+              OpenHub
+            </a>
+            <p>A macOS shell that brings your AI tools into one window. Open source, MIT.</p>
+          </div>
+          <div class="footer-cols">
+            <div class="footer-col">
+              <h4>Product</h4>
+              <a href="tools.html">Tools</a>
+              <a href="how-it-works.html">How it works</a>
+              <a href="privacy.html">Privacy</a>
+              <a href="faq.html">FAQ</a>
+            </div>
+            <div class="footer-col">
+              <h4>Resources</h4>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.md">Usage guide</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.md">Orchestrator docs</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/ARCHITECTURE.md">Architecture</a>
+              <a href="https://github.com/Open-Fable/OpenHub/releases/latest">Download</a>
+            </div>
+            <div class="footer-col">
+              <h4>Project</h4>
+              <a href="https://github.com/Open-Fable/OpenHub">GitHub</a>
+              <a href="https://github.com/Open-Fable/OpenHub/issues">Issues</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/CONTRIBUTING.md">Contributing</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/LICENSE">MIT License</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>OpenHub is a shell, not a fork. The AI tools belong to their respective creators.</span>
+          <a href="how-it-works.fr.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">Français</a>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>

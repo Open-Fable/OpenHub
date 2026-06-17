@@ -3,440 +3,327 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenHub — Your entire AI workflow in one macOS window</title>
+    <title>OpenHub — Every AI tool in one macOS window</title>
     <meta
       name="description"
-      content="Free, open-source macOS app: chat, multi-agent orchestrator, code agent, design tool in one sidebar. Supports Anthropic, OpenAI, Ollama, Gemini."
+      content="A free, open-source macOS app. Chat with any model, run a code agent, design interfaces, manage projects, and orchestrate a team of AI agents that ships real files. Your API keys stay on your Mac."
     />
-    <meta property="og:title" content="OpenHub — AI workspace for macOS" />
-    <meta
-      property="og:description"
-      content="Chat, code, design, and multi-agent orchestration in one window. Open source, MIT licensed."
-    />
+    <meta property="og:title" content="OpenHub — Every AI tool in one macOS window" />
+    <meta property="og:description" content="Chat, code, design, work, and multi-agent orchestration in one window. Open source, MIT. Your keys never leave your Mac." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://open-fable.github.io/OpenHub" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="OpenHub — AI workspace for macOS" />
-    <meta
-      name="twitter:description"
-      content="Chat, code, design, and multi-agent orchestration in one window. Open source."
-    />
-    <style>
-      :root {
-        --bg: #0a0a0b;
-        --surface: #141416;
-        --border: #27272a;
-        --text: #fafafa;
-        --text-muted: #a1a1aa;
-        --accent: #3b82f6;
-        --accent-hover: #2563eb;
-        --gradient-start: #3b82f6;
-        --gradient-end: #8b5cf6;
-      }
-
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-      }
-
-      .container {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 0 24px;
-      }
-
-      /* Nav */
-      nav {
-        padding: 20px 0;
-        border-bottom: 1px solid var(--border);
-      }
-      nav .container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      nav .logo {
-        font-size: 1.25rem;
-        font-weight: 700;
-        text-decoration: none;
-        color: var(--text);
-      }
-      nav .links {
-        display: flex;
-        gap: 24px;
-        align-items: center;
-      }
-      nav .links a {
-        color: var(--text-muted);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: color 0.2s;
-      }
-      nav .links a:hover {
-        color: var(--text);
-      }
-
-      /* Hero */
-      .hero {
-        text-align: center;
-        padding: 100px 0 80px;
-      }
-      .hero .badge {
-        display: inline-block;
-        padding: 6px 16px;
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        margin-bottom: 24px;
-      }
-      .hero h1 {
-        font-size: clamp(2.5rem, 6vw, 4rem);
-        font-weight: 800;
-        line-height: 1.1;
-        margin-bottom: 20px;
-        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-      .hero p {
-        font-size: 1.2rem;
-        color: var(--text-muted);
-        max-width: 600px;
-        margin: 0 auto 40px;
-      }
-      .hero .cta {
-        display: inline-flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 14px 28px;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.2s;
-        cursor: pointer;
-        border: none;
-      }
-      .btn-primary {
-        background: var(--accent);
-        color: white;
-      }
-      .btn-primary:hover {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-      }
-      .btn-secondary {
-        background: var(--surface);
-        color: var(--text);
-        border: 1px solid var(--border);
-      }
-      .btn-secondary:hover {
-        border-color: var(--text-muted);
-      }
-
-      /* Screenshot placeholder */
-      .screenshot {
-        margin: 0 auto 100px;
-        max-width: 800px;
-        aspect-ratio: 16 / 10;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-muted);
-        font-size: 0.9rem;
-      }
-
-      /* Features */
-      .features {
-        padding: 80px 0;
-      }
-      .features h2 {
-        text-align: center;
-        font-size: 2rem;
-        margin-bottom: 60px;
-      }
-      .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 24px;
-      }
-      .feature-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 28px;
-      }
-      .feature-card .icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 16px;
-        font-size: 1.2rem;
-      }
-      .feature-card h3 {
-        font-size: 1.1rem;
-        margin-bottom: 8px;
-      }
-      .feature-card p {
-        color: var(--text-muted);
-        font-size: 0.9rem;
-      }
-
-      /* Architecture */
-      .architecture {
-        padding: 80px 0;
-        text-align: center;
-      }
-      .architecture h2 {
-        font-size: 2rem;
-        margin-bottom: 16px;
-      }
-      .architecture .subtitle {
-        color: var(--text-muted);
-        margin-bottom: 48px;
-        font-size: 1.1rem;
-      }
-      .arch-diagram {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 32px;
-        text-align: left;
-        font-family: "SF Mono", "Fira Code", monospace;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        overflow-x: auto;
-        white-space: pre;
-        line-height: 1.8;
-      }
-
-      /* CTA */
-      .final-cta {
-        text-align: center;
-        padding: 100px 0;
-      }
-      .final-cta h2 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 16px;
-      }
-      .final-cta p {
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        margin-bottom: 32px;
-      }
-
-      /* Footer */
-      footer {
-        padding: 40px 0;
-        border-top: 1px solid var(--border);
-        text-align: center;
-        color: var(--text-muted);
-        font-size: 0.85rem;
-      }
-      footer a {
-        color: var(--text-muted);
-        text-decoration: none;
-      }
-      footer a:hover {
-        color: var(--text);
-      }
-      footer .footer-links {
-        display: flex;
-        gap: 24px;
-        justify-content: center;
-        margin-bottom: 16px;
-      }
-
-      @media (max-width: 640px) {
-        .hero {
-          padding: 60px 0 40px;
-        }
-        .features-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
+    <meta name="twitter:title" content="OpenHub — Every AI tool in one macOS window" />
+    <meta name="twitter:description" content="Five AI tools in one macOS window. Open source, MIT. Your keys never leave your Mac." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M 20.27 6.41 A 10.5 10.5 0 0 1 26.44 17.10'/%3E%3Cpath d='M 22.17 24.49 A 10.5 10.5 0 0 1 9.83 24.49'/%3E%3Cpath d='M 5.56 17.10 A 10.5 10.5 0 0 1 11.73 6.41'/%3E%3C/g%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <nav>
-      <div class="container">
-        <a href="/" class="logo">OpenHub</a>
-        <div class="links">
-          <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.md">Docs</a>
-          <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.md"
-            >Orchestrator</a
-          >
-          <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/FAQ.md">FAQ</a>
-          <a
-            href="https://github.com/Open-Fable/OpenHub"
-            class="btn btn-secondary"
-            style="padding: 8px 16px; font-size: 0.85rem"
-            >GitHub</a
-          >
-        </div>
-      </div>
-    </nav>
 
+    <!-- ── Nav ──────────────────────────────────────────────────── -->
+    <header class="nav">
+      <div class="container nav-inner">
+        <a href="index.html" class="nav-logo">
+          <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+          OpenHub
+        </a>
+        <nav class="nav-links">
+          <a href="tools.html" class="hide-sm">Tools</a>
+          <a href="how-it-works.html" class="hide-sm">How it works</a>
+          <a href="privacy.html" class="hide-sm">Privacy</a>
+          <a href="faq.html" class="hide-sm">FAQ</a>
+          <a href="index.fr.html" class="nav-lang">FR</a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-sm btn-secondary">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ── Hero ─────────────────────────────────────────────────── -->
     <section class="hero">
       <div class="container">
-        <span class="badge">Open source &middot; MIT licensed &middot; macOS</span>
-        <h1>Your entire AI workflow in one window</h1>
-        <p>
-          Chat, code, design, and multi-agent orchestration — unified in a single macOS
-          sidebar. Enter your keys once. All tools share context and memory.
-        </p>
-        <div class="cta">
-          <a
-            href="https://github.com/Open-Fable/OpenHub/releases/latest"
-            class="btn btn-primary"
-            >Download .dmg</a
-          >
-          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-secondary"
-            >View on GitHub</a
-          >
+        <div class="hero-logo">
+          <svg width="48" height="48" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
         </div>
+        <div class="hero-badge"><span class="hero-badge-dot"></span> Open source · MIT · macOS</div>
+        <h1>Every AI tool you use,<br>in one macOS window.</h1>
+        <p class="hero-sub">
+          Chat with any model. Run a code agent. Design interfaces. Hand a goal to
+          a team of agents and get real files back. Five tools share one window,
+          one config, and one set of API keys that never leaves your Mac.
+        </p>
+        <div class="hero-cta">
+          <a href="https://github.com/Open-Fable/OpenHub/releases/latest" class="btn btn-md btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+          </a>
+          <a href="tools.html" class="btn btn-md btn-secondary">See what it does</a>
+        </div>
+        <p class="hero-note">Apple Silicon · macOS 14+ · Free, no account, no telemetry</p>
       </div>
     </section>
 
+    <!-- ── Screenshot ───────────────────────────────────────────── -->
     <div class="container">
-      <div class="screenshot">
-        <!-- Replace with actual screenshot: <img src="screenshot.png" alt="OpenHub" style="width:100%;border-radius:16px;"> -->
-        Replace this with a screenshot of the app
-      </div>
+      <div class="shot"><span>App screenshot coming soon</span></div>
     </div>
 
-    <section class="features">
+    <!-- ── The problem ──────────────────────────────────────────── -->
+    <section class="section">
       <div class="container">
-        <h2>Five tools, one sidebar</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="icon">&#x1F4AC;</div>
-            <h3>Built-in chat</h3>
-            <p>
-              Talk to any model. History, attachments, web search, per-model reasoning
-              effort. No separate app needed.
-            </p>
+        <div class="section-head">
+          <div class="eyebrow">The problem</div>
+          <p class="statement">
+            Your AI tools live in <span class="dim">separate windows, with separate
+            keys, that never talk to each other.</span> You copy-paste between them
+            and reconfigure the same model three times a day.
+            <span class="on">OpenHub ends that.</span>
+          </p>
+        </div>
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>One window, not eight</h3>
+            <p>Chat, code, design, work, and orchestration sit in a single native sidebar. Each opens in its own view and keeps its state when you switch.</p>
           </div>
-          <div class="feature-card">
-            <div class="icon">&#x1F916;</div>
-            <h3>Multi-agent orchestrator</h3>
-            <p>
-              Give it a goal. It builds a DAG of agents — planner, coder, designer,
-              verifier — and produces real deliverables.
-            </p>
+          <div class="card">
+            <h3>One config, not five</h3>
+            <p>Enter your API keys once. A local proxy holds them and feeds every tool. No per-app setup, no keys pasted into five settings panels.</p>
           </div>
-          <div class="feature-card">
-            <div class="icon">&#x1F4BB;</div>
-            <h3>Code agent</h3>
-            <p>
-              OpenCode by SST — a terminal-grade code assistant running in its own
-              sandboxed view.
-            </p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">&#x1F3A8;</div>
-            <h3>Design tool</h3>
-            <p>
-              Open Design for visual mockups and prototypes. Generate and iterate on
-              designs with AI assistance.
-            </p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">&#x1F512;</div>
-            <h3>Secure by default</h3>
-            <p>
-              API keys in macOS Keychain — never on disk. Sandboxed WebViews.
-              Localhost-only proxy with Bearer auth.
-            </p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">&#x1F310;</div>
-            <h3>Any LLM provider</h3>
-            <p>
-              One proxy endpoint routes to Anthropic, OpenAI, OpenRouter, Ollama, and
-              Google Gemini. Configure once.
-            </p>
+          <div class="card">
+            <h3>One memory, not none</h3>
+            <p>A shared profile, project context, and tagged facts follow you across every tool, so you stop re-explaining who you are and what you're building.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="architecture">
+    <!-- ── Five tools ───────────────────────────────────────────── -->
+    <section class="section section--divide">
       <div class="container">
-        <h2>How it works</h2>
-        <p class="subtitle">One proxy, one config, zero Docker</p>
-        <div class="arch-diagram">
-          WebView (OpenWork / OpenCode / Open Design) | |-- CSS/JS overrides &lt;--
-          electron/overrides/ | '-- LLM calls --&gt; Proxy :9999 --&gt; Anthropic / OpenAI
-          / OpenRouter / Ollama / Gemini | |-- Context injection (project, memory) '--
-          Background memory extraction Secrets: macOS Keychain &rarr; RAM &rarr; env vars
-          at process spawn (never disk)
+        <div class="section-head section-head--center">
+          <div class="eyebrow">The five tools</div>
+          <h2 class="section-title">One sidebar. Five ways to create.</h2>
+          <p class="section-sub">
+            Two are built into OpenHub. Three are best-in-class open-source tools,
+            wrapped unmodified. They all share the same keys, theme, and memory.
+          </p>
+        </div>
+        <div class="grid grid-3">
+
+          <a href="tools.html#chat" class="card card--link">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <h3>Chat</h3>
+            <p>Talk to any model with history, attachments, web search, and per-model reasoning effort. No second app.</p>
+          </a>
+
+          <a href="tools.html#orchestrator" class="card card--link">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+            <h3>Orchestrator</h3>
+            <p>Describe a goal. A team of agents plans, builds, and checks the work, then writes real files you can ship.</p>
+          </a>
+
+          <a href="tools.html#code" class="card card--link">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+            <h3>Code</h3>
+            <p>OpenCode, the terminal-grade agent from SST. Reads and writes files, runs commands, in its own sandboxed view.</p>
+          </a>
+
+          <a href="tools.html#design" class="card card--link">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <h3>Design</h3>
+            <p>Open Design generates and refines mockups in HTML, CSS, and SVG. No terminal. The app launches it for you.</p>
+          </a>
+
+          <a href="tools.html#work" class="card card--link">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+            <h3>Work</h3>
+            <p>OpenWork handles structured work and documents. Your projects and their instructions follow you everywhere.</p>
+          </a>
+
+          <a href="tools.html#memory" class="card card--link">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="22" x2="15" y2="22"/></svg></div>
+            <h3>Memory</h3>
+            <p>A profile and tagged facts that carry across sessions. Only the relevant ones enter each request, so you don't repeat yourself.</p>
+          </a>
+
+        </div>
+        <div style="text-align:center; margin-top:36px;">
+          <a href="tools.html" class="btn-link">Explore every tool in depth
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
         </div>
       </div>
     </section>
 
-    <section class="final-cta">
+    <!-- ── Orchestrator spotlight ───────────────────────────────── -->
+    <section class="section section--divide">
       <div class="container">
-        <h2>Get started in 60 seconds</h2>
-        <p>Clone, setup, run. Or just download the .dmg.</p>
-        <div class="cta">
-          <a
-            href="https://github.com/Open-Fable/OpenHub/releases/latest"
-            class="btn btn-primary"
-            >Download for macOS</a
-          >
-          <a
-            href="https://github.com/Open-Fable/OpenHub#-installation"
-            class="btn btn-secondary"
-            >Build from source</a
-          >
+        <div class="feature">
+          <div class="feature-text">
+            <div class="feature-eyebrow">
+              <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+              <span class="feature-kicker">The part nobody else does</span>
+            </div>
+            <h2>You give a goal. It gives you a finished project.</h2>
+            <p class="one-liner">Not a chat transcript. A folder of real, working files.</p>
+            <div class="body">
+              <p>
+                The orchestrator turns one sentence into a team of specialized
+                agents, a planner, coders, a designer, a researcher, a verifier,
+                wired into a dependency graph. They plan the work, build it in
+                order, pass results downstream, and write files to disk.
+              </p>
+              <p>
+                Then the part that matters: a <strong>deterministic quality
+                gate</strong> reads the output and force-fails on broken imports,
+                missing files, dead links, or two agents that wrote incompatible
+                APIs. The model never gets the final word on whether the work is
+                correct. When something breaks, only the responsible agent is
+                relaunched.
+              </p>
+            </div>
+            <div style="margin-top:22px;">
+              <a href="tools.html#orchestrator" class="btn-link">How the orchestrator works
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
+            </div>
+          </div>
+          <div class="feature-media">
+            <div class="diagram"><span class="ac">Goal:</span> "Build a pricing site with a checkout demo"
+   │
+   ▼
+<span class="ac">Plan</span>   break goal into agents + a file contract
+   │
+   ├─ <span class="ac">work</span>      design system, copy, palette
+   ├─ <span class="ac">design</span>    mockups (HTML / CSS)
+   ├─ <span class="ac">code</span>      the working site + checkout
+   └─ <span class="ac">verifier</span>  reads it all, QA
+   │
+   ▼
+<span class="ac">Quality gate</span>  broken link? dead import?
+              missing file?  →  re-run owner
+   │
+   ▼
+<span class="ac">/workspace</span>   your deliverable, on disk</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <footer>
+    <!-- ── How it works teaser ──────────────────────────────────── -->
+    <section class="section section--divide">
       <div class="container">
-        <div class="footer-links">
-          <a href="https://github.com/Open-Fable/OpenHub">GitHub</a>
-          <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.md"
-            >Documentation</a
-          >
-          <a href="https://github.com/Open-Fable/OpenHub/issues">Issues</a>
-          <a href="https://github.com/Open-Fable/OpenHub/blob/main/CONTRIBUTING.md"
-            >Contributing</a
-          >
-          <a href="https://github.com/Open-Fable/OpenHub/blob/main/LICENSE">MIT License</a>
+        <div class="section-head section-head--center">
+          <div class="eyebrow">Under the hood</div>
+          <h2 class="section-title">One proxy holds the keys. The tools never see them.</h2>
+          <p class="section-sub">
+            A small server runs on your machine, routes every request to the right
+            provider, and injects your context along the way. No Docker. No cloud.
+          </p>
         </div>
-        <p>
-          OpenHub is a shell, not a fork. The AI tools belong to their respective
-          creators.
-        </p>
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>Configure once</h3>
+            <p>All three integrated tools run on the same engine, so a single config file sets up every one of them. Add a key, every tool can use it.</p>
+          </div>
+          <div class="card">
+            <h3>Keys stay on your Mac</h3>
+            <p>Your real keys live in the macOS Keychain, load into memory, and route through a localhost-only proxy. The tools only ever see a local token.</p>
+          </div>
+          <div class="card">
+            <h3>Updates don't break it</h3>
+            <p>The wrapped tools are cloned unmodified. Every customization is CSS and JS injection, so upstream updates land without a merge conflict.</p>
+          </div>
+        </div>
+        <div style="text-align:center; margin-top:36px;">
+          <a href="how-it-works.html" class="btn-link">See the full architecture
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Trust ────────────────────────────────────────────────── -->
+    <section class="section section--divide">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Your keys, your machine</div>
+          <h2 class="section-title">We don't ask for your trust. We prove it.</h2>
+          <p class="section-sub">There's no OpenHub server. There's nothing to sign up for. Everything runs and stays on your Mac.</p>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>No account, no cloud, no telemetry</h3>
+            <p>OpenHub has no backend. Your projects, memory, and chats live in your home folder. Nothing is sent anywhere you didn't ask it to go.</p>
+          </div>
+          <div class="card">
+            <h3>Open source, end to end</h3>
+            <p>MIT licensed. The proxy, the secret handling, the override layer, all auditable. If you don't trust it, read it.</p>
+          </div>
+        </div>
+        <div style="margin-top:28px;">
+          <a href="privacy.html" class="btn-link">Read how OpenHub handles your data
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Final CTA ────────────────────────────────────────────── -->
+    <section class="cta-band section--divide">
+      <div class="container">
+        <h2>Download it. Add your keys. Create.</h2>
+        <p>Drag OpenHub to your Applications folder, then add your API keys in the Config panel. Apple Silicon, macOS 14 and up.</p>
+        <div class="hero-cta">
+          <a href="https://github.com/Open-Fable/OpenHub/releases/latest" class="btn btn-md btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+          </a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-md btn-secondary">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Footer ───────────────────────────────────────────────── -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="index.html" class="nav-logo">
+              <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+              OpenHub
+            </a>
+            <p>A macOS shell that brings your AI tools into one window. Open source, MIT.</p>
+          </div>
+          <div class="footer-cols">
+            <div class="footer-col">
+              <h4>Product</h4>
+              <a href="tools.html">Tools</a>
+              <a href="how-it-works.html">How it works</a>
+              <a href="privacy.html">Privacy</a>
+              <a href="faq.html">FAQ</a>
+            </div>
+            <div class="footer-col">
+              <h4>Resources</h4>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.md">Usage guide</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.md">Orchestrator docs</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/ARCHITECTURE.md">Architecture</a>
+              <a href="https://github.com/Open-Fable/OpenHub/releases/latest">Download</a>
+            </div>
+            <div class="footer-col">
+              <h4>Project</h4>
+              <a href="https://github.com/Open-Fable/OpenHub">GitHub</a>
+              <a href="https://github.com/Open-Fable/OpenHub/issues">Issues</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/CONTRIBUTING.md">Contributing</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/LICENSE">MIT License</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>OpenHub is a shell, not a fork. The AI tools belong to their respective creators.</span>
+          <a href="index.fr.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">Français</a>
+        </div>
       </div>
     </footer>
+
   </body>
 </html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAQ — OpenHub</title>
+    <meta name="description" content="Questions frequentes sur OpenHub : est-ce gratuit, ca tourne sur Windows ou Linux, ou vivent mes cles et mes donnees, quels fournisseurs sont supportes, ce que fait l'orchestrateur, et comment contribuer." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M 20.27 6.41 A 10.5 10.5 0 0 1 26.44 17.10'/%3E%3Cpath d='M 22.17 24.49 A 10.5 10.5 0 0 1 9.83 24.49'/%3E%3Cpath d='M 5.56 17.10 A 10.5 10.5 0 0 1 11.73 6.41'/%3E%3C/g%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <header class="nav">
+      <div class="container nav-inner">
+        <a href="index.fr.html" class="nav-logo">
+          <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+          OpenHub
+        </a>
+        <nav class="nav-links">
+          <a href="tools.fr.html" class="hide-sm">Outils</a>
+          <a href="how-it-works.fr.html" class="hide-sm">Fonctionnement</a>
+          <a href="privacy.fr.html" class="hide-sm">Confidentialite</a>
+          <a href="faq.fr.html" class="hide-sm" aria-current="page">FAQ</a>
+          <a href="faq.html" class="nav-lang">EN</a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-sm btn-secondary">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="page-hero">
+      <div class="container">
+        <div class="eyebrow">FAQ</div>
+        <h1>Les questions que tout le monde se pose d'abord.</h1>
+        <p class="lead">
+          Couts, plateformes, ou vont tes donnees, ce qu'est vraiment l'orchestrateur.
+          Des reponses directes, sans detour.
+        </p>
+      </div>
+    </section>
+
+    <section class="section--tight">
+      <div class="container container--prose">
+
+        <div class="qa">
+          <h3>OpenHub est-il gratuit ?</h3>
+          <p>
+            L'enveloppe OpenHub est open source sous licence MIT, donc oui, l'app
+            elle-meme est gratuite. Elle n'inclut aucun credit IA, par contre : tu
+            apportes tes propres cles API (Anthropic, OpenAI, OpenRouter, Google) ou
+            tu fais tourner des modeles locaux via Ollama. L'inference est facturee
+            par ton fournisseur, pas par OpenHub.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Ca tourne sur Windows ou Linux ?</h3>
+          <p>
+            Pas encore, macOS 14 et plus uniquement. OpenHub s'appuie sur le Trousseau
+            macOS pour stocker les secrets et sur le systeme de vues d'Electron pour la
+            sidebar. Un portage vers d'autres plateformes n'est pas prevu a court terme.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Ou sont stockees mes cles API ?</h3>
+          <p>
+            Dans le Trousseau macOS. Jamais ecrites sur le disque, jamais en local
+            storage, jamais dans les vues des outils. Le proxy les charge en memoire et
+            les injecte au demarrage des process. Les trois outils embarques ne
+            recoivent qu'un faux token local, jamais tes vraies cles.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Ou sont mes donnees, projets, memoire, chats, stockees ?</h3>
+          <p>
+            Tout est local, dans ton dossier perso : projets et memoire sous
+            <code>~/.config/openhub/</code>, la config des outils sous
+            <code>~/.config/opencode/</code>, et l'historique de chat en local storage
+            avec une sauvegarde fichier sur le disque. Rien n'est envoye a un serveur
+            OpenHub, parce qu'il n'y en a pas. Le detail complet est sur la
+            <a href="privacy.fr.html">page confidentialite</a>.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Quels fournisseurs LLM sont supportes ?</h3>
+          <p>
+            Anthropic (Claude), OpenAI (GPT), OpenRouter (multi-modeles), Ollama
+            (local) et Google Gemini. Tu peux melanger cloud et local selon la tache,
+            le tout par le meme proxy.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>L'orchestrateur, c'est quoi concretement ?</h3>
+          <p>
+            Un moteur qui decoupe un objectif en agents specialises, code, design,
+            work, recherche, verification, organises en graphe de dependances, puis les
+            execute avec des controles qualite automatiques et deterministes. Le
+            resultat est un dossier de vrais livrables, pas un journal de chat.
+            L'histoire complete est sur la
+            <a href="tools.fr.html#orchestrator">page outils</a> et dans la
+            <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.fr.md">reference du moteur</a>.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Les apps open-source embarquees sont-elles modifiees ?</h3>
+          <p>
+            Jamais. OpenHub clone OpenWork, OpenCode et Open Design et les laisse
+            intactes. Toute la personnalisation, le theme, les reglages natifs masques,
+            les fonctions ajoutees, vit dans une couche d'injection separee. C'est pour
+            ca que les mises a jour upstream ne cassent rien.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Pourquoi un proxy local sur le port 9999 ?</h3>
+          <p>
+            Pour centraliser tes secrets et ta config au meme endroit. Au lieu de
+            coller tes cles dans trois apps, tu les entres une fois ; le proxy
+            (<code>127.0.0.1:9999</code>, compatible OpenAI, Bearer requis) detient les
+            vraies cles et route chaque appel vers le bon fournisseur. C'est aussi la
+            que la recherche web et l'injection de contexte ont lieu.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>L'interface a casse apres une mise a jour. Je fais quoi ?</h3>
+          <p>
+            Lance la verification des selecteurs (<code>npm run check:selectors</code>).
+            Elle verifie que les selecteurs CSS sur lesquels les overrides s'appuient
+            existent encore dans le nouveau code des apps, et signale ceux qu'un
+            changement upstream a deplaces, pour que tu saches exactement quel override
+            ajuster.
+          </p>
+        </div>
+
+        <div class="qa">
+          <h3>Comment contribuer, ou signaler un bug ?</h3>
+          <p>
+            Les bugs et demandes de fonctionnalites passent par les
+            <a href="https://github.com/Open-Fable/OpenHub/issues">issues GitHub</a>,
+            avec un template pour chaque. Pour contribuer du code, vois
+            <a href="https://github.com/Open-Fable/OpenHub/blob/main/CONTRIBUTING.fr.md">CONTRIBUTING.fr.md</a> :
+            fork, branche, lance les tests et les verifications, ouvre une pull request.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section section--divide">
+      <div class="container container--prose">
+        <div class="callout">
+          <strong>Toujours bloque ?</strong> Ouvre une
+          <a href="https://github.com/Open-Fable/OpenHub/issues" style="color:var(--accent-primary); font-weight:600;">issue sur GitHub</a>
+          ou lis le
+          <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.fr.md" style="color:var(--accent-primary); font-weight:600;">guide d'usage complet</a>.
+          Chaque commentaire recoit une reponse.
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band section--divide">
+      <div class="container">
+        <h2>Telecharge. Ajoute tes cles. Cree.</h2>
+        <p>Glisse OpenHub dans ton dossier Applications, puis ajoute tes cles API dans le panneau Config. Apple Silicon, macOS 14 et plus.</p>
+        <div class="hero-cta">
+          <a href="https://github.com/Open-Fable/OpenHub/releases/latest" class="btn btn-md btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Telecharger pour macOS
+          </a>
+          <a href="https://github.com/Open-Fable/OpenHub" class="btn btn-md btn-secondary">Voir sur GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="index.fr.html" class="nav-logo">
+              <svg width="24" height="24" viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g></svg>
+              OpenHub
+            </a>
+            <p>Une enveloppe macOS qui reunit tes outils IA dans une fenetre. Open source, MIT.</p>
+          </div>
+          <div class="footer-cols">
+            <div class="footer-col">
+              <h4>Produit</h4>
+              <a href="tools.fr.html">Outils</a>
+              <a href="how-it-works.fr.html">Fonctionnement</a>
+              <a href="privacy.fr.html">Confidentialite</a>
+              <a href="faq.fr.html">FAQ</a>
+            </div>
+            <div class="footer-col">
+              <h4>Ressources</h4>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/USAGE.fr.md">Guide d'usage</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/docs/ORCHESTRATOR.fr.md">Doc orchestrateur</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/ARCHITECTURE.fr.md">Architecture</a>
+              <a href="https://github.com/Open-Fable/OpenHub/releases/latest">Telecharger</a>
+            </div>
+            <div class="footer-col">
+              <h4>Projet</h4>
+              <a href="https://github.com/Open-Fable/OpenHub">GitHub</a>
+              <a href="https://github.com/Open-Fable/OpenHub/issues">Issues</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/CONTRIBUTING.fr.md">Contribuer</a>
+              <a href="https://github.com/Open-Fable/OpenHub/blob/main/LICENSE">Licence MIT</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>OpenHub est une enveloppe, pas un fork. Les outils IA appartiennent a leurs createurs respectifs.</span>
+          <a href="faq.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">English</a>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>
