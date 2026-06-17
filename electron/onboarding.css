@@ -1,0 +1,544 @@
+/* ── Onboarding overlay ─────────────────────────────────────────────────── */
+
+#onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  background: var(--oh-color-bg-deepest, #0a0a0a);
+  color: var(--oh-color-text-primary, #ececec);
+  font-family: var(--oh-font-sans, system-ui, sans-serif);
+  overflow: hidden;
+}
+
+#onboarding-overlay.open {
+  display: flex;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+
+.onboarding-progress {
+  position: relative;
+  height: 3px;
+  background: var(--oh-color-bg-surface, #1e1e24);
+  flex-shrink: 0;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: var(--oh-color-accent-primary, #14b8a6);
+  transition: width 0.3s var(--oh-ease-default, ease);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ── Content area ────────────────────────────────────────────────────────── */
+
+.onboarding-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--oh-space-6, 24px) var(--oh-space-6, 24px);
+  overflow-y: auto;
+}
+
+.onboarding-step {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  gap: var(--oh-space-5, 20px);
+  animation: obFadeIn 0.25s ease;
+  margin: auto 0;
+}
+
+.onboarding-step.active {
+  display: flex;
+}
+
+@keyframes obFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onboarding-step-counter {
+  font-size: var(--oh-font-size-xs, 11px);
+  color: var(--oh-color-text-muted, #8b8b94);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.onboarding-title {
+  font-size: var(--oh-font-size-xl, 20px);
+  font-weight: var(--oh-font-weight-bold, 700);
+  line-height: 1.3;
+}
+
+.onboarding-subtitle {
+  font-size: var(--oh-font-size-sm, 13px);
+  color: var(--oh-color-text-secondary, #b0b0b8);
+  max-width: 440px;
+  line-height: 1.5;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.onboarding-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--oh-space-4, 16px) var(--oh-space-6, 24px);
+  border-top: 1px solid var(--oh-color-border-subtle, #2a2a32);
+  flex-shrink: 0;
+}
+
+.onboarding-footer-left,
+.onboarding-footer-right {
+  display: flex;
+  gap: var(--oh-space-2, 8px);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.ob-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--oh-font-size-sm, 13px);
+  font-weight: var(--oh-font-weight-medium, 500);
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.ob-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ob-btn--primary {
+  background: var(--oh-color-accent-primary, #14b8a6);
+  color: #000;
+}
+
+.ob-btn--primary:hover:not(:disabled) {
+  background: var(--oh-color-accent-hover, #0ea899);
+}
+
+.ob-btn--ghost {
+  background: transparent;
+  color: var(--oh-color-text-secondary, #b0b0b8);
+}
+
+.ob-btn--ghost:hover:not(:disabled) {
+  background: var(--oh-color-bg-surface, #1e1e24);
+  color: var(--oh-color-text-primary, #ececec);
+}
+
+.ob-btn--outline {
+  background: transparent;
+  border: 1px solid var(--oh-color-border-subtle, #2a2a32);
+  color: var(--oh-color-text-primary, #ececec);
+}
+
+.ob-btn--outline:hover:not(:disabled) {
+  border-color: var(--oh-color-accent-primary, #14b8a6);
+  color: var(--oh-color-accent-primary, #14b8a6);
+}
+
+/* ── Welcome cards ───────────────────────────────────────────────────────── */
+
+.ob-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--oh-space-3, 12px);
+  width: 100%;
+  margin-top: var(--oh-space-2, 8px);
+}
+
+.ob-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--oh-space-2, 8px);
+  padding: var(--oh-space-4, 16px) var(--oh-space-3, 12px);
+  background: var(--oh-color-bg-panel, #141418);
+  border: 1px solid var(--oh-color-border-subtle, #2a2a32);
+  border-radius: var(--radius-lg, 12px);
+  text-align: center;
+}
+
+.ob-card-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--oh-color-accent-subtle, rgba(20, 184, 166, 0.1));
+  color: var(--oh-color-accent-primary, #14b8a6);
+}
+
+.ob-card-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ob-card-title {
+  font-size: var(--oh-font-size-sm, 13px);
+  font-weight: var(--oh-font-weight-semibold, 600);
+}
+
+.ob-card-desc {
+  font-size: 11px;
+  color: var(--oh-color-text-muted, #8b8b94);
+  line-height: 1.4;
+}
+
+/* ── Language toggle ─────────────────────────────────────────────────────── */
+
+.ob-lang-toggle {
+  display: flex;
+  gap: var(--oh-space-2, 8px);
+  margin-top: var(--oh-space-3, 12px);
+}
+
+.ob-lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: 2px solid var(--oh-color-border-subtle, #2a2a32);
+  border-radius: var(--radius-lg, 12px);
+  background: transparent;
+  color: var(--oh-color-text-secondary, #b0b0b8);
+  font-size: var(--oh-font-size-base, 14px);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ob-lang-btn.selected {
+  border-color: var(--oh-color-accent-primary, #14b8a6);
+  background: var(--oh-color-accent-subtle, rgba(20, 184, 166, 0.1));
+  color: var(--oh-color-accent-primary, #14b8a6);
+}
+
+.ob-lang-btn:hover:not(.selected) {
+  border-color: var(--oh-color-text-muted, #8b8b94);
+}
+
+/* ── Preferences form ────────────────────────────────────────────────────── */
+
+.ob-prefs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oh-space-5, 20px);
+  width: 100%;
+  text-align: left;
+}
+
+.ob-prefs-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oh-space-2, 8px);
+}
+
+.ob-prefs-group-title {
+  font-size: var(--oh-font-size-xs, 11px);
+  font-weight: var(--oh-font-weight-semibold, 600);
+  color: var(--oh-color-text-muted, #8b8b94);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ob-prefs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--oh-space-2, 8px);
+  padding: var(--oh-space-2, 8px) 0;
+}
+
+.ob-prefs-row-text {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.ob-prefs-label {
+  font-size: var(--oh-font-size-sm, 13px);
+  font-weight: var(--oh-font-weight-medium, 500);
+}
+
+.ob-prefs-desc {
+  font-size: 11px;
+  color: var(--oh-color-text-muted, #8b8b94);
+  margin-top: 2px;
+}
+
+.ob-prefs .form-input,
+.ob-prefs .form-select,
+.ob-prefs .key-input-group {
+  flex: 1 1 200px;
+  max-width: 260px;
+  min-width: 160px;
+}
+
+/* ── Ollama models step ──────────────────────────────────────────────────── */
+
+.ob-ollama-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--oh-space-3, 12px);
+  padding: var(--oh-space-5, 20px);
+  background: var(--oh-color-bg-panel, #141418);
+  border: 1px solid var(--oh-color-border-subtle, #2a2a32);
+  border-radius: var(--radius-lg, 12px);
+  width: 100%;
+}
+
+.ob-ollama-notice-text {
+  font-size: var(--oh-font-size-sm, 13px);
+  color: var(--oh-color-text-secondary, #b0b0b8);
+  line-height: 1.5;
+}
+
+.ob-ollama-notice-actions {
+  display: flex;
+  gap: var(--oh-space-2, 8px);
+}
+
+.ob-ollama-models {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oh-space-3, 12px);
+  width: 100%;
+}
+
+.ob-ollama-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--oh-space-3, 12px);
+  padding: var(--oh-space-4, 16px);
+  background: var(--oh-color-bg-panel, #141418);
+  border: 1px solid var(--oh-color-border-subtle, #2a2a32);
+  border-radius: var(--radius-lg, 12px);
+}
+
+.ob-ollama-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ob-ollama-card-name {
+  font-size: var(--oh-font-size-sm, 13px);
+  font-weight: var(--oh-font-weight-semibold, 600);
+}
+
+.ob-ollama-card-role {
+  font-size: 11px;
+  color: var(--oh-color-text-muted, #8b8b94);
+}
+
+.ob-ollama-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--oh-space-2, 8px);
+  flex-shrink: 0;
+}
+
+.ob-ollama-status {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.ob-ollama-status--installed {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--oh-color-status-success, #22c55e);
+}
+
+.ob-ollama-status--missing {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--oh-color-status-warning, #f59e0b);
+}
+
+.ob-ollama-status--error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--oh-color-status-error, #ef4444);
+}
+
+.ob-ollama-progress {
+  width: 100%;
+  margin-top: var(--oh-space-2, 8px);
+}
+
+.ob-ollama-progress-track {
+  height: 4px;
+  background: var(--oh-color-bg-surface, #1e1e24);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ob-ollama-progress-bar {
+  height: 100%;
+  background: var(--oh-color-accent-primary, #14b8a6);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.ob-ollama-progress-text {
+  font-size: 11px;
+  color: var(--oh-color-text-muted, #8b8b94);
+  margin-top: 4px;
+  text-align: left;
+}
+
+/* ── Done step ───────────────────────────────────────────────────────────── */
+
+.ob-done-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--oh-color-accent-subtle, rgba(20, 184, 166, 0.1));
+  color: var(--oh-color-accent-primary, #14b8a6);
+}
+
+.ob-done-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Switch toggle (reused from config panel style) ──────────────────────── */
+
+.ob-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.ob-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ob-switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--oh-color-bg-elevated, #28282e);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ob-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.ob-switch input:checked + .ob-switch-track {
+  background: var(--oh-color-accent-primary, #14b8a6);
+}
+
+.ob-switch input:checked + .ob-switch-track::after {
+  transform: translateX(18px);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 620px) {
+  .onboarding-content {
+    padding: var(--oh-space-4, 16px);
+  }
+
+  .ob-prefs-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ob-prefs .form-input,
+  .ob-prefs .form-select,
+  .ob-prefs .key-input-group {
+    max-width: none;
+    width: 100%;
+  }
+
+  .ob-prefs-row .ob-btn--outline {
+    width: 100%;
+  }
+
+  .ob-cards {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .ob-ollama-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ob-ollama-card-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-height: 580px) {
+  .onboarding-content {
+    padding: var(--oh-space-3, 12px) var(--oh-space-4, 16px);
+    justify-content: flex-start;
+  }
+
+  .onboarding-step {
+    margin: 0;
+    gap: var(--oh-space-3, 12px);
+  }
+
+  .onboarding-title {
+    font-size: var(--oh-font-size-lg, 17px);
+  }
+}
