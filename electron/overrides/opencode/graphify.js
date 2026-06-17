@@ -3,6 +3,8 @@
   if (window.__OPENHUB_GRAPHIFY_INJECTED__) return;
   window.__OPENHUB_GRAPHIFY_INJECTED__ = true;
 
+  var _lang = (window.openhub && window.openhub.language) || "fr";
+
   const ICONS = {
     // 4-node square graph (network/knowledge graph icon — distinctly NOT a share button)
     graph:
@@ -24,13 +26,11 @@
     btn.setAttribute("data-component", "icon-button"); // Inherit some base styles
     btn.innerHTML = ICONS.graph;
 
-    // Custom Tooltip
-    const tooltipText = "Mettre à jour Graphify";
     btn.onmouseenter = () => {
       const rect = btn.getBoundingClientRect();
       const tooltip = document.createElement("div");
       tooltip.className = "oh-custom-tooltip";
-      tooltip.textContent = tooltipText;
+      tooltip.textContent = _lang === "en" ? "Update Graphify" : "Mettre à jour Graphify";
       tooltip.style.left = rect.right + 10 + "px";
       tooltip.style.top = rect.top + rect.height / 2 + "px";
       document.body.appendChild(tooltip);
@@ -93,10 +93,18 @@
       } catch (err) {
         console.error("[graphify-btn] Update failed:", err);
         btn.innerHTML = ICONS.error;
-        btn.setAttribute("title", "Erreur : " + err.message);
+        btn.setAttribute(
+          "title",
+          (_lang === "en" ? "Error: " : "Erreur : ") + err.message,
+        );
         setTimeout(() => {
           btn.innerHTML = ICONS.graph;
-          btn.setAttribute("title", "Mettre à jour la cartographie Graphify");
+          btn.setAttribute(
+            "title",
+            _lang === "en"
+              ? "Update Graphify knowledge graph"
+              : "Mettre à jour la cartographie Graphify",
+          );
           btn.classList.remove("loading");
           running = false;
         }, 5000);
@@ -201,4 +209,10 @@
   observer.observe(document.body, { childList: true, subtree: true });
   injectButton();
   if (document.querySelector(".oh-graphify-btn")) observer.disconnect();
+
+  if (window.openhub && window.openhub.onLanguageChanged) {
+    window.openhub.onLanguageChanged(function (l) {
+      _lang = l === "en" ? "en" : "fr";
+    });
+  }
 })();

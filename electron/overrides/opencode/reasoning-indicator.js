@@ -17,10 +17,30 @@
     { id: "max", name: "Maximum" },
   ];
 
-  var ALL_LABELS = FALLBACK_LEVELS.reduce(function (acc, l) {
-    acc[l.id] = l.name;
-    return acc;
-  }, {});
+  var _lang = (window.openhub && window.openhub.language) || "fr";
+  var LEVEL_NAMES = {
+    fr: {
+      none: "Aucun",
+      minimal: "Minimal",
+      low: "Bas",
+      medium: "Moyen",
+      high: "Élevé",
+      xhigh: "Très élevé",
+      max: "Maximum",
+    },
+    en: {
+      none: "None",
+      minimal: "Minimal",
+      low: "Low",
+      medium: "Medium",
+      high: "High",
+      xhigh: "Very high",
+      max: "Maximum",
+    },
+  };
+  function levelName(id) {
+    return (LEVEL_NAMES[_lang] || LEVEL_NAMES.fr)[id] || id;
+  }
 
   var currentEffort = localStorage.getItem(EFFORT_KEY) || "medium";
   var activeLevels = FALLBACK_LEVELS;
@@ -123,7 +143,7 @@
     }
 
     btn.style.display = "flex";
-    var label = ALL_LABELS[currentEffort] || "Moyen";
+    var label = levelName(currentEffort);
     btn.innerHTML = '<span class="truncate">' + label + "</span>" + getChevronSvg();
   }
 
@@ -208,7 +228,7 @@
           : "transparent") +
         ";";
 
-      opt.textContent = item.name;
+      opt.textContent = levelName(item.id);
       if (isActive) {
         opt.innerHTML +=
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -278,6 +298,13 @@
       updateInlineButton();
     }
   });
+
+  if (window.openhub && window.openhub.onLanguageChanged) {
+    window.openhub.onLanguageChanged(function (l) {
+      _lang = l === "en" ? "en" : "fr";
+      updateInlineButton();
+    });
+  }
 
   // Polling fallback — localStorage sync only (observer handles DOM re-injection)
   setInterval(function () {

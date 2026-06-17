@@ -6,6 +6,54 @@
 
   var hub = window.openhub;
 
+  // ── Inline i18n (webview has no runtime) ──
+  var lang = (hub && hub.language) || "fr";
+  var DICT = {
+    fr: {
+      editProject: "Modifier le projet",
+      newProject: "Nouveau projet",
+      projectName: "Nom du projet",
+      namePlaceholder: "Ex: Assistant Marketing",
+      color: "Couleur",
+      linkedFolder: "Dossier lié",
+      noFolder: "Aucun dossier lié",
+      choose: "Choisir...",
+      instructions: "Instructions",
+      instrPlaceholder: "Instructions pour l'IA...",
+      cancel: "Annuler",
+      save: "Enregistrer",
+      create: "Créer",
+      saveError: "Échec de l'enregistrement du projet : {err}",
+      projects: "Projets",
+    },
+    en: {
+      editProject: "Edit project",
+      newProject: "New project",
+      projectName: "Project name",
+      namePlaceholder: "E.g.: Marketing Assistant",
+      color: "Color",
+      linkedFolder: "Linked folder",
+      noFolder: "No linked folder",
+      choose: "Choose...",
+      instructions: "Instructions",
+      instrPlaceholder: "Instructions for the AI...",
+      cancel: "Cancel",
+      save: "Save",
+      create: "Create",
+      saveError: "Failed to save project: {err}",
+      projects: "Projects",
+    },
+  };
+  function t(key, vars) {
+    var str = (DICT[lang] || DICT.fr)[key] || key;
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        str = str.replace(new RegExp("\\{" + k + "\\}", "g"), vars[k]);
+      });
+    }
+    return str;
+  }
+
   // Escapes untrusted project fields (name/path/instructions are LLM/user-controlled
   // and persisted) before they are interpolated into HTML — prevents stored XSS.
   function escapeHtml(text) {
@@ -48,32 +96,32 @@
 
     modal.innerHTML = `
       <div class="oh-modal-header">
-        <h2>${isEdit ? "Modifier le projet" : "Nouveau projet"}</h2>
+        <h2>${isEdit ? t("editProject") : t("newProject")}</h2>
         <button class="oh-modal-close">×</button>
       </div>
       <div class="oh-modal-field">
-        <label for="oh-modal-name-input">Nom du projet</label>
-        <input type="text" id="oh-modal-name-input" placeholder="Ex: Assistant Marketing" maxlength="120" value="${editing ? escapeHtml(editing.name) : ""}">
+        <label for="oh-modal-name-input">${t("projectName")}</label>
+        <input type="text" id="oh-modal-name-input" placeholder="${t("namePlaceholder")}" maxlength="120" value="${editing ? escapeHtml(editing.name) : ""}">
       </div>
       <div class="oh-modal-field">
-        <label>Couleur</label>
+        <label>${t("color")}</label>
         <div class="oh-color-row" id="oh-modal-color-row"></div>
       </div>
       <div class="oh-modal-field">
-        <label for="oh-modal-path-input">Dossier lié</label>
+        <label for="oh-modal-path-input">${t("linkedFolder")}</label>
         <div style="display: flex; gap: 8px;">
-          <input type="text" id="oh-modal-path-input" placeholder="Aucun dossier lié" value="${editing ? escapeHtml(editing.path || "") : ""}" readonly style="flex: 1; cursor: default; opacity: 0.8;">
-          <button class="oh-btn oh-btn-ghost" id="oh-modal-pick-path" style="border: 1px solid var(--border-default); white-space: nowrap; background: var(--bg-surface, #1e1e1e); color: var(--text-primary, #ececec); font-weight: 500;">Choisir...</button>
+          <input type="text" id="oh-modal-path-input" placeholder="${t("noFolder")}" value="${editing ? escapeHtml(editing.path || "") : ""}" readonly style="flex: 1; cursor: default; opacity: 0.8;">
+          <button class="oh-btn oh-btn-ghost" id="oh-modal-pick-path" style="border: 1px solid var(--border-default); white-space: nowrap; background: var(--bg-surface, #1e1e1e); color: var(--text-primary, #ececec); font-weight: 500;">${t("choose")}</button>
         </div>
       </div>
       <div class="oh-modal-field oh-modal-field-grow">
-        <label for="oh-modal-instr-input">Instructions</label>
-        <textarea id="oh-modal-instr-input" placeholder="Instructions pour l'IA..." maxlength="8000">${editing ? escapeHtml(editing.instructions) : ""}</textarea>
+        <label for="oh-modal-instr-input">${t("instructions")}</label>
+        <textarea id="oh-modal-instr-input" placeholder="${t("instrPlaceholder")}" maxlength="8000">${editing ? escapeHtml(editing.instructions) : ""}</textarea>
       </div>
       <div class="oh-modal-footer">
         <div style="flex:1"></div>
-        <button class="oh-btn oh-btn-ghost" id="oh-modal-cancel">Annuler</button>
-        <button class="oh-btn oh-btn-primary" id="oh-modal-save">${isEdit ? "Enregistrer" : "Créer"}</button>
+        <button class="oh-btn oh-btn-ghost" id="oh-modal-cancel">${t("cancel")}</button>
+        <button class="oh-btn oh-btn-primary" id="oh-modal-save">${isEdit ? t("save") : t("create")}</button>
       </div>
     `;
 
@@ -125,10 +173,16 @@
 
     modal.querySelector(".oh-modal-close").onclick = closeModal;
     modal.querySelector("#oh-modal-cancel").onclick = closeModal;
-    modal.querySelector("#oh-modal-save").onclick = function () {
+    nameInput.addEventListener("input", function () {
+      nameInput.style.borderColor = "";
+    });
+    var saveBtn = modal.querySelector("#oh-modal-save");
+    saveBtn.onclick = function () {
+      if (saveBtn.disabled) return;
       var name = nameInput.value.trim();
       if (!name) {
         nameInput.style.borderColor = "#ef4444";
+        nameInput.focus();
         return;
       }
       var data = {
@@ -138,10 +192,17 @@
         path: selectedPath,
       };
       if (isEdit) data.id = editing.id;
-      hub.saveProject(data).then(function () {
-        closeModal();
-        if (window.__OH_REFRESH_HUB) window.__OH_REFRESH_HUB();
-      });
+      saveBtn.disabled = true;
+      hub
+        .saveProject(data)
+        .then(function () {
+          closeModal();
+          if (window.__OH_REFRESH_HUB) window.__OH_REFRESH_HUB();
+        })
+        .catch(function (err) {
+          saveBtn.disabled = false;
+          alert(t("saveError", { err: err && err.message ? err.message : "?" }));
+        });
     };
 
     nameInput.focus();
@@ -183,7 +244,7 @@
     var btn = document.createElement("button");
     btn.id = "oh-simple-projects-btn";
     btn.className = "oh-sidebar-simple-btn";
-    btn.innerHTML = getFolderIcon() + "<span>Projets</span>";
+    btn.innerHTML = getFolderIcon() + "<span>" + t("projects") + "</span>";
 
     btn.onclick = function (e) {
       e.preventDefault();
@@ -228,6 +289,17 @@
     document.addEventListener("DOMContentLoaded", function () {
       observer.observe(document.body, { childList: true, subtree: true });
       ensureInjected();
+    });
+  }
+
+  if (hub && hub.onLanguageChanged) {
+    hub.onLanguageChanged(function (newLang) {
+      lang = newLang === "en" ? "en" : "fr";
+      var btn = document.getElementById("oh-simple-projects-btn");
+      if (btn) {
+        var span = btn.querySelector("span");
+        if (span) span.textContent = t("projects");
+      }
     });
   }
 })();
