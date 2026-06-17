@@ -31,8 +31,8 @@ First public release. A macOS desktop shell unifying three open-source AI tools.
 - **Override layer** (CSS/JS) per app — upstream source code is never
   modified, which preserves compatibility with updates.
 - **Prefix caching optimization** in the proxy to reduce cost and latency.
-- **Tooling**: automated setup (`scripts/setup.sh`), `npm run update:apps`,
-  `npm run check:selectors`, Vitest + Playwright tests, CI lint & typecheck.
+- **Tooling**: automated setup, selector verification, Vitest + Playwright
+  tests, CI lint & typecheck.
 
 ### Security
 

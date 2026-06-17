@@ -152,13 +152,12 @@ or in local storage.
 
 ## 7. Updating the upstream apps
 
-```bash
-npm run update:apps     # git pull + rebuild des 3 apps
-npm run check:selectors # vérifie que les sélecteurs CSS des overrides existent encore
-```
-
-The source code of the 3 apps is never modified: all customization lives in
+OpenHub updates the bundled tools automatically when a new `.dmg` is released. The
+source code of the 3 apps is never modified: all customization lives in
 `electron/overrides/`, so upstream updates don't break anything.
+
+For contributors building from source, see [CONTRIBUTING.md](../CONTRIBUTING.md) for
+the update and selector-check workflow.
 
 ---
 

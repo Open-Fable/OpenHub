@@ -47,8 +47,7 @@ l'enrichissement de contexte.
 
 **Jamais.** OpenHub clone OpenWork, OpenCode et Open Design dans `apps/` et les laisse
 intacts. Toute la personnalisation (thème, masquage de settings, features) passe par
-de l'injection CSS/JS depuis `electron/overrides/`. C'est pour ça que les mises à jour
-upstream (`npm run update:apps`) ne cassent rien.
+de l'injection CSS/JS depuis `electron/overrides/`. C'est pour ça que les mises à jour upstream ne cassent rien.
 
 ### Quels providers LLM sont supportés ?
 
@@ -64,14 +63,16 @@ livrables. Voir le [guide d'usage](USAGE.fr.md#4-lorchestrateur-multi-agents).
 
 ### Après une mise à jour upstream, l'interface est cassée. Que faire ?
 
-Lance `npm run check:selectors` : ça vérifie que les sélecteurs CSS visés par les
-overrides existent toujours dans le nouveau code des apps. Si un sélecteur a changé en
-amont, il faut ajuster le fichier d'override concerné dans `electron/overrides/`.
+OpenHub inclut une vérification de sélecteurs qui contrôle si les sélecteurs CSS
+visés par les overrides existent toujours dans le nouveau code des apps. Si un
+sélecteur a changé en amont, il faut ajuster le fichier d'override concerné dans
+`electron/overrides/`. Voir [CONTRIBUTING.md](../CONTRIBUTING.md) pour le workflow
+développeur complet.
 
 ### Comment contribuer ?
 
-Voir [CONTRIBUTING.md](../CONTRIBUTING.md). En résumé : fork, branche, tests
-(`npm test`), typecheck (`npm run typecheck`), lint (`npm run lint`), puis PR.
+Voir [CONTRIBUTING.md](../CONTRIBUTING.md) pour le workflow complet : fork, branche,
+tests, puis pull request.
 
 ### Comment signaler un bug ou demander une fonctionnalité ?
 

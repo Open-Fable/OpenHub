@@ -45,8 +45,7 @@ serves as the injection point for web search and context enrichment.
 
 **Never.** OpenHub clones OpenWork, OpenCode, and Open Design into `apps/` and leaves
 them intact. All customization (theme, hiding settings, features) happens through
-CSS/JS injection from `electron/overrides/`. That's why upstream updates
-(`npm run update:apps`) don't break anything.
+CSS/JS injection from `electron/overrides/`. That's why upstream updates don't break anything.
 
 ### Which LLM providers are supported?
 
@@ -62,14 +61,15 @@ with automatic quality checks. The result is a folder of deliverables. See the
 
 ### After an upstream update, the interface is broken. What do I do?
 
-Run `npm run check:selectors`: it verifies that the CSS selectors targeted by the
-overrides still exist in the apps' new code. If a selector changed upstream, you need
-to adjust the relevant override file in `electron/overrides/`.
+OpenHub ships a selector check that verifies whether the CSS selectors targeted by the
+overrides still exist in the apps' new code. If a selector changed upstream, the
+relevant override file in `electron/overrides/` needs adjusting.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full developer workflow.
 
 ### How do I contribute?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md). In short: fork, branch, tests
-(`npm test`), typecheck (`npm run typecheck`), lint (`npm run lint`), then PR.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full workflow: fork, branch, test,
+then open a pull request.
 
 ### How do I report a bug or request a feature?
 

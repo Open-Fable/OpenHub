@@ -31,8 +31,8 @@ Première version publique. Shell desktop macOS unifiant trois outils IA open-so
 - **Couche d'overrides** CSS/JS par app — le code source upstream n'est jamais
   modifié, ce qui préserve la compatibilité avec les mises à jour.
 - **Optimisation du prefix caching** dans le proxy pour réduire coûts et latence.
-- **Outillage** : setup automatisé (`scripts/setup.sh`), `npm run update:apps`,
-  `npm run check:selectors`, tests Vitest + Playwright, CI lint & typecheck.
+- **Outillage** : setup automatisé, vérification des sélecteurs, tests Vitest +
+  Playwright, CI lint & typecheck.
 
 ### Sécurité
 
