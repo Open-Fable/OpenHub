@@ -293,6 +293,63 @@ contextBridge.exposeInMainWorld("openhub", {
     >,
 });
 
+const OPENWORK_MOCK_RESPONSES: Record<string, unknown> = {
+  getOpenworkUiMcpCommand: [],
+  getOpenworkUiMcpEnvironment: {},
+  getComputerUseMcpCommand: [],
+  getDeviceFingerprint: "openhub-stub",
+  __setApplicationMenuVisible: true,
+  __setNativeTheme: true,
+  getUiControlBridgeInfo: { supported: false },
+};
+
+contextBridge.exposeInMainWorld("__OPENWORK_ELECTRON__", {
+  invokeDesktop: (command: string, ...args: unknown[]) => {
+    if (OPENWORK_MOCK_RESPONSES[command] !== undefined) {
+      return Promise.resolve(OPENWORK_MOCK_RESPONSES[command]);
+    }
+    return ipcRenderer
+      .invoke("openwork-desktop-invoke", command, ...args)
+      .then((res: unknown) => (res === null ? [] : res))
+      .catch(() => [] as unknown[]);
+  },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke("od-shell:open-external", url),
+    relaunch: () => Promise.resolve(),
+  },
+  system: {
+    getArchitectureInfo: () =>
+      Promise.resolve({
+        arch: "arm64",
+        releaseUrl: "https://github.com/different-ai/openwork",
+      }),
+    askMicrophoneAccess: () => Promise.resolve(true),
+  },
+  browser: {
+    createTab: (url: string) => ipcRenderer.invoke("od-shell:open-external", url),
+    openUrl: (url: string) => ipcRenderer.invoke("od-shell:open-external", url),
+  },
+  updater: {
+    getChannel: () => Promise.resolve({ channel: "stable", currentVersion: "0.15.1" }),
+    setChannel: (ch: string) =>
+      Promise.resolve({ channel: ch, currentVersion: "0.15.1" }),
+    check: () =>
+      Promise.resolve({
+        available: false,
+        currentVersion: "0.15.1",
+        reason: "unavailable",
+      }),
+    download: () => Promise.resolve({ ok: false, reason: "unavailable" }),
+    installAndRestart: () => Promise.resolve({ ok: false, reason: "unavailable" }),
+    onDownloadProgress: () => () => {},
+  },
+  meta: {
+    platform: "darwin",
+    version: "openhub",
+    initialDeepLinks: [],
+  },
+});
+
 type ProjectImportResult =
   | { ok: true; projectId: string; conversationId: string; entryFile: string | null }
   | { ok: false; canceled: true }

@@ -100,12 +100,6 @@ const SLOT_URLS: Record<Exclude<SlotName, "config" | "chat" | "projects">, strin
 
 const SPLASH_MIN_MS = 1200;
 
-// Delay before warming slot pages in hidden views — lets the sidebar + chat
-// paint first so a launch-time compile burst doesn't starve them.
-const WARM_DELAY_MS = 1500;
-
-type RemoteSlot = Exclude<SlotName, "config" | "chat" | "projects">;
-
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let splashShownAt = 0;
@@ -263,14 +257,31 @@ function createSlotView(
     },
   });
 
+  // Match the app shell so a freshly-revealed view never flashes white/black
+  // before its first paint.
+  view.setBackgroundColor("#18181E");
+
   // CSS only on full navigation: a did-navigate-in-page keeps the same document,
   // so the stylesheet inserted by insertCSS() is still present. Re-inserting it
   // there appends a DUPLICATE stylesheet that accumulates unboundedly over a long
   // SPA session (memory + style-recalc cost). JS is re-run on both events because
   // an in-page route swap can drop our injected DOM; the overrides are guarded by
   // window.__OPENHUB_*_INJECTED__ flags so re-running is idempotent.
-  view.webContents.on("did-navigate", () => injectOverrides(slot, view, true));
-  view.webContents.on("did-navigate-in-page", () => injectOverrides(slot, view, false));
+  // Override injection is DEFERRED until after loadURL completes. Injecting
+  // during did-navigate (while modules are loading) blocks the renderer's main
+  // thread via IPC round-trips (insertCSS/executeJavaScript), turning a <1s
+  // load into 17-27s.  The did-navigate-in-page listener handles SPA route
+  // changes after the initial load.
+  if (process.env.OPENHUB_NO_OVERRIDES !== "1") {
+    let inPageTimer: ReturnType<typeof setTimeout> | null = null;
+    view.webContents.on("did-navigate-in-page", () => {
+      if (inPageTimer) clearTimeout(inPageTimer);
+      inPageTimer = setTimeout(() => {
+        inPageTimer = null;
+        injectOverrides(slot, view, false);
+      }, 300);
+    });
+  }
 
   // Block drag-and-drop navigation to local files or other unsafe protocols
   view.webContents.on("will-navigate", (event, url) => {
@@ -312,28 +323,55 @@ async function injectOverrides(
   view: WebContentsView,
   injectCss: boolean,
 ): Promise<void> {
+  const t0 = Date.now();
+  // JS first: bridge.js must set window.__OPENWORK_ELECTRON__ before the page's
+  // top-level modules evaluate isDesktopRuntime(). Each executeJavaScript is an
+  // IPC round-trip that blocks the renderer's main thread, so run them before
+  // CSS to minimise interference with module loading.
+  const jsBlocks = await loadOverrides(slot, "js");
+  console.warn(
+    `[override-timing] ${slot} loadOverrides(js) ${jsBlocks.length} blocks +${Date.now() - t0}ms`,
+  );
+  for (let i = 0; i < jsBlocks.length; i++) {
+    const jsBefore = Date.now();
+    await view.webContents.executeJavaScript(jsBlocks[i]);
+    console.warn(
+      `[override-timing] ${slot} executeJS[${i}] done +${Date.now() - t0}ms (took ${Date.now() - jsBefore}ms)`,
+    );
+  }
+  console.warn(`[override-timing] ${slot} JS done +${Date.now() - t0}ms`);
+
+  // CSS: fire all insertions in parallel — they don't need to complete before
+  // the page renders (cosmetic), and sequential await blocks module loading
+  // for seconds on the renderer's main thread.
   if (injectCss) {
     const cssBlocks = await loadOverrides(slot, "css");
-    for (const css of cssBlocks) {
-      await view.webContents.insertCSS(css);
-    }
+    console.warn(
+      `[override-timing] ${slot} loadOverrides(css) ${cssBlocks.length} blocks +${Date.now() - t0}ms`,
+    );
+    Promise.all(cssBlocks.map((css) => view.webContents.insertCSS(css))).then(() =>
+      console.warn(`[override-timing] ${slot} insertCSS done +${Date.now() - t0}ms`),
+    );
   }
-  const jsBlocks = await loadOverrides(slot, "js");
-  for (const js of jsBlocks) {
-    await view.webContents.executeJavaScript(js);
-  }
+  console.warn(`[override-timing] ${slot} ALL done +${Date.now() - t0}ms`);
 }
 
 async function loadViewUrl(view: WebContentsView, url: string): Promise<void> {
+  const t0 = Date.now();
   for (let attempt = 1; attempt <= 6; attempt++) {
     try {
-      console.warn(`[main] loadURL attempt ${attempt}/6: ${url}`);
+      console.warn(`[loadURL-timing] attempt ${attempt}/6 ${url} +${Date.now() - t0}ms`);
+      const before = Date.now();
       await view.webContents.loadURL(url);
-      console.warn(`[main] loadURL success: ${url}`);
+      console.warn(
+        `[loadURL-timing] SUCCESS ${url} attempt=${attempt} loadURL took ${Date.now() - before}ms total +${Date.now() - t0}ms`,
+      );
       return;
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      console.error(`[main] loadURL failed (${code}): ${url}`);
+      console.error(
+        `[loadURL-timing] FAIL (${code}) ${url} attempt=${attempt} +${Date.now() - t0}ms`,
+      );
       if (code === "ERR_CONNECTION_REFUSED" && attempt < 6) {
         await new Promise((r) => setTimeout(r, 1000));
       } else {
@@ -341,78 +379,6 @@ async function loadViewUrl(view: WebContentsView, url: string): Promise<void> {
       }
     }
   }
-}
-
-// Ensures a slot view exists, is a child of the window, and is in the `views`
-// Map. Returns the view. Does NOT change activeSlot or visibility. Callers
-// guarantee mainWindow is non-null (switchSlot/preloadSlot both guard first).
-function ensureSlotView(slot: RemoteSlot): WebContentsView {
-  const existing = views.get(slot);
-  if (existing) {
-    mainWindow!.contentView.addChildView(existing); // bring to front
-    return existing;
-  }
-  const view = createSlotView(slot);
-  view.setBackgroundColor("#18181E");
-  mainWindow!.contentView.addChildView(view);
-  views.set(slot, view);
-  return view;
-}
-
-// Deduplicates concurrent loads of the same slot: a click and a background warm
-// can target one view at once, and two parallel loadURL() retry loops on the
-// same webContents cancel each other. Callers share the single in-flight load.
-const slotLoads = new Map<RemoteSlot, Promise<void>>();
-
-function loadSlotOnce(
-  view: WebContentsView,
-  slot: RemoteSlot,
-  url: string,
-): Promise<void> {
-  const inFlight = slotLoads.get(slot);
-  if (inFlight) return inFlight;
-  const cur = view.webContents.getURL();
-  const alreadyLoaded =
-    cur !== "" && cur !== "about:blank" && !cur.startsWith("chrome-error://");
-  if (alreadyLoaded) return Promise.resolve();
-  const p = loadViewUrl(view, url).finally(() => slotLoads.delete(slot));
-  slotLoads.set(slot, p);
-  return p;
-}
-
-// Warms a slot in the background: creates its hidden view and loads the URL so
-// Turbopack/Vite compiles the route before the user ever clicks the slot. Never
-// changes activeSlot; the view stays hidden via repositionViews().
-async function preloadSlot(slot: RemoteSlot, url: string): Promise<void> {
-  if (!mainWindow || !url) return;
-  const view = ensureSlotView(slot);
-  const [width, height] = mainWindow.getContentSize();
-  view.setBounds({ x: 0, y: headerHeight, width, height: height - headerHeight });
-  view.setVisible(false); // must never paint over the active slot
-  await loadSlotOnce(view, slot, url);
-}
-
-// Warms work/code/design once each service is healthy. Mirrors switchSlot's
-// port→SLOT_URLS capture; allSettled so one slow/failed service never blocks
-// the others.
-async function warmSlots(starts: {
-  startCode: Promise<number | null>;
-  startWork: Promise<number | null>;
-  startDesign: Promise<number | null>;
-}): Promise<void> {
-  await Promise.allSettled([
-    starts.startWork.then((port) =>
-      preloadSlot("work", port !== null ? SLOT_URLS.work : ""),
-    ),
-    starts.startCode.then((port) => {
-      if (port !== null) SLOT_URLS.code = `http://127.0.0.1:${port}`;
-      return preloadSlot("code", port !== null ? SLOT_URLS.code : "");
-    }),
-    starts.startDesign.then((port) => {
-      if (port !== null) SLOT_URLS.design = `http://localhost:${port}`;
-      return preloadSlot("design", port !== null ? SLOT_URLS.design : "");
-    }),
-  ]);
 }
 
 let configOpen = false;
@@ -423,14 +389,13 @@ function repositionViews(): void {
   const [width, height] = mainWindow.getContentSize();
   const contentY = headerHeight;
   const contentHeight = height - headerHeight;
-  const bounds = { x: 0, y: contentY, width: width, height: contentHeight };
 
   for (const [slot, view] of views) {
     const isActive = slot === activeSlot;
     view.setVisible(isActive && !configOpen && !onboardingOpen);
-    // Lay out hidden views too so they render at the right size (xterm/lexical
-    // mis-measure at 0×0) — no reflow flash when later revealed.
-    view.setBounds(bounds);
+    if (isActive) {
+      view.setBounds({ x: 0, y: contentY, width: width, height: contentHeight });
+    }
   }
 }
 
@@ -460,6 +425,8 @@ const SLOT_ALLOWED_CHANNELS = new Set<string>([
   "od-dialog:pick-and-import",
   "od-dialog:pick-and-replace-working-dir",
   "od-pet:set-visible",
+  "get-language-sync",
+  "onboarding-pending-sync",
 ]);
 
 function senderIsTrusted(e: IpcMainInvokeEvent | IpcMainEvent, channel: string): boolean {
@@ -572,6 +539,9 @@ ipcOn("nav-popup-select", (_e, slot: SlotName) => {
 });
 
 async function switchSlot(slot: SlotName): Promise<void> {
+  const __t0 = Date.now();
+  const __t = (label: string) =>
+    console.warn(`[timing] ${slot} +${Date.now() - __t0}ms ${label}`);
   console.warn(`\n[main] ── switchSlot("${slot}") ──`);
 
   if (onboardingOpen) return;
@@ -668,10 +638,104 @@ async function switchSlot(slot: SlotName): Promise<void> {
     return;
   }
 
-  // 1. Create/show the view IMMEDIATELY so the user sees feedback right away,
-  //    even before the backend service is healthy (warming may have created it
-  //    already, in which case ensureSlotView just brings it to front).
-  const view = ensureSlotView(slot);
+  // Start the service (or reuse if already running)
+  if (processManager) {
+    console.warn(`[main] ensureRunning("${slot}")...`);
+    __t("ensureRunning start");
+    const port = await processManager.ensureRunning(slot);
+    __t(`ensureRunning done → port ${port}`);
+    console.warn(`[main] ensureRunning("${slot}") → port ${port}`);
+    if (port !== null && slot === "design") {
+      // Daemon-served build (:7456) binds 127.0.0.1 only, so use an explicit IP
+      // (Chromium would otherwise resolve "localhost" to ::1 and fail). The
+      // next-dev fallback (:3456) keeps localhost as before.
+      SLOT_URLS[slot] =
+        port === 7456 ? `http://127.0.0.1:${port}` : `http://localhost:${port}`;
+    } else if (port !== null && slot === "code") {
+      // opencode binds to 127.0.0.1 (IPv4) — use explicit IP so Chromium doesn't try ::1
+      SLOT_URLS[slot] = `http://127.0.0.1:${port}`;
+    }
+  }
+
+  const url = SLOT_URLS[slot];
+  console.warn(`[main] slot url: ${url || "(empty)"}`);
+
+  // Load BEFORE revealing: the previous slot stays on screen (with a sidebar
+  // spinner) during the load — no black flash.
+  if (!views.has(slot)) {
+    __t("createSlotView start");
+    const view = createSlotView(slot);
+    __t("createSlotView done");
+
+    // ── Exhaustive WebContents lifecycle logging ──
+    const wc = view.webContents;
+    wc.once("dom-ready", () => __t("EVENT dom-ready"));
+    wc.once("did-finish-load", () => __t("EVENT did-finish-load"));
+    wc.once("did-start-loading", () => __t("EVENT did-start-loading"));
+    wc.once("did-stop-loading", () => __t("EVENT did-stop-loading"));
+    wc.once("did-start-navigation", (_e, navUrl) =>
+      __t(`EVENT did-start-navigation → ${navUrl}`),
+    );
+    wc.once("did-navigate", (_e, navUrl) => __t(`EVENT did-navigate → ${navUrl}`));
+    wc.once("did-fail-load", (_e, code, desc) =>
+      __t(`EVENT did-fail-load code=${code} desc=${desc}`),
+    );
+    wc.once("render-process-gone", (_e, details) =>
+      __t(`EVENT render-process-gone reason=${details.reason}`),
+    );
+    wc.once("responsive", () => __t("EVENT responsive"));
+    wc.once("unresponsive", () => __t("EVENT unresponsive"));
+    wc.once("did-frame-finish-load", (_e, isMain) =>
+      __t(`EVENT did-frame-finish-load isMainFrame=${isMain}`),
+    );
+    wc.once("page-title-updated", (_e, title) =>
+      __t(`EVENT page-title-updated → ${title}`),
+    );
+
+    // Give the view real bounds BEFORE loadURL so Chromium's renderer has a
+    // non-zero viewport. A 0×0 view throttles IPC (insertCSS, executeJS) and
+    // module loading — root cause of the 27s hang. The view is VISIBLE with
+    // bounds so the renderer runs at full priority.
+    const [cw, ch] = mainWindow.getContentSize();
+    view.setBounds({ x: 0, y: headerHeight, width: cw, height: ch - headerHeight });
+    __t("setBounds (visible) before load");
+
+    __t("addChildView start");
+    mainWindow.contentView.addChildView(view);
+    __t("addChildView done");
+    views.set(slot, view);
+    if (url) {
+      __t("loadViewUrl start");
+      await loadViewUrl(view, url);
+      __t("loadViewUrl done");
+      // Inject overrides AFTER the page has fully loaded — injecting during
+      // did-navigate blocks the renderer for 17-27s via IPC round-trips.
+      if (process.env.OPENHUB_NO_OVERRIDES !== "1") {
+        __t("injectOverrides start (post-load)");
+        await injectOverrides(slot, view, true);
+        __t("injectOverrides done (post-load)");
+      }
+    }
+  } else {
+    const view = views.get(slot)!;
+    const currentUrl = view.webContents.getURL();
+    console.warn(`[main] existing view current url: "${currentUrl}"`);
+    mainWindow.contentView.addChildView(view);
+    const needsLoad =
+      !currentUrl ||
+      currentUrl === "about:blank" ||
+      currentUrl.startsWith("chrome-error://");
+    if (needsLoad && url) {
+      __t("loadViewUrl start (reuse)");
+      await loadViewUrl(view, url);
+      __t("loadViewUrl done (reuse)");
+    }
+  }
+
+  activeSlot = slot;
+  repositionViews();
+  __t("repositionViews done (revealed)");
+  mainWindow.webContents.send("slot-changed", slot);
 
   const slotTitles: Record<string, string> = {
     work: "OpenHub — Work",
@@ -679,29 +743,7 @@ async function switchSlot(slot: SlotName): Promise<void> {
     design: "OpenHub — Design",
     chat: "OpenHub — Chat",
   };
-  activeSlot = slot;
-  repositionViews();
-  mainWindow.webContents.send("slot-changed", slot);
   mainWindow.setTitle(slotTitles[slot] ?? "OpenHub");
-
-  // 2. Start the service (or reuse if already running). The view is already
-  //    visible with a dark background, so a long startup no longer looks frozen.
-  if (processManager) {
-    console.warn(`[main] ensureRunning("${slot}")...`);
-    const port = await processManager.ensureRunning(slot);
-    console.warn(`[main] ensureRunning("${slot}") → port ${port}`);
-    if (port !== null && slot === "design") {
-      SLOT_URLS[slot] = `http://localhost:${port}`;
-    } else if (port !== null && slot === "code") {
-      SLOT_URLS[slot] = `http://127.0.0.1:${port}`;
-    }
-  }
-
-  // 3. Load the URL — shared with any in-flight background warm via loadSlotOnce,
-  //    and skipped if the view already shows the right page.
-  const url = SLOT_URLS[slot];
-  console.warn(`[main] slot url: ${url || "(empty)"}`);
-  if (url) await loadSlotOnce(view, slot, url);
 
   console.warn(`[main] ── switchSlot("${slot}") done ──\n`);
 }
@@ -2061,16 +2103,40 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
       };
     }
 
-    // Check if graphify is installed (execFile — no shell)
-    let hasGraphify = false;
+    // Electron apps launched from Finder/Dock inherit a minimal PATH that
+    // excludes ~/.local/bin, nvm paths, etc. Build an enriched PATH so we
+    // can locate user-installed binaries like graphify and npm.
+    const home = homedir();
+    const extraDirs = [
+      path.join(home, ".local", "bin"),
+      path.join(home, ".nvm", "versions", "node"),
+      "/usr/local/bin",
+      "/opt/homebrew/bin",
+    ];
+    // For nvm, pick the latest installed version's bin directory.
     try {
-      await execFilePromise("which", ["graphify"]);
-      hasGraphify = true;
+      const nvmBase = path.join(home, ".nvm", "versions", "node");
+      const versions = await fs.readdir(nvmBase);
+      if (versions.length > 0) {
+        versions.sort();
+        extraDirs.push(path.join(nvmBase, versions[versions.length - 1], "bin"));
+      }
     } catch {
-      hasGraphify = false;
+      // nvm not installed — ignore
+    }
+    const enrichedPath =
+      extraDirs.join(path.delimiter) + path.delimiter + (process.env.PATH ?? "");
+    const pathEnv = { env: { ...process.env, PATH: enrichedPath } };
+
+    // Check if graphify is installed (execFile — no shell)
+    let graphifyBin = "";
+    try {
+      graphifyBin = (await execFilePromise("which", ["graphify"], pathEnv)).trim();
+    } catch {
+      // not found
     }
 
-    if (!hasGraphify) {
+    if (!graphifyBin) {
       const { response } = await dialog.showMessageBox({
         type: "question",
         title: "Installer Graphify ?",
@@ -2084,7 +2150,8 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
 
       if (response === 0) {
         try {
-          await execFilePromise("npm", ["install", "-g", "graphify-ai"]);
+          await execFilePromise("npm", ["install", "-g", "graphify-ai"], pathEnv);
+          graphifyBin = (await execFilePromise("which", ["graphify"], pathEnv)).trim();
         } catch {
           return {
             ok: false,
@@ -2099,7 +2166,10 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
 
     // Run update in the actual project directory (execFile — no shell)
     console.warn(`[graphify] Running update in: ${workspaceDir}`);
-    await execFilePromise("graphify", ["update", "."], { cwd: workspaceDir });
+    await execFilePromise(graphifyBin || "graphify", ["update", "."], {
+      cwd: workspaceDir,
+      ...pathEnv,
+    });
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -2371,26 +2441,35 @@ function applyPermissionHardening(): void {
 app
   .whenReady()
   .then(async () => {
-    // Thème sombre par défaut (ADN OpenHub) : pilote prefers-color-scheme dans
-    // toutes les WebContentsView (vues internes + apps tierces).
+    const bootT0 = Date.now();
+    const bootT = (label: string) =>
+      console.warn(`[boot-timing] ${label} +${Date.now() - bootT0}ms`);
+
     nativeTheme.themeSource = "dark";
     applyNavigationHardening();
     splashWindow = createSplash();
     splashShownAt = Date.now();
+    bootT("splash shown");
 
     applyPermissionHardening();
 
+    bootT("loadSettings start");
     await loadSettings();
+    bootT("loadSettings done");
     registerOllamaHandlers();
+    bootT("startProxy start");
     proxyToken = await startProxy();
     setProxyToken(proxyToken);
+    bootT("startProxy done");
 
+    bootT("readSecrets start");
     const [anthropicKey, openaiKey, openrouterKey, googleAiKey] = await Promise.all([
       readSecret("openhub", "anthropic-api-key"),
       readSecret("openhub", "openai-api-key"),
       readSecret("openhub", "openrouter-api-key"),
       readSecret("openhub", "google-ai-key"),
     ]);
+    bootT("readSecrets done");
 
     processManager = new ProcessManager(
       proxyToken,
@@ -2402,6 +2481,7 @@ app
         userDataDir: app.getPath("userData"),
       },
     );
+    bootT("ProcessManager created");
 
     // Sync binary in background so it doesn't block UI startup
     ensureBinarySynced().catch((err) => {
@@ -2415,7 +2495,35 @@ app
       });
     }
 
-    // Initialize the self-updater (Partie 2 — packaged mode only)
+    bootT("generateOpenCodeConfig start");
+    await generateOpenCodeConfig({ proxyToken, anthropicKey, openaiKey, openrouterKey });
+    bootT("generateOpenCodeConfig done");
+
+    // Start opencode ASAP — don't let the gh token lookup (up to 5s timeout)
+    // delay the background boot. Work slot also needs the opencode engine.
+    bootT("ensureRunning(code) fire-and-forget");
+    processManager.ensureRunning("code").catch((err) => {
+      console.warn("[main] background opencode start failed:", err);
+    });
+
+    // Resolve a GitHub token for the self-updater — runs concurrently with
+    // opencode boot + window creation so it never blocks the startup path.
+    const ghTokenP = (async () => {
+      if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+      try {
+        return (await execFilePromise("gh", ["auth", "token"], { timeout: 5000 })).trim();
+      } catch {
+        return "";
+      }
+    })();
+
+    bootT("createWindow start");
+    await createWindow();
+    bootT("createWindow done");
+
+    // Initialize the self-updater after the window is up — the gh token
+    // lookup ran in parallel and is ready (or timed out) by now.
+    const ghToken = await ghTokenP;
     initUpdater({
       getProcessManager: () => processManager,
       onStatusChange: (status) => {
@@ -2425,34 +2533,8 @@ app
           showUpdateToast(status.version);
         }
       },
+      githubToken: ghToken || undefined,
     });
-
-    await generateOpenCodeConfig({ proxyToken, anthropicKey, openaiKey, openrouterKey });
-
-    // Pre-start all 3 services in the background so slot switches are instant.
-    // Don't await: let them start while the window loads.
-    const startCode = processManager.ensureRunning("code");
-    const startWork = processManager.ensureRunning("work");
-    const startDesign = processManager.ensureRunning("design");
-    startCode.catch((err) =>
-      console.warn("[main] background opencode start failed:", err),
-    );
-    startWork.catch((err) =>
-      console.warn("[main] background openwork start failed:", err),
-    );
-    startDesign.catch((err) =>
-      console.warn("[main] background open-design start failed:", err),
-    );
-
-    await createWindow();
-
-    // Warm each slot's page in a hidden view so Turbopack/Vite compiles the
-    // route before the user clicks (the 20-40s black screen is that first
-    // compile). Deferred + off the critical path so the sidebar/chat paint first.
-    setTimeout(
-      () => void warmSlots({ startCode, startWork, startDesign }),
-      WARM_DELAY_MS,
-    );
 
     // Background self-update check (U4: only when packaged, best-effort)
     if (app.isPackaged && autoUpdateEnabled) {
