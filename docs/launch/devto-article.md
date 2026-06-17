@@ -73,6 +73,6 @@ It's like a tiny CI pipeline for creative work.
 
 ---
 
-[OpenHub on GitHub](https://github.com/Open-Fable/OpenHub) — MIT licensed. Download the `.dmg` from Releases or build from source.
+[OpenHub on GitHub](https://github.com/Open-Fable/OpenHub) — MIT licensed. Download the `.dmg` from Releases.
 
 I'd love feedback on the architecture, especially the override system and the orchestrator engine.
