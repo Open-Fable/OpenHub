@@ -52,7 +52,7 @@ async function editProject(id) {
     return proj.id === id;
   });
   if (!p) return;
-  document.getElementById("modalProjectTitle").textContent = "Modifier l'agent";
+  document.getElementById("modalProjectTitle").textContent = t("proj.modal.editAgent");
   document.getElementById("projName").value = p.name || "";
   document.getElementById("projType").value = p.type || "code";
   document.getElementById("projModel").value = p.model || "";
@@ -75,6 +75,8 @@ async function editProject(id) {
       !!p.orchSettings.relaunchOnError;
     document.getElementById("chkAdaptToWeakModel").checked =
       !!p.orchSettings.adaptToWeakModel;
+    document.getElementById("inpMaxParallel").value =
+      p.orchSettings.maxParallelNodes || 3;
   }
   document.getElementById("btnSaveProjectConfirm").dataset.editId = id;
   onProjectTypeChange();
@@ -101,7 +103,7 @@ async function deleteProject(id) {
           await window.openhub.saveProject(p);
         }
       });
-      showToast("Agent supprimé", "success");
+      showToast(t("proj.toast.agentDeleted"), "success");
       if (selectedOrchestratorId === id) selectedOrchestratorId = null;
       await loadProjects();
       resolve();
@@ -119,7 +121,7 @@ async function duplicateProject(id) {
   });
   if (!p) return null;
   var copy = Object.assign({}, p, {
-    name: p.name + " (copie)",
+    name: p.name + t("proj.duplicate.copySuffix"),
     x: (p.x || 0) + 40,
     y: (p.y || 0) + 40,
   });
@@ -128,13 +130,13 @@ async function duplicateProject(id) {
   delete copy.updatedAt;
   var saved = await window.openhub.saveProject(copy);
   await loadProjects();
-  showToast("Agent dupliqué : " + copy.name, "success");
+  showToast(t("proj.toast.agentDuplicated", { name: copy.name }), "success");
   return saved;
 }
 
 async function importDemoTemplate() {
   try {
-    showToast("Génération du modèle de démonstration...", "info");
+    showToast(t("proj.toast.generatingDemo"), "info");
     var p1 = await window.openhub.saveProject({
       name: "API Backend — Authentification",
       instructions:
@@ -204,17 +206,17 @@ async function importDemoTemplate() {
       y: 280,
       task: "Coordonner la refonte complète de l'onboarding.",
     });
-    showToast("Modèle onboarding créé !", "success");
+    showToast(t("proj.toast.demoCreated"), "success");
     await loadProjects();
     selectOrchestrator(orch.id);
   } catch (err) {
-    showToast("Erreur lors de l'importation : " + err.message, "error");
+    showToast(t("proj.toast.importError", { msg: err.message }), "error");
   }
 }
 
 async function importWebsiteTemplate() {
   try {
-    showToast("Création du modèle Site Web...", "info");
+    showToast(t("proj.toast.creatingWebsite"), "info");
     var p1 = await window.openhub.saveProject({
       name: "Styles & Design CSS",
       instructions:
@@ -265,17 +267,17 @@ async function importWebsiteTemplate() {
       y: 240,
       task: "Créer un site web vitrine responsive.",
     });
-    showToast("Modèle Site Web créé !", "success");
+    showToast(t("proj.toast.websiteCreated"), "success");
     await loadProjects();
     selectOrchestrator(orch.id);
   } catch (err) {
-    showToast("Erreur lors de l'importation : " + err.message, "error");
+    showToast(t("proj.toast.importError", { msg: err.message }), "error");
   }
 }
 
 async function importSEOContentTemplate() {
   try {
-    showToast("Création du modèle Contenu SEO...", "info");
+    showToast(t("proj.toast.creatingSeo"), "info");
     var p1 = await window.openhub.saveProject({
       name: "Rédaction de l'article (FR)",
       instructions:
@@ -326,17 +328,17 @@ async function importSEOContentTemplate() {
       y: 240,
       task: "Rédiger un article de blog complet et optimisé SEO.",
     });
-    showToast("Modèle Contenu SEO créé !", "success");
+    showToast(t("proj.toast.seoCreated"), "success");
     await loadProjects();
     selectOrchestrator(orch.id);
   } catch (err) {
-    showToast("Erreur lors de l'importation : " + err.message, "error");
+    showToast(t("proj.toast.importError", { msg: err.message }), "error");
   }
 }
 
 async function importSimpleOrchestrator() {
   try {
-    showToast("Création de l'orchestrateur...", "info");
+    showToast(t("proj.toast.creatingOrch"), "info");
     var orch = await window.openhub.saveProject({
       name: "Mon Orchestrateur",
       instructions:
@@ -354,11 +356,11 @@ async function importSimpleOrchestrator() {
       y: 240,
       task: "Définis ici l'objectif global du workflow...",
     });
-    showToast("Orchestrateur créé !", "success");
+    showToast(t("proj.toast.orchCreated"), "success");
     await loadProjects();
     selectOrchestrator(orch.id);
   } catch (err) {
-    showToast("Erreur lors de la création : " + err.message, "error");
+    showToast(t("proj.toast.createError", { msg: err.message }), "error");
   }
 }
 
@@ -367,7 +369,7 @@ async function applyTaskSuggestion(text) {
     return p.id === selectedOrchestratorId;
   });
   if (!activeOrch || activeOrch.type !== "orchestrator") {
-    showToast("Création d'un orchestrateur pour la suggestion...", "info");
+    showToast(t("proj.toast.creatingOrchForSuggestion"), "info");
     await importSimpleOrchestrator();
     activeOrch = projects.find(function (p) {
       return p.id === selectedOrchestratorId;
@@ -377,7 +379,7 @@ async function applyTaskSuggestion(text) {
     activeOrch.task = text;
     await window.openhub.saveProject(activeOrch);
     document.getElementById("sharedTaskText").value = text;
-    showToast("Suggestion appliquée !", "success");
+    showToast(t("proj.toast.suggestionApplied"), "success");
     updateDetailPanel();
   }
 }
@@ -387,16 +389,12 @@ function confirmLoadTemplate() {
     return p.id === selectedOrchestratorId;
   });
   var hasProjects = activeOrch && (activeOrch.linked || []).length > 0;
-  if (
-    hasProjects &&
-    !confirm("Charger ce modèle ajoute des agents à ton canvas actuel. Continuer ?")
-  )
-    return false;
+  if (hasProjects && !confirm(t("proj.confirm.loadTemplate"))) return false;
   return true;
 }
 
 function resetProjectModal() {
-  document.getElementById("modalProjectTitle").textContent = "Nouvel agent";
+  document.getElementById("modalProjectTitle").textContent = t("proj.modal.newAgent");
   document.getElementById("projName").value = "";
   document.getElementById("projType").value = "code";
   document.getElementById("projModel").value = "";
@@ -412,6 +410,7 @@ function resetProjectModal() {
   document.getElementById("chkCheckCoherence").checked = true;
   document.getElementById("chkRelaunchOnError").checked = true;
   document.getElementById("chkAdaptToWeakModel").checked = false;
+  document.getElementById("inpMaxParallel").value = 3;
   delete document.getElementById("btnSaveProjectConfirm").dataset.editId;
   onProjectTypeChange();
 }
@@ -468,13 +467,13 @@ function initModals() {
     if (!name) {
       nameInput.style.borderColor = "var(--error, #ef4444)";
       nameInput.focus();
-      showToast("Le nom de l'agent est obligatoire.", "error");
+      showToast(t("proj.toast.agentNameRequired"), "error");
       return;
     }
     if (name.length > 100) {
       nameInput.style.borderColor = "var(--error, #ef4444)";
       nameInput.focus();
-      showToast("Le nom de l'agent ne peut pas dépasser 100 caractères.", "error");
+      showToast(t("proj.toast.agentNameTooLong"), "error");
       return;
     }
     nameInput.style.borderColor = "";
@@ -511,11 +510,15 @@ function initModals() {
     };
     if (editId) data.id = editId;
     if (type === "orchestrator") {
+      var parsedParallel = parseInt(document.getElementById("inpMaxParallel").value, 10);
+      if (isNaN(parsedParallel)) parsedParallel = 3;
+      var maxParallelNodes = Math.min(Math.max(parsedParallel, 1), 4);
       data.orchSettings = {
         autoDistribute: document.getElementById("chkAutoDistribute").checked,
         checkCoherence: document.getElementById("chkCheckCoherence").checked,
         relaunchOnError: document.getElementById("chkRelaunchOnError").checked,
         adaptToWeakModel: document.getElementById("chkAdaptToWeakModel").checked,
+        maxParallelNodes: maxParallelNodes,
       };
     } else {
       var checkedDeps = [];
@@ -551,14 +554,15 @@ function initModals() {
         }
       }
       closeModal("modalProject");
-      showToast(editId ? "Agent mis à jour" : "Agent créé", "success");
+      showToast(
+        editId ? t("proj.toast.agentUpdated") : t("proj.toast.agentCreated"),
+        "success",
+      );
       await loadProjects();
     } catch (err) {
       // Ne jamais avaler l'erreur : le modal reste ouvert et l'utilisateur est prévenu
       showToast(
-        editId
-          ? "Échec de la mise à jour de l'agent."
-          : "Échec de la création de l'agent.",
+        editId ? t("proj.toast.agentUpdateFailed") : t("proj.toast.agentCreateFailed"),
         "error",
       );
       console.error("saveProject failed", err);

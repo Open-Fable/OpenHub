@@ -21,7 +21,7 @@ function clearActivityFeed() {
     empty = document.createElement("div");
     empty.className = "activity-empty";
     empty.id = "activityEmpty";
-    empty.textContent = "Lance une orchestration pour suivre l'activité ici.";
+    empty.textContent = t("proj.activity.empty");
     feed.appendChild(empty);
   }
 }
@@ -56,14 +56,15 @@ function buildActivityMessage(data) {
         : "";
       return {
         type: "running",
-        text: "L'orchestrateur distribue les taches aux agents" + dirHint,
+        text: t("proj.activity.orchDistributes") + dirHint,
       };
     }
-    if (data.status === "done") return { type: "done", text: "Orchestration terminee" };
+    if (data.status === "done")
+      return { type: "done", text: t("proj.activity.orchDone") };
     if (data.status === "error")
-      return { type: "error", text: "L'orchestration s'est arretee sur une erreur" };
+      return { type: "error", text: t("proj.activity.orchError") };
     if (data.status === "warning") {
-      var warnText = data.error ? escapeHtml(data.error) : "Avertissement";
+      var warnText = data.error ? escapeHtml(data.error) : t("proj.activity.warning");
       return { type: "warning", text: warnText };
     }
     return null;
@@ -91,14 +92,14 @@ function buildActivityMessage(data) {
     var taskHint = data.task ? " — " + escapeHtml(data.task.substring(0, 80)) : "";
     return {
       type: "running",
-      text: "<strong>" + escapeHtml(name) + "</strong> demarre" + taskHint,
+      text: t("proj.activity.nodeStarts", { name: escapeHtml(name) }) + taskHint,
     };
   }
 
   if (data.status === "done") {
     return {
       type: "done",
-      text: "<strong>" + escapeHtml(name) + "</strong> a termine son travail",
+      text: t("proj.activity.nodeDone", { name: escapeHtml(name) }),
     };
   }
 
@@ -106,7 +107,7 @@ function buildActivityMessage(data) {
     var errMsg = data.error ? " — " + escapeHtml(data.error.substring(0, 100)) : "";
     return {
       type: "error",
-      text: "<strong>" + escapeHtml(name) + "</strong> a rencontre une erreur" + errMsg,
+      text: t("proj.activity.nodeError", { name: escapeHtml(name) }) + errMsg,
     };
   }
 
@@ -114,15 +115,14 @@ function buildActivityMessage(data) {
     var warnDetail = data.error ? " — " + escapeHtml(data.error.substring(0, 160)) : "";
     return {
       type: "warning",
-      text:
-        "<strong>" + escapeHtml(name) + "</strong> signale un avertissement" + warnDetail,
+      text: t("proj.activity.nodeWarning", { name: escapeHtml(name) }) + warnDetail,
     };
   }
 
   if (data.status === "skipped") {
     return {
       type: "info",
-      text: "<strong>" + escapeHtml(name) + "</strong> a ete ignore",
+      text: t("proj.activity.nodeSkipped", { name: escapeHtml(name) }),
     };
   }
 
@@ -178,7 +178,8 @@ function appendActivityItem(data) {
 function clearOrchConsole() {
   orchLogLines = [];
   var el = document.getElementById("orchConsole");
-  el.innerHTML = '<span class="console-info">Console d\'orchestration prête.</span>';
+  el.innerHTML =
+    '<span class="console-info">' + escapeHtml(t("proj.detail.consoleReady")) + "</span>";
 }
 
 function appendOrchLog(text, type) {
@@ -196,7 +197,9 @@ function showNodeResult() {
   var viewer = document.getElementById("orchResultViewer");
   if (!selectedNodeId || !orchResults[selectedNodeId]) {
     viewer.innerHTML =
-      "<div class=\"orch-result-empty\">Le résultat s'affichera ici après l'exécution.</div>";
+      '<div class="orch-result-empty">' +
+      escapeHtml(t("proj.detail.resultEmpty")) +
+      "</div>";
     return;
   }
   viewer.textContent = orchResults[selectedNodeId];
@@ -212,12 +215,30 @@ function updateTopbarProgress(current, total) {
     (current / total) * 100 + "%";
 }
 
+// An orchestration is in flight while the Stop button is shown — the only run-state
+// signal the renderer keeps. There is no per-agent cancellation: the backend runs the
+// whole workflow under a single AbortController, so stopping affects the entire run.
+function isOrchestrationRunning() {
+  var stopBtn = document.getElementById("btnStopOrch");
+  return !!(stopBtn && stopBtn.style.display !== "none");
+}
+
+function stopOrchestration() {
+  if (!window.openhub.cancelOrchestration) return;
+  window.openhub.cancelOrchestration();
+  appendOrchLog(t("proj.exec.orchStopped"), "error");
+  showTopbarProgress(false);
+  document.getElementById("btnExecuteOrch").style.display = "inline-flex";
+  document.getElementById("btnStopOrch").style.display = "none";
+  saveOrchRun("cancelled");
+}
+
 function startOrchestration() {
   var activeOrch = projects.find(function (p) {
     return p.id === selectedOrchestratorId;
   });
   if (!activeOrch) {
-    showToast("Crée d'abord un workflow pour lancer une orchestration.", "error");
+    showToast(t("proj.exec.needWorkflow"), "error");
     return;
   }
   var missionEl = document.getElementById("taskCardText");
@@ -227,14 +248,14 @@ function startOrchestration() {
     (taskEl ? taskEl.value.trim() : "") ||
     (activeOrch.task || "").trim();
   if (!task) {
-    showToast("Définis d'abord une tâche globale.", "error");
+    showToast(t("proj.exec.needGlobalTask"), "error");
     return;
   }
   var linked = projects.filter(function (p) {
     return (activeOrch.linked || []).includes(p.id);
   });
   if (linked.length === 0) {
-    showToast("Lie au moins un agent au workflow avant de lancer.", "error");
+    showToast(t("proj.exec.needOneAgent"), "error");
     return;
   }
   var emptyTask = linked.filter(function (p) {
@@ -245,12 +266,13 @@ function startOrchestration() {
   });
   if (emptyTask.length > 0) {
     showToast(
-      "Agents sans tâche : " +
-        emptyTask
+      t("proj.exec.agentsWithoutTask", {
+        names: emptyTask
           .map(function (p) {
             return p.name;
           })
           .join(", "),
+      }),
       "warning",
     );
     return;
@@ -260,12 +282,13 @@ function startOrchestration() {
   });
   if (noModel.length > 0) {
     showToast(
-      "Aucun modèle défini pour : " +
-        noModel
+      t("proj.exec.noModelFor", {
+        names: noModel
           .map(function (p) {
             return p.name;
           })
           .join(", "),
+      }),
       "error",
     );
     return;
@@ -279,7 +302,7 @@ function startOrchestration() {
   showTopbarProgress(true);
   document.getElementById("btnExecuteOrch").style.display = "none";
   document.getElementById("btnStopOrch").style.display = "inline-flex";
-  appendOrchLog("Lancement de l'orchestration...", "info");
+  appendOrchLog(t("proj.exec.launching"), "info");
   switchPanelTab("activity");
   openDetailWorkflow();
   var consoleAcc = document.getElementById("consoleAccordion");
@@ -312,9 +335,17 @@ function startOrchestration() {
         orchNodeStatuses[data.projectId] = data.status;
       }
     }
-    if (data.status === "done") appendOrchLog("✓ " + (data.task || "Terminé"), "done");
-    if (data.status === "error") appendOrchLog("✗ " + (data.error || "Erreur"), "error");
-    if (data.status === "skipped") appendOrchLog("— Ignoré", "skip");
+    if (data.status === "done")
+      appendOrchLog(
+        t("proj.exec.logDone", { task: data.task || t("proj.exec.taskDoneFallback") }),
+        "done",
+      );
+    if (data.status === "error")
+      appendOrchLog(
+        t("proj.exec.logError", { error: data.error || t("proj.exec.errorFallback") }),
+        "error",
+      );
+    if (data.status === "skipped") appendOrchLog(t("proj.exec.logSkipped"), "skip");
     if (
       data.projectId === selectedOrchestratorId &&
       (data.status === "done" || data.status === "error")
@@ -322,9 +353,8 @@ function startOrchestration() {
       showTopbarProgress(false);
       document.getElementById("btnExecuteOrch").style.display = "inline-flex";
       document.getElementById("btnStopOrch").style.display = "none";
-      if (data.status === "done")
-        appendOrchLog("✓ Orchestration terminée avec succès !", "done");
-      else appendOrchLog("✗ Orchestration terminée sur erreur.", "error");
+      if (data.status === "done") appendOrchLog(t("proj.exec.orchSuccess"), "done");
+      else appendOrchLog(t("proj.exec.orchFailure"), "error");
       saveOrchRun(data.status);
     }
   });
@@ -442,7 +472,7 @@ function renderOrchHistory(runs) {
   if (!container) return;
   if (runs.length === 0) {
     container.innerHTML =
-      '<div class="history-empty">Tes exécutions passées s\'afficheront ici.</div>';
+      '<div class="history-empty">' + escapeHtml(t("proj.history.empty")) + "</div>";
     return;
   }
   container.innerHTML = "";
@@ -465,7 +495,9 @@ function renderOrchHistory(runs) {
 
     var iterBadge =
       run.parentRunId && run.iteration
-        ? '<span class="history-badge--iteration">Itération ' + run.iteration + "</span> "
+        ? '<span class="history-badge--iteration">' +
+          escapeHtml(t("proj.history.iteration", { n: run.iteration })) +
+          "</span> "
         : "";
 
     item.innerHTML =
@@ -485,10 +517,8 @@ function renderOrchHistory(runs) {
       " · " +
       formatDuration(run.duration) +
       " · " +
-      doneCount +
-      "/" +
-      nodeCount +
-      " agents</span>" +
+      escapeHtml(t("proj.history.metaAgents", { done: doneCount, total: nodeCount })) +
+      "</span>" +
       "</div>" +
       "</div>" +
       '<svg class="history-item-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -505,7 +535,8 @@ function showRunDetail(run) {
   var back = document.createElement("button");
   back.className = "history-back-btn";
   back.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg> Retour';
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg> ' +
+    escapeHtml(t("proj.history.back"));
   back.onclick = function () {
     loadOrchHistory();
   };
@@ -514,7 +545,11 @@ function showRunDetail(run) {
   var header = document.createElement("div");
   header.className = "history-detail-header";
   var statusLabel =
-    run.status === "done" ? "Succès" : run.status === "cancelled" ? "Annulée" : "Erreur";
+    run.status === "done"
+      ? t("proj.history.statusSuccess")
+      : run.status === "cancelled"
+        ? t("proj.history.statusCancelled")
+        : t("proj.history.statusError");
   var statusClass =
     run.status === "done" ? "history-status--done" : "history-status--error";
   var statusIcon = run.status === "done" ? "✓" : run.status === "cancelled" ? "—" : "✗";
@@ -541,14 +576,18 @@ function showRunDetail(run) {
   if (run.feedback) {
     var feedbackEl = document.createElement("div");
     feedbackEl.className = "history-detail-feedback";
-    feedbackEl.innerHTML = "<strong>Feedback :</strong> " + escapeHtml(run.feedback);
+    feedbackEl.innerHTML =
+      "<strong>" +
+      escapeHtml(t("proj.history.feedback")) +
+      "</strong> " +
+      escapeHtml(run.feedback);
     container.appendChild(feedbackEl);
   }
 
   if (run.nodeResults && run.nodeResults.length > 0) {
     var nodesTitle = document.createElement("div");
     nodesTitle.className = "history-section-title";
-    nodesTitle.textContent = "Résultats par agent";
+    nodesTitle.textContent = t("proj.history.resultsByAgent");
     container.appendChild(nodesTitle);
 
     run.nodeResults.forEach(function (nr) {
@@ -580,7 +619,7 @@ function showRunDetail(run) {
   if (run.logs && run.logs.length > 0) {
     var logsTitle = document.createElement("div");
     logsTitle.className = "history-section-title";
-    logsTitle.textContent = "Logs";
+    logsTitle.textContent = t("proj.history.logs");
     container.appendChild(logsTitle);
 
     var logsEl = document.createElement("div");
@@ -591,7 +630,7 @@ function showRunDetail(run) {
 
   var delBtn = document.createElement("button");
   delBtn.className = "btn btn--ghost history-delete-btn";
-  delBtn.textContent = "Supprimer cette exécution";
+  delBtn.textContent = t("proj.history.deleteRun");
   delBtn.onclick = function () {
     window.openhub.deleteOrchRun(run.id).then(function () {
       loadOrchHistory();
@@ -630,11 +669,11 @@ function startIteration() {
   var input = document.getElementById("feedbackInput");
   var feedback = input ? input.value.trim() : "";
   if (!feedback) {
-    showToast("Écris d'abord un feedback.", "error");
+    showToast(t("proj.exec.needFeedback"), "error");
     return;
   }
   if (!lastRunMeta || !activeWorkflowId || !selectedOrchestratorId) {
-    showToast("Aucun run précédent trouvé.", "error");
+    showToast(t("proj.exec.noPreviousRun"), "error");
     return;
   }
 
@@ -649,7 +688,10 @@ function startIteration() {
   showTopbarProgress(true);
   document.getElementById("btnExecuteOrch").style.display = "none";
   document.getElementById("btnStopOrch").style.display = "inline-flex";
-  appendOrchLog("Itération " + iteration + " — feedback : " + feedback, "info");
+  appendOrchLog(
+    t("proj.exec.iterationFeedback", { n: iteration, feedback: feedback }),
+    "info",
+  );
   switchPanelTab("activity");
   updateIterateBar();
 
@@ -681,9 +723,17 @@ function startIteration() {
         orchNodeStatuses[data.projectId] = data.status;
       }
     }
-    if (data.status === "done") appendOrchLog("✓ " + (data.task || "Terminé"), "done");
-    if (data.status === "error") appendOrchLog("✗ " + (data.error || "Erreur"), "error");
-    if (data.status === "skipped") appendOrchLog("— Ignoré", "skip");
+    if (data.status === "done")
+      appendOrchLog(
+        t("proj.exec.logDone", { task: data.task || t("proj.exec.taskDoneFallback") }),
+        "done",
+      );
+    if (data.status === "error")
+      appendOrchLog(
+        t("proj.exec.logError", { error: data.error || t("proj.exec.errorFallback") }),
+        "error",
+      );
+    if (data.status === "skipped") appendOrchLog(t("proj.exec.logSkipped"), "skip");
     if (
       data.projectId === selectedOrchestratorId &&
       (data.status === "done" || data.status === "error")
@@ -691,9 +741,8 @@ function startIteration() {
       showTopbarProgress(false);
       document.getElementById("btnExecuteOrch").style.display = "inline-flex";
       document.getElementById("btnStopOrch").style.display = "none";
-      if (data.status === "done")
-        appendOrchLog("✓ Itération terminée avec succès !", "done");
-      else appendOrchLog("✗ Itération terminée sur erreur.", "error");
+      if (data.status === "done") appendOrchLog(t("proj.exec.iterationSuccess"), "done");
+      else appendOrchLog(t("proj.exec.iterationFailure"), "error");
       saveOrchRun(data.status);
     }
   });
@@ -707,7 +756,7 @@ function startIteration() {
       pendingIteration = null;
       updateIterateBar();
       showToast(
-        err && err.message ? err.message : "Erreur lors de l'itération.",
+        err && err.message ? err.message : t("proj.exec.iterationError"),
         "error",
       );
     });
@@ -723,10 +772,10 @@ function initExecution() {
       var text = console ? console.innerText : "";
       navigator.clipboard.writeText(text).then(function () {
         copyBtn.classList.add("copied");
-        copyBtn.title = "Copié !";
+        copyBtn.title = t("proj.exec.copied");
         setTimeout(function () {
           copyBtn.classList.remove("copied");
-          copyBtn.title = "Copier la console";
+          copyBtn.title = t("proj.exec.copyConsole");
         }, 1500);
       });
     };
@@ -738,14 +787,7 @@ function initExecution() {
   if (iterBtn) iterBtn.onclick = startIteration;
 
   document.getElementById("btnStopOrch").onclick = function () {
-    if (window.openhub.cancelOrchestration) {
-      window.openhub.cancelOrchestration();
-      appendOrchLog("Orchestration arrêtée par l'utilisateur.", "error");
-      showTopbarProgress(false);
-      document.getElementById("btnExecuteOrch").style.display = "inline-flex";
-      document.getElementById("btnStopOrch").style.display = "none";
-      saveOrchRun("cancelled");
-    }
+    stopOrchestration();
   };
 
   if (window.openhub.onOrchestrationStatus) {
@@ -780,22 +822,22 @@ function applyNodeStatus(data) {
         (node.id === selectedNodeId ? "node-card--selected" : "") +
         " node-card--" +
         data.status;
-      var statusLabel = "En attente";
+      var statusLabel = t("proj.node.statusIdle");
       var statusClass = "status-dot--idle";
       if (data.status === "running") {
-        statusLabel = "En cours";
+        statusLabel = t("proj.node.statusRunning");
         statusClass = "status-dot--running";
       } else if (data.status === "done") {
-        statusLabel = "Terminé";
+        statusLabel = t("proj.node.statusDone");
         statusClass = "status-dot--done";
       } else if (data.status === "error") {
-        statusLabel = "Erreur";
+        statusLabel = t("proj.node.statusError");
         statusClass = "status-dot--error";
       } else if (data.status === "warning") {
-        statusLabel = "Attention";
+        statusLabel = t("proj.node.statusWarning");
         statusClass = "status-dot--warning";
       } else if (data.status === "skipped") {
-        statusLabel = "Ignoré";
+        statusLabel = t("proj.node.statusSkipped");
         statusClass = "status-dot--skipped";
       }
       nodeCard.querySelector(".node-card-status span:last-child").textContent =
@@ -814,9 +856,7 @@ function applyNodeStatus(data) {
     document.getElementById("btnExecuteOrch").disabled = false;
     isExecuting = false;
     showToast(
-      data.status === "done"
-        ? "Orchestration terminée avec succès"
-        : "Orchestration arrêtée sur erreur",
+      data.status === "done" ? t("proj.toast.orchSuccess") : t("proj.toast.orchError"),
       data.status === "done" ? "success" : "error",
     );
   }

@@ -117,6 +117,9 @@
     toggleProjectSelection: function (t) {
       toggleProjectSelection(t.dataset.arg);
     },
+    setProjectModelFromMgmt: function (t) {
+      setProjectModelFromMgmt(t.dataset.arg, t.value);
+    },
   };
 
   var INPUT_ACTIONS = {

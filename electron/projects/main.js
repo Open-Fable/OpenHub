@@ -20,7 +20,7 @@ async function loadWorkflows() {
         : workflows[0].id;
     await switchWorkflow(target);
   } else if (!activeWorkflowId) {
-    document.getElementById("wfName").textContent = "Aucun workflow";
+    document.getElementById("wfName").textContent = t("proj.topbar.noWorkflow");
   }
 }
 
@@ -43,9 +43,13 @@ function renderWorkflowSelector() {
     .join("");
   if (el.innerHTML) el.innerHTML += '<div class="wf-dropdown-divider"></div>';
   el.innerHTML +=
-    '<div class="wf-dropdown-new" data-action="createWorkflow">+ Nouveau workflow</div>';
+    '<div class="wf-dropdown-new" data-action="createWorkflow">' +
+    escapeHtml(t("proj.wf.new")) +
+    "</div>";
   el.innerHTML +=
-    '<div class="wf-dropdown-item" data-action="openManagement" style="color:var(--text-muted);">Gérer les workflows</div>';
+    '<div class="wf-dropdown-item" data-action="openManagement" style="color:var(--text-muted);">' +
+    escapeHtml(t("proj.wf.manage")) +
+    "</div>";
 }
 
 async function switchWorkflow(id) {
@@ -101,14 +105,14 @@ function restoreSelectedNode() {
 
 async function createWorkflow() {
   document.getElementById("wfDropdown").classList.remove("open");
-  var base = "Nouveau workflow";
+  var base = t("proj.mgmt.newWorkflow");
   var sameNameCount = workflows.filter(function (w) {
     return w.name.indexOf(base) === 0;
   }).length;
   var name = sameNameCount === 0 ? base : base + " " + (sameNameCount + 1);
   try {
     var orch = await window.openhub.saveProject({
-      name: "Orchestrateur",
+      name: t("proj.node.typeOrchestrator"),
       instructions:
         "Tu es un coordinateur d'agents. Distribue les tâches et assure la cohérence globale.",
       color: "#0d9488",
@@ -135,9 +139,12 @@ async function createWorkflow() {
     renderWorkflowSelector();
     switchWorkflow(wf.id);
     renderManagement();
-    showToast("Workflow créé. Renomme-le quand tu veux.", "success");
+    showToast(t("proj.wf.created"), "success");
   } catch (err) {
-    showToast("Erreur : " + (err.message || "inconnue"), "error");
+    showToast(
+      t("proj.common.errorWith", { msg: err.message || t("proj.common.unknown") }),
+      "error",
+    );
   }
 }
 
@@ -193,13 +200,13 @@ function initMain() {
     if (!name) {
       wfInput.focus();
       wfInput.style.borderColor = "var(--error)";
-      showToast("Le nom du workflow est obligatoire.", "error");
+      showToast(t("proj.wf.renameRequired"), "error");
       return;
     }
     if (name.length > 80) {
       wfInput.focus();
       wfInput.style.borderColor = "var(--error)";
-      showToast("Le nom du workflow ne peut pas dépasser 80 caractères.", "error");
+      showToast(t("proj.wf.renameTooLong"), "error");
       return;
     }
     wfInput.style.borderColor = "";
@@ -222,9 +229,12 @@ function initMain() {
       renderWorkflowSelector();
       renderManagement();
       closeModal("modalWorkflowPrompt");
-      showToast("Workflow renommé", "success");
+      showToast(t("proj.wf.renamed"), "success");
     } catch (err) {
-      showToast("Erreur : " + (err.message || "inconnue"), "error");
+      showToast(
+        t("proj.common.errorWith", { msg: err.message || t("proj.common.unknown") }),
+        "error",
+      );
     } finally {
       this.disabled = false;
     }
@@ -279,3 +289,34 @@ document.addEventListener("DOMContentLoaded", async function () {
   await loadConversations();
   updateChatPanelVisibility();
 });
+
+// Re-render JS-built chrome whose labels aren't covered by [data-i18n] when the
+// language changes live. data-i18n elements are already re-applied by the runtime
+// before these listeners run.
+if (window.I18N && window.I18N.onChange) {
+  window.I18N.onChange(function () {
+    try {
+      renderWorkflowSelector();
+      if (activeWorkflowId) {
+        var wf = workflows.find(function (w) {
+          return w.id === activeWorkflowId;
+        });
+        if (wf) document.getElementById("wfName").textContent = wf.name;
+      } else {
+        document.getElementById("wfName").textContent = t("proj.topbar.noWorkflow");
+      }
+      renderCanvas();
+      renderConvDropdown();
+      var convTitleEl = document.getElementById("convTitle");
+      if (convTitleEl && !getActiveConv()) {
+        convTitleEl.textContent = t("proj.chat.newConversation");
+      }
+      updateTaskCard();
+      updateDetailPanel();
+      renderManagement();
+      loadOrchHistory();
+    } catch {
+      /* a missing optional view must not break the language switch */
+    }
+  });
+}

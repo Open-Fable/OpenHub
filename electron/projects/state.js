@@ -132,47 +132,47 @@ function updateReasoningOptions(selectEl, modelId, currentValue) {
   var cat = getReasoningCategory(modelId);
   var opts = [];
   if (cat === "none") {
-    opts = [{ value: "", label: "Non disponible pour ce modèle" }];
+    opts = [{ value: "", label: t("proj.reasoning.notAvailable") }];
   } else if (cat === "openai") {
     opts = [
-      { value: "", label: "Par défaut" },
-      { value: "low", label: "Low" },
-      { value: "medium", label: "Medium" },
-      { value: "high", label: "High" },
+      { value: "", label: t("proj.reasoning.default") },
+      { value: "low", label: t("proj.reasoning.optLow") },
+      { value: "medium", label: t("proj.reasoning.optMedium") },
+      { value: "high", label: t("proj.reasoning.optHigh") },
     ];
   } else if (cat === "anthropic") {
     opts = [
-      { value: "", label: "Par défaut" },
-      { value: "low", label: "Faible — 1K tokens" },
-      { value: "medium", label: "Moyenne — 4K tokens" },
-      { value: "high", label: "Haute — 16K tokens" },
-      { value: "xhigh", label: "Très haute — 32K tokens" },
-      { value: "max", label: "Maximum — 64K tokens" },
+      { value: "", label: t("proj.reasoning.default") },
+      { value: "low", label: t("proj.reasoning.lowAnthropic") },
+      { value: "medium", label: t("proj.reasoning.mediumAnthropic") },
+      { value: "high", label: t("proj.reasoning.highAnthropic") },
+      { value: "xhigh", label: t("proj.reasoning.xhighAnthropic") },
+      { value: "max", label: t("proj.reasoning.maxAnthropic") },
     ];
   } else if (cat === "gemini") {
     opts = [
-      { value: "", label: "Par défaut" },
-      { value: "low", label: "Faible — 1K tokens" },
-      { value: "medium", label: "Moyenne — 8K tokens" },
-      { value: "high", label: "Haute — 24K tokens" },
-      { value: "max", label: "Maximum" },
+      { value: "", label: t("proj.reasoning.default") },
+      { value: "low", label: t("proj.reasoning.lowGemini") },
+      { value: "medium", label: t("proj.reasoning.mediumGemini") },
+      { value: "high", label: t("proj.reasoning.highGemini") },
+      { value: "max", label: t("proj.reasoning.max") },
     ];
   } else if (cat === "deepseek") {
     opts = [
-      { value: "", label: "Par défaut" },
-      { value: "low", label: "Faible" },
-      { value: "medium", label: "Moyenne" },
-      { value: "high", label: "Haute" },
+      { value: "", label: t("proj.reasoning.default") },
+      { value: "low", label: t("proj.reasoning.low") },
+      { value: "medium", label: t("proj.reasoning.medium") },
+      { value: "high", label: t("proj.reasoning.high") },
     ];
   } else {
     // unknown — no model selected, show generic set
     opts = [
-      { value: "", label: "Par défaut" },
-      { value: "low", label: "Faible" },
-      { value: "medium", label: "Moyenne" },
-      { value: "high", label: "Haute" },
-      { value: "xhigh", label: "Très haute" },
-      { value: "max", label: "Maximum" },
+      { value: "", label: t("proj.reasoning.default") },
+      { value: "low", label: t("proj.reasoning.low") },
+      { value: "medium", label: t("proj.reasoning.medium") },
+      { value: "high", label: t("proj.reasoning.high") },
+      { value: "xhigh", label: t("proj.reasoning.xhigh") },
+      { value: "max", label: t("proj.reasoning.max") },
     ];
   }
   selectEl.innerHTML = opts
@@ -194,7 +194,8 @@ function updateReasoningOptions(selectEl, modelId, currentValue) {
 async function loadModels() {
   var loadingSelect = document.getElementById("projModel");
   if (loadingSelect) {
-    loadingSelect.innerHTML = '<option value="">Chargement des modèles…</option>';
+    loadingSelect.innerHTML =
+      '<option value="">' + escapeHtml(t("proj.model.loading")) + "</option>";
   }
   try {
     var config = await window.openhub.getChatConfig();
@@ -205,7 +206,9 @@ async function loadModels() {
     models = data.data || [];
     var modelSelect = document.getElementById("projModel");
     modelSelect.innerHTML =
-      '<option value="">— Modèle par défaut de l\'application —</option>' +
+      '<option value="">' +
+      escapeHtml(t("proj.model.defaultApp")) +
+      "</option>" +
       models
         .map(function (m) {
           return (
@@ -244,7 +247,7 @@ async function loadModels() {
     console.error("[projects] Failed to load models:", err);
     if (loadingSelect) {
       loadingSelect.innerHTML =
-        '<option value="">Modèles indisponibles — vérifie le proxy</option>';
+        '<option value="">' + escapeHtml(t("proj.model.unavailable")) + "</option>";
     }
   }
 }

@@ -4,13 +4,11 @@ var mgmtSelectedWfId = null;
 var selectedProjectIds = [];
 var allProjFilter = { query: "", type: "", noWorkflow: false };
 
-var AGENT_TYPE_LABELS = {
-  code: "OpenCode",
-  design: "OpenDesign",
-  work: "OpenWork",
-  recherche: "Recherche",
-  verifier: "Vérificateur",
-};
+var AGENT_TYPE_KEYS = ["code", "design", "work", "recherche", "verifier"];
+// Resolved at call time so labels follow live language switches.
+function agentTypeLabel(type) {
+  return AGENT_TYPE_KEYS.indexOf(type) !== -1 ? t("proj.type." + type) : "";
+}
 var AGENT_TYPE_BADGE_CLASSES = {
   code: "code",
   design: "design",
@@ -19,6 +17,48 @@ var AGENT_TYPE_BADGE_CLASSES = {
   verifier: "verify",
 };
 var MGMT_AVAILABLE_VISIBLE_LIMIT = 10;
+
+// Per-agent model picker: empty value = inherit the workflow's global model.
+function mgmtModelSelectHtml(p) {
+  var opts =
+    '<option value="">' +
+    escapeHtml(t("proj.model.global")) +
+    "</option>" +
+    (models || [])
+      .map(function (m) {
+        var sel = p.model === m.id ? " selected" : "";
+        return (
+          '<option value="' +
+          escapeHtml(m.id) +
+          '"' +
+          sel +
+          ">" +
+          escapeHtml(displayModelName(m.id)) +
+          "</option>"
+        );
+      })
+      .join("");
+  return (
+    '<select class="mgmt-p-model-select" data-action="setProjectModelFromMgmt" data-arg="' +
+    escapeHtml(p.id) +
+    '" title="' +
+    escapeHtml(t("proj.mgmt.modelOfAgent")) +
+    '">' +
+    opts +
+    "</select>"
+  );
+}
+
+// Override a single agent's model (or clear it to fall back to the global model).
+async function setProjectModelFromMgmt(projectId, model) {
+  var idx = projects.findIndex(function (pp) {
+    return pp.id === projectId;
+  });
+  if (idx === -1) return;
+  var updated = Object.assign({}, projects[idx], { model: model || undefined });
+  await window.openhub.saveProject(updated);
+  projects[idx] = updated;
+}
 
 function openManagement() {
   document.getElementById("mgmtOverlay").classList.add("open");
@@ -60,9 +100,11 @@ function renderMgmtWfList() {
         escapeHtml(w.name) +
         "</div>" +
         '<div class="mgmt-wf-count">' +
-        linked +
-        " agent" +
-        (linked !== 1 ? "s" : "") +
+        escapeHtml(
+          linked === 1
+            ? t("proj.mgmt.agentCountSingular", { count: linked })
+            : t("proj.mgmt.agentCountPlural", { count: linked }),
+        ) +
         "</div>" +
         "</div>" +
         '<span class="mgmt-wf-arrow" data-action="switchWorkflowFromMgmt" data-arg="' +
@@ -85,10 +127,12 @@ function renderMgmtDetail(wfId) {
     return w.id === wfId;
   });
   if (!wf) {
-    document.getElementById("mgmtDetailName").textContent = "Sélectionne un workflow";
+    document.getElementById("mgmtDetailName").textContent = t("proj.mgmt.selectWorkflow");
     document.getElementById("mgmtDetailMeta").innerHTML = "";
     document.getElementById("mgmtDetailBody").innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">Sélectionne un workflow dans la liste.</div>';
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">' +
+      escapeHtml(t("proj.mgmt.selectWorkflowShort")) +
+      "</div>";
     document.getElementById("mgmtMenuBtn").style.display = "none";
     return;
   }
@@ -96,10 +140,14 @@ function renderMgmtDetail(wfId) {
   document.getElementById("mgmtDetailName").textContent = wf.name;
   var linked = (wf.linkedProjectIds || []).length;
   document.getElementById("mgmtDetailMeta").innerHTML =
-    '<span class="tag active"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-right:4px;"></span>Actif</span><span>' +
-    linked +
-    " agent" +
-    (linked !== 1 ? "s" : "") +
+    '<span class="tag active"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-right:4px;"></span>' +
+    escapeHtml(t("proj.mgmt.active")) +
+    "</span><span>" +
+    escapeHtml(
+      linked === 1
+        ? t("proj.mgmt.agentCountSingular", { count: linked })
+        : t("proj.mgmt.agentCountPlural", { count: linked }),
+    ) +
     "</span>";
   document.getElementById("mgmtMenuBtn").style.display = "inline-flex";
 
@@ -118,12 +166,16 @@ function renderMgmtDetail(wfId) {
   var html = "";
 
   html +=
-    '<div><div class="mgmt-section-title">Agents liés <span class="count">(' +
+    '<div><div class="mgmt-section-title">' +
+    escapeHtml(t("proj.mgmt.linkedAgents")) +
+    ' <span class="count">(' +
     linkedProjects.length +
     ")</span></div>";
   if (linkedProjects.length === 0) {
     html +=
-      '<div class="mgmt-proj-grid"><div class="mgmt-proj-empty">Aucun agent lié. Ajoutes-en depuis la liste ci-dessous.</div></div>';
+      '<div class="mgmt-proj-grid"><div class="mgmt-proj-empty">' +
+      escapeHtml(t("proj.mgmt.noLinkedAgents")) +
+      "</div></div>";
   } else {
     html += '<div class="mgmt-proj-grid">';
     linkedProjects.forEach(function (p) {
@@ -143,7 +195,11 @@ function renderMgmtDetail(wfId) {
           })
           .join(", ");
         inText =
-          '<span class="mgmt-p-in">Aussi dans <strong>' + names + "</strong></span>";
+          '<span class="mgmt-p-in">' +
+          escapeHtml(t("proj.mgmt.alsoIn")) +
+          " <strong>" +
+          names +
+          "</strong></span>";
       }
       html +=
         '<div class="mgmt-proj-card">' +
@@ -151,18 +207,22 @@ function renderMgmtDetail(wfId) {
         '<div class="mgmt-p-info"><div class="mgmt-p-name">' +
         escapeHtml(p.name) +
         '</div><div class="mgmt-p-model">' +
-        (p.model ? escapeHtml(displayModelName(p.model)) : "Modèle par défaut") +
+        mgmtModelSelectHtml(p) +
         "</div></div>" +
         badge +
         inText +
-        '<span class="mgmt-p-dup" title="Dupliquer" data-action="duplicateProjectFromMgmt" data-arg="' +
+        '<span class="mgmt-p-dup" title="' +
+        escapeHtml(t("proj.mgmt.duplicate")) +
+        '" data-action="duplicateProjectFromMgmt" data-arg="' +
         p.id +
         '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>' +
         '<span class="mgmt-p-remove" data-action="unlinkProjectFromWf" data-arg="' +
         wf.id +
         '" data-arg2="' +
         p.id +
-        '" title="Dissocier">✕</span>' +
+        '" title="' +
+        escapeHtml(t("proj.mgmt.unlink")) +
+        '">✕</span>' +
         "</div>";
     });
     html += "</div>";
@@ -170,16 +230,26 @@ function renderMgmtDetail(wfId) {
   html += "</div>";
 
   html +=
-    '<div><div class="mgmt-section-title">Agents disponibles <span class="count">(' +
+    '<div><div class="mgmt-section-title">' +
+    escapeHtml(t("proj.mgmt.availableAgents")) +
+    ' <span class="count">(' +
     availableProjects.length +
     ")</span>" +
     (availableProjects.length > 0
-      ? '<input class="mgmt-inline-search" id="mgmtAvailSearch" placeholder="Filtrer…" autocomplete="off" aria-label="Filtrer les agents disponibles" data-action="filterAvailableProjects" />'
+      ? '<input class="mgmt-inline-search" id="mgmtAvailSearch" placeholder="' +
+        escapeHtml(t("proj.mgmt.filterPlaceholder")) +
+        '" autocomplete="off" aria-label="' +
+        escapeHtml(t("proj.mgmt.filterAria")) +
+        '" data-action="filterAvailableProjects" />'
       : "") +
     "</div>";
   if (availableProjects.length === 0) {
     html +=
-      '<div class="mgmt-proj-grid"><div class="mgmt-proj-empty">Aucun agent disponible. <span class="link" data-action="openNewProjectFromMgmt">Créer un agent</span></div></div>';
+      '<div class="mgmt-proj-grid"><div class="mgmt-proj-empty">' +
+      escapeHtml(t("proj.mgmt.noAvailableAgents")) +
+      ' <span class="link" data-action="openNewProjectFromMgmt">' +
+      escapeHtml(t("proj.mgmt.createAgent")) +
+      "</span></div></div>";
   } else {
     html += '<div class="mgmt-proj-grid">';
     availableProjects.forEach(function (p, idx) {
@@ -193,9 +263,14 @@ function renderMgmtDetail(wfId) {
             return escapeHtml(w2.name);
           })
           .join(", ");
-        inText = '<span class="mgmt-p-in">Dans <strong>' + names + "</strong></span>";
+        inText =
+          '<span class="mgmt-p-in">' +
+          escapeHtml(t("proj.mgmt.in")) +
+          " <strong>" +
+          names +
+          "</strong></span>";
       }
-      var typeLabel = AGENT_TYPE_LABELS[p.type] || "";
+      var typeLabel = agentTypeLabel(p.type);
       var searchStr = escapeHtml(
         (p.name + " " + (p.model || "") + " " + typeLabel).toLowerCase(),
       );
@@ -210,38 +285,56 @@ function renderMgmtDetail(wfId) {
         '<div class="mgmt-p-info"><div class="mgmt-p-name">' +
         escapeHtml(p.name) +
         '</div><div class="mgmt-p-model">' +
-        (p.model ? escapeHtml(displayModelName(p.model)) : "Modèle par défaut") +
+        (p.model
+          ? escapeHtml(displayModelName(p.model))
+          : escapeHtml(t("proj.model.global"))) +
         "</div></div>" +
         inText +
         '<span class="mgmt-p-add" data-action="linkProjectToWf" data-arg="' +
         wf.id +
         '" data-arg2="' +
         p.id +
-        '">+ Lier</span>' +
+        '">' +
+        escapeHtml(t("proj.mgmt.link")) +
+        "</span>" +
         "</div>";
     });
     if (availableProjects.length > MGMT_AVAILABLE_VISIBLE_LIMIT) {
       html +=
-        '<div class="mgmt-proj-empty" id="mgmtAvailMore" style="padding:12px;">+' +
-        (availableProjects.length - MGMT_AVAILABLE_VISIBLE_LIMIT) +
-        ' autres agents. Filtre ci-dessus ou <span class="link" data-action="showAllProjectsModal">voir tout</span>.</div>';
+        '<div class="mgmt-proj-empty" id="mgmtAvailMore" style="padding:12px;">' +
+        escapeHtml(
+          t("proj.mgmt.moreAgents", {
+            count: availableProjects.length - MGMT_AVAILABLE_VISIBLE_LIMIT,
+          }),
+        ) +
+        '<span class="link" data-action="showAllProjectsModal">' +
+        escapeHtml(t("proj.mgmt.viewAll")) +
+        "</span>.</div>";
     }
     html +=
-      '<div class="mgmt-proj-empty" id="mgmtAvailNoMatch" style="padding:12px;display:none;">Aucun agent ne correspond.</div>';
+      '<div class="mgmt-proj-empty" id="mgmtAvailNoMatch" style="padding:12px;display:none;">' +
+      escapeHtml(t("proj.mgmt.noMatch")) +
+      "</div>";
     html += "</div>";
   }
   html += "</div>";
 
   html +=
-    '<div><div class="mgmt-section-title">Paramètres</div>' +
+    '<div><div class="mgmt-section-title">' +
+    escapeHtml(t("proj.mgmt.settings")) +
+    "</div>" +
     '<div class="mgmt-settings-card">' +
-    '<span class="label">Dossier de travail</span>' +
+    '<span class="label">' +
+    escapeHtml(t("proj.mgmt.workFolder")) +
+    "</span>" +
     '<span class="path">' +
-    escapeHtml(wf.workDir || "Aucun dossier sélectionné") +
+    escapeHtml(wf.workDir || t("proj.mgmt.noFolderSelected")) +
     "</span>" +
     '<span class="pick" data-action="pickWfWorkdir" data-arg="' +
     wf.id +
-    '">Choisir</span>' +
+    '">' +
+    escapeHtml(t("proj.mgmt.choose")) +
+    "</span>" +
     "</div>" +
     "</div>";
 
@@ -260,7 +353,7 @@ function linkProjectToWf(wfId, projectId) {
     renderMgmtDetail(wfId);
     renderMgmtWfList();
     switchWorkflow(wfId);
-    showToast("Agent lié au workflow", "success");
+    showToast(t("proj.toast.agentLinked"), "success");
   });
 }
 
@@ -276,7 +369,7 @@ function unlinkProjectFromWf(wfId, projectId) {
     renderMgmtDetail(wfId);
     renderMgmtWfList();
     switchWorkflow(wfId);
-    showToast("Agent dissocié du workflow", "success");
+    showToast(t("proj.toast.agentUnlinked"), "success");
   });
 }
 
@@ -309,7 +402,7 @@ function pickWfWorkdir(wfId) {
       window.openhub.saveProject(orch);
     }
     renderMgmtDetail(wfId);
-    showToast("Dossier de travail mis à jour", "success");
+    showToast(t("proj.toast.workdirUpdatedMgmt"), "success");
   });
 }
 
@@ -332,8 +425,7 @@ function renameCurrentWorkflow() {
 function deleteCurrentWorkflow() {
   closeMgmtMenu();
   if (!mgmtSelectedWfId) return;
-  if (!confirm("Supprimer ce workflow ? Les agents liés ne seront pas supprimés."))
-    return;
+  if (!confirm(t("proj.confirm.deleteWorkflow"))) return;
   var wf = workflows.find(function (w) {
     return w.id === mgmtSelectedWfId;
   });
@@ -347,13 +439,13 @@ function deleteCurrentWorkflow() {
     } else if (activeWorkflowId === mgmtSelectedWfId) {
       activeWorkflowId = null;
       selectedOrchestratorId = null;
-      document.getElementById("wfName").textContent = "Aucun workflow";
+      document.getElementById("wfName").textContent = t("proj.topbar.noWorkflow");
       renderCanvas();
     }
     mgmtSelectedWfId = workflows.length > 0 ? workflows[0].id : null;
     renderManagement();
     renderWorkflowSelector();
-    showToast("Workflow supprimé", "success");
+    showToast(t("proj.toast.workflowDeleted"), "success");
   });
 }
 
@@ -366,20 +458,28 @@ function showAllProjectsModal() {
       return p.type !== "orchestrator";
     });
     var html =
-      '<input class="form-input" id="mgmtSearchProj" placeholder="Rechercher un agent…" aria-label="Rechercher un agent" style="margin-bottom:8px;" data-action="filterMgmtProjects" />';
+      '<input class="form-input" id="mgmtSearchProj" placeholder="' +
+      escapeHtml(t("proj.allProj.searchPlaceholder")) +
+      '" aria-label="' +
+      escapeHtml(t("proj.allProj.searchAria")) +
+      '" style="margin-bottom:8px;" data-action="filterMgmtProjects" />';
     html += '<div class="mgmt-filter-chips" id="mgmtFilterChips">';
     html +=
-      '<button class="filter-chip active" data-kind="type" data-action="setAllProjTypeFilter" data-arg="">Tous</button>';
-    Object.keys(AGENT_TYPE_LABELS).forEach(function (type) {
+      '<button class="filter-chip active" data-kind="type" data-action="setAllProjTypeFilter" data-arg="">' +
+      escapeHtml(t("proj.allProj.filterAll")) +
+      "</button>";
+    AGENT_TYPE_KEYS.forEach(function (type) {
       html +=
         '<button class="filter-chip" data-kind="type" data-action="setAllProjTypeFilter" data-arg="' +
         type +
         '">' +
-        AGENT_TYPE_LABELS[type] +
+        escapeHtml(agentTypeLabel(type)) +
         "</button>";
     });
     html +=
-      '<button class="filter-chip filter-chip--toggle" data-action="toggleNoWorkflowFilter">Sans workflow</button>';
+      '<button class="filter-chip filter-chip--toggle" data-action="toggleNoWorkflowFilter">' +
+      escapeHtml(t("proj.allProj.filterNoWorkflow")) +
+      "</button>";
     html += "</div>";
     html += '<div id="mgmtProjList">';
     nonOrchProjs.forEach(function (p) {
@@ -393,8 +493,8 @@ function showAllProjectsModal() {
                 return escapeHtml(w.name);
               })
               .join(", ")
-          : "Aucun workflow";
-      var typeLabel = AGENT_TYPE_LABELS[p.type] || "";
+          : t("proj.allProj.noWorkflow");
+      var typeLabel = agentTypeLabel(p.type);
       var badge = typeLabel
         ? '<span class="mgmt-p-badge ' +
           (AGENT_TYPE_BADGE_CLASSES[p.type] || "") +
@@ -423,7 +523,9 @@ function showAllProjectsModal() {
         escapeHtml(p.name) +
         "</div></div>" +
         badge +
-        '<span class="mgmt-p-in">Dans <strong>' +
+        '<span class="mgmt-p-in">' +
+        escapeHtml(t("proj.allProj.in")) +
+        " <strong>" +
         inText +
         "</strong></span>";
       if (
@@ -437,12 +539,19 @@ function showAllProjectsModal() {
           mgmtSelectedWfId +
           '" data-arg2="' +
           p.id +
-          '">+ Lier</span>';
+          '">' +
+          escapeHtml(t("proj.allProj.linkAndClose")) +
+          "</span>";
       } else if (mgmtSelectedWfId) {
-        html += '<span class="mgmt-p-already">✓ Lié</span>';
+        html +=
+          '<span class="mgmt-p-already">' +
+          escapeHtml(t("proj.allProj.alreadyLinked")) +
+          "</span>";
       }
       html +=
-        '<span class="mgmt-p-dup" title="Dupliquer" data-action="duplicateProjectFromModal" data-arg="' +
+        '<span class="mgmt-p-dup" title="' +
+        escapeHtml(t("proj.allProj.duplicate")) +
+        '" data-action="duplicateProjectFromModal" data-arg="' +
         p.id +
         '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span>';
       html += "</div>";
@@ -471,8 +580,10 @@ function applyAllProjFilters() {
   if (count) {
     count.textContent =
       shown === items.length
-        ? items.length + " agent" + (items.length !== 1 ? "s" : "")
-        : shown + " / " + items.length + " agents";
+        ? items.length === 1
+          ? t("proj.allProj.countSingular", { count: items.length })
+          : t("proj.allProj.countPlural", { count: items.length })
+        : t("proj.allProj.countFiltered", { shown: shown, total: items.length });
   }
 }
 
@@ -511,12 +622,12 @@ function updateAllProjDeleteBtn() {
   var deleteBtn = document.getElementById("btnDeleteSelectedProjs");
   if (deleteBtn) {
     deleteBtn.style.display = n > 0 ? "inline-flex" : "none";
-    deleteBtn.textContent = "Supprimer (" + n + ")";
+    deleteBtn.textContent = t("proj.allProj.deleteBtn", { count: n });
   }
   var linkBtn = document.getElementById("btnLinkSelectedProjs");
   if (linkBtn) {
     linkBtn.style.display = n > 0 && mgmtSelectedWfId ? "inline-flex" : "none";
-    linkBtn.textContent = "Lier au workflow (" + n + ")";
+    linkBtn.textContent = t("proj.allProj.linkBtn", { count: n });
   }
 }
 
@@ -541,7 +652,7 @@ async function linkSelectedProjects() {
     return !alreadyLinked.includes(id);
   });
   if (toAdd.length === 0) {
-    showToast("Ces agents sont déjà liés au workflow", "info");
+    showToast(t("proj.toast.alreadyLinked"), "info");
     return;
   }
   wf.linkedProjectIds = [].concat(alreadyLinked, toAdd);
@@ -552,7 +663,9 @@ async function linkSelectedProjects() {
   renderMgmtWfList();
   switchWorkflow(wf.id);
   showToast(
-    toAdd.length + " agent" + (toAdd.length > 1 ? "s liés" : " lié") + " au workflow",
+    toAdd.length > 1
+      ? t("proj.toast.agentsLinkedCountPlural", { count: toAdd.length })
+      : t("proj.toast.agentsLinkedCountSingular", { count: toAdd.length }),
     "success",
   );
 }
@@ -564,8 +677,11 @@ async function deleteSelectedProjects() {
   var titleEl = modal.querySelector(".confirm-title");
   var descEl = modal.querySelector(".confirm-desc");
   var origTitle = titleEl.textContent;
-  titleEl.textContent = "Supprimer " + n + " agent" + (n > 1 ? "s" : "") + " ?";
-  descEl.textContent = "Cette action est irréversible. Tous les liens seront supprimés.";
+  titleEl.textContent =
+    n > 1
+      ? t("proj.confirmDelete.titleMultiPlural", { count: n })
+      : t("proj.confirmDelete.titleMultiSingular", { count: n });
+  descEl.textContent = t("proj.confirmDelete.desc");
   modal.classList.add("open");
 
   return new Promise(function (resolve) {
@@ -589,9 +705,9 @@ async function deleteSelectedProjects() {
       }
       closeModal("modal-all-projects");
       showToast(
-        idsToDelete.length +
-          " agent" +
-          (idsToDelete.length > 1 ? "s supprimés" : " supprimé"),
+        idsToDelete.length > 1
+          ? t("proj.toast.agentsDeletedPlural", { count: idsToDelete.length })
+          : t("proj.toast.agentsDeletedSingular", { count: idsToDelete.length }),
         "success",
       );
       await loadProjects();

@@ -99,7 +99,7 @@ function getActiveConvMessages() {
 
 function ensureConversation() {
   if (activeConvId && getActiveConv()) return getActiveConv();
-  var title = "Discussion " + (conversations.length + 1);
+  var title = t("proj.chat.discussionPrefix") + (conversations.length + 1);
   var conv = {
     id: "conv-" + Date.now(),
     workflowId: activeWorkflowId,
@@ -142,7 +142,7 @@ function renderConvDropdown() {
   }
   var newItem = document.createElement("div");
   newItem.className = "conv-dropdown-new";
-  newItem.textContent = "＋ Nouvelle conversation";
+  newItem.textContent = t("proj.chat.newConversationItem");
   newItem.onclick = function () {
     newConversation();
     dd.classList.remove("open");
@@ -158,12 +158,27 @@ function selectConversation(id) {
   renderConvDropdown();
 }
 
+// A conversation keeps an auto-generated placeholder title until the first user
+// message renames it. Recognize both languages' placeholders (and titles created
+// before a language switch) so auto-renaming keeps working across locales.
+function isPlaceholderConvTitle(title) {
+  if (!title) return true;
+  if (
+    title === "Nouvelle conversation" ||
+    title === "New conversation" ||
+    title === "Discussion " ||
+    title.startsWith("Discussion ")
+  )
+    return true;
+  return false;
+}
+
 function newConversation() {
   activeConvId = null;
   conversations.unshift({
     id: "conv-" + Date.now(),
     workflowId: activeWorkflowId,
-    title: "Nouvelle conversation",
+    title: t("proj.chat.newConversation"),
     messages: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -178,12 +193,7 @@ function newConversation() {
 function updateConvTitle(title) {
   var conv = getActiveConv();
   if (!conv) return;
-  if (
-    conv.title !== "Nouvelle conversation" &&
-    conv.title !== "Discussion " &&
-    !conv.title.startsWith("Discussion")
-  )
-    return;
+  if (!isPlaceholderConvTitle(conv.title)) return;
   conv.title = title.length > 40 ? title.substring(0, 40) + "…" : title;
   saveConversations();
   renderConvDropdown();
@@ -192,7 +202,7 @@ function updateConvTitle(title) {
 function makeCopyButton(bubble) {
   var copyBtn = document.createElement("button");
   copyBtn.className = "chat-copy-btn";
-  copyBtn.title = "Copier";
+  copyBtn.title = t("proj.chat.copy");
   copyBtn.innerHTML =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
   copyBtn.onclick = function (e) {
@@ -223,12 +233,14 @@ function renderOrchChatHistory() {
   if (conv) {
     titleEl.textContent = conv.title;
   } else {
-    titleEl.textContent = "Nouvelle conversation";
+    titleEl.textContent = t("proj.chat.newConversation");
   }
 
   if (!conv || conv.messages.length === 0) {
     container.innerHTML =
-      '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Pose une question ou décris ton projet. Je t\'aide à créer et gérer tes workflows.</div>';
+      '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">' +
+      escapeHtml(t("proj.chat.welcome")) +
+      "</div>";
     return;
   }
 
@@ -298,7 +310,10 @@ function showThinkingIndicator(bubble) {
   var indicator = document.createElement("div");
   indicator.className = "msg-thinking";
   indicator.innerHTML =
-    THINKING_SVG + '<span class="msg-thinking-label">Réflexion…</span>';
+    THINKING_SVG +
+    '<span class="msg-thinking-label">' +
+    escapeHtml(t("proj.chat.thinking")) +
+    "</span>";
   bubble.appendChild(indicator);
 }
 
@@ -382,15 +397,14 @@ function sendChat() {
     .then(async function (res) {
       if (!res.ok) {
         removeThinkingIndicator(bubble);
-        bubble.textContent =
-          "❌ Erreur " +
-          res.status +
-          " : " +
-          (
+        bubble.textContent = t("proj.chat.httpError", {
+          status: res.status,
+          body: (
             await res.text().catch(function () {
               return "";
             })
-          ).substring(0, 200);
+          ).substring(0, 200),
+        });
         return;
       }
       var reader = res.body.getReader();
@@ -413,7 +427,7 @@ function sendChat() {
                   ? parsed.choices[0].delta.content || ""
                   : "";
               if (parsed.error) {
-                fullText += "\n[Erreur: " + parsed.error + "]";
+                fullText += t("proj.chat.streamError", { error: parsed.error });
                 continue;
               }
               if (delta) {
@@ -471,7 +485,9 @@ function sendChat() {
     })
     .catch(function (err) {
       removeThinkingIndicator(bubble);
-      bubble.textContent = "❌ Erreur de connexion : " + (err.message || "inconnue");
+      bubble.textContent = t("proj.chat.connError", {
+        msg: err.message || t("proj.common.unknown"),
+      });
     })
     .finally(function () {
       _chatSending = false;
@@ -484,25 +500,23 @@ function sendChat() {
 function describeAction(action) {
   switch (action.type) {
     case "create_workflow":
-      return "Créer le workflow « " + action.name + " »";
+      return t("proj.action.createWorkflow", { name: action.name });
     case "create_project":
       return (
-        "Créer l'agent « " +
-        action.name +
-        " »" +
-        (action.linkToWf ? " (lié au workflow actif)" : "")
+        t("proj.action.createProject", { name: action.name }) +
+        (action.linkToWf ? t("proj.action.linkedToActiveWf") : "")
       );
     case "link_project":
-      return "Lier un agent au workflow";
+      return t("proj.action.linkProject");
     case "set_model":
       if (action.target === "all") {
-        return "Changer le modèle de tous les agents → " + action.model;
+        return t("proj.action.setModelAll", { model: action.model });
       }
-      return "Changer le modèle → " + action.model;
+      return t("proj.action.setModel", { model: action.model });
     case "set_task":
-      return "Définir la tâche globale du workflow";
+      return t("proj.action.setTask");
     default:
-      return "Action : " + action.type;
+      return t("proj.action.generic", { type: action.type });
   }
 }
 
@@ -541,30 +555,27 @@ async function processActions(bubbleEl, fullText) {
     renderManagement();
 
     var summary = "";
+    var agentWord =
+      agentNames.length > 1
+        ? t("proj.summary.agentPlural")
+        : t("proj.summary.agentSingular");
     if (wfName && agentNames.length > 0) {
-      summary =
-        "J'ai créé le workflow « " +
-        wfName +
-        " » avec " +
-        agentNames.length +
-        " agent" +
-        (agentNames.length > 1 ? "s" : "") +
-        " : " +
-        agentNames.join(", ") +
-        ".";
+      summary = t("proj.summary.wfWithAgents", {
+        wf: wfName,
+        count: agentNames.length,
+        agentWord: agentWord,
+        names: agentNames.join(", "),
+      });
     } else if (wfName) {
-      summary = "J'ai créé le workflow « " + wfName + " ».";
+      summary = t("proj.summary.wfOnly", { wf: wfName });
     } else if (agentNames.length > 0) {
-      summary =
-        "J'ai ajouté " +
-        agentNames.length +
-        " agent" +
-        (agentNames.length > 1 ? "s" : "") +
-        " : " +
-        agentNames.join(", ") +
-        ".";
+      summary = t("proj.summary.agentsOnly", {
+        count: agentNames.length,
+        agentWord: agentWord,
+        names: agentNames.join(", "),
+      });
     } else {
-      summary = "Les actions ont été appliquées.";
+      summary = t("proj.summary.applied");
     }
     addChatMessage("assistant", summary);
     addMessageToConv("assistant", summary);
@@ -580,14 +591,14 @@ async function processActions(bubbleEl, fullText) {
     btns.className = "action-btns";
     var confirmBtn = document.createElement("button");
     confirmBtn.className = "action-btn confirm";
-    confirmBtn.textContent = "Confirmer";
+    confirmBtn.textContent = t("proj.chat.confirm");
     confirmBtn.onclick = function () {
       confirmAction(JSON.stringify(action));
       card.remove();
     };
     var dismissBtn = document.createElement("button");
     dismissBtn.className = "action-btn dismiss";
-    dismissBtn.textContent = "✕ Ignorer";
+    dismissBtn.textContent = t("proj.chat.dismiss");
     dismissBtn.onclick = function () {
       card.remove();
     };
@@ -616,13 +627,19 @@ function processQuestions(bubbleEl, fullText) {
     confirmWrapper.className = "question-confirm-wrapper";
     var confirmBtn = document.createElement("button");
     confirmBtn.className = "question-confirm-btn";
-    confirmBtn.textContent = "Confirmer les réponses (0/" + qs.length + ")";
+    confirmBtn.textContent = t("proj.chat.confirmAnswers", {
+      count: 0,
+      total: qs.length,
+    });
     confirmBtn.disabled = true;
     confirmWrapper.appendChild(confirmBtn);
 
     function updateConfirmState() {
       var count = Object.keys(answers).length;
-      confirmBtn.textContent = "Confirmer les réponses (" + count + "/" + qs.length + ")";
+      confirmBtn.textContent = t("proj.chat.confirmAnswers", {
+        count: count,
+        total: qs.length,
+      });
       confirmBtn.disabled = count < qs.length;
     }
 
@@ -674,7 +691,7 @@ function processQuestions(bubbleEl, fullText) {
       if (q.allowCustom) {
         var customInput = document.createElement("input");
         customInput.className = "question-custom-input";
-        customInput.placeholder = "Autre réponse…";
+        customInput.placeholder = t("proj.chat.customAnswer");
         customInput.oninput = function () {
           if (customInput.value.trim()) {
             selectOption(customInput.value.trim(), null);
@@ -700,10 +717,10 @@ function processQuestions(bubbleEl, fullText) {
 }
 
 function answerQuestion(question, answer, idx) {
-  var text = "Question : " + question + "\nMa réponse : " + answer;
+  var text = t("proj.chat.questionPrefix", { question: question, answer: answer });
   addChatMessage("user", text);
   addMessageToConv("user", text);
-  sendChatWithText("Pour ma réponse à « " + question + " » : " + answer);
+  sendChatWithText(t("proj.chat.answerPrefix", { question: question, answer: answer }));
 }
 
 function sendChatWithText(text) {
@@ -893,10 +910,17 @@ async function confirmAction(actionJson, silent) {
       renderManagement();
       renderCanvas();
       updateTaskCard();
-      addChatMessage("system", "✅ Action exécutée : " + describeAction(action));
+      addChatMessage(
+        "system",
+        t("proj.chat.actionExecuted", { desc: describeAction(action) }),
+      );
     }
   } catch (err) {
-    if (!silent) addChatMessage("system", "❌ Erreur : " + (err.message || "inconnue"));
+    if (!silent)
+      addChatMessage(
+        "system",
+        t("proj.chat.actionError", { msg: err.message || t("proj.common.unknown") }),
+      );
   }
 }
 
@@ -907,7 +931,7 @@ async function createWorkflowFromAssistant(name, batch) {
   var oldConvId = activeConvId;
 
   var orch = await window.openhub.saveProject({
-    name: "Orchestrateur",
+    name: t("proj.node.typeOrchestrator"),
     instructions:
       "Tu es un coordinateur d'agents. Distribue les tâches et assure la cohérence globale.",
     color: "#0d9488",

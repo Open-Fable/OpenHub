@@ -84,42 +84,52 @@ function renderCanvas() {
     var posY = node.y != null ? node.y : node.id === activeOrch.id ? 250 : 100 + i * 180;
     card.style.left = posX + "px";
     card.style.top = posY + "px";
-    var typeLabel = "Agent";
+    var typeLabel = t("proj.node.typeAgent");
     var typeClass = "node-card-type--project";
     if (node.type === "orchestrator") {
-      typeLabel = "Orchestrateur";
+      typeLabel = t("proj.node.typeOrchestrator");
       typeClass = "node-card-type--orch";
     } else if (node.type === "verifier") {
-      typeLabel = "Vérificateur";
+      typeLabel = t("proj.node.typeVerifier");
       typeClass = "node-card-type--verifier";
     } else if (node.type === "code") {
-      typeLabel = "OpenCode";
+      typeLabel = t("proj.node.typeCode");
     } else if (node.type === "design") {
-      typeLabel = "Open Design";
+      typeLabel = t("proj.node.typeDesign");
     } else if (node.type === "work") {
-      typeLabel = "OpenWork";
+      typeLabel = t("proj.node.typeWork");
     } else if (node.type === "recherche") {
-      typeLabel = "Recherche";
+      typeLabel = t("proj.node.typeRecherche");
     }
-    var statusLabel = "En attente";
+    var statusLabel = t("proj.node.statusIdle");
     var statusClass = "status-dot--idle";
     if (node.status === "running") {
-      statusLabel = "En cours";
+      statusLabel = t("proj.node.statusRunning");
       statusClass = "status-dot--running";
     } else if (node.status === "done") {
-      statusLabel = "Terminé";
+      statusLabel = t("proj.node.statusDone");
       statusClass = "status-dot--done";
     } else if (node.status === "error") {
-      statusLabel = "Erreur";
+      statusLabel = t("proj.node.statusError");
       statusClass = "status-dot--error";
     } else if (node.status === "warning") {
-      statusLabel = "Attention";
+      statusLabel = t("proj.node.statusWarning");
       statusClass = "status-dot--warning";
     } else if (node.status === "skipped") {
-      statusLabel = "Ignoré";
+      statusLabel = t("proj.node.statusSkipped");
       statusClass = "status-dot--skipped";
     }
+    var removeOrDeleteLabel = escapeHtml(t("proj.node.removeOrDelete"));
+    var deleteHandleHtml =
+      node.id === activeOrch.id
+        ? ""
+        : '<button class="node-delete-handle" title="' +
+          removeOrDeleteLabel +
+          '" aria-label="' +
+          removeOrDeleteLabel +
+          '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
     card.innerHTML =
+      deleteHandleHtml +
       '<div class="node-card-type ' +
       typeClass +
       '">' +
@@ -141,13 +151,28 @@ function renderCanvas() {
       "</span></div>" +
       '<div class="node-link-handle" data-id="' +
       node.id +
-      '" title="Relier à un autre agent"></div>';
+      '" title="' +
+      escapeHtml(t("proj.node.linkTo")) +
+      '"></div>';
     var handle = card.querySelector(".node-link-handle");
     if (handle) {
       handle.addEventListener("mousedown", function (e) {
         e.stopPropagation();
         e.preventDefault();
         linkStartNode = node.id;
+      });
+    }
+    var deleteHandle = card.querySelector(".node-delete-handle");
+    if (deleteHandle) {
+      // Swallow mousedown so the card's drag/select handler doesn't fire.
+      deleteHandle.addEventListener("mousedown", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+      deleteHandle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        showNodeActionPopover(e, node);
       });
     }
     card.addEventListener("mousedown", function (e) {
@@ -311,13 +336,13 @@ function drawConnections() {
       path.addEventListener("dblclick", async function (e) {
         e.stopPropagation();
         closeLinkPopover();
-        if (!confirm("Supprimer cette dépendance ?")) return;
+        if (!confirm(t("proj.confirm.removeDependency"))) return;
         node.dependencies = node.dependencies.filter(function (id) {
           return id !== parentId;
         });
         await window.openhub.saveProject(node);
         drawConnections();
-        showToast("Dépendance supprimée", "success");
+        showToast(t("proj.toast.dependencyRemoved"), "success");
       });
       svg.appendChild(path);
       svg.appendChild(hitPath);
@@ -479,6 +504,7 @@ function applyTransform() {
   var canvasInner = document.getElementById("canvasInner");
   canvasInner.style.transform =
     "translate(" + panX + "px, " + panY + "px) scale(" + zoom + ")";
+  canvasInner.style.setProperty("--inv-zoom", 1 / zoom);
 }
 
 document.addEventListener("mousemove", function (e) {
@@ -580,9 +606,30 @@ document.addEventListener("mousemove", function (e) {
   }
 });
 
+// Tracks the document-level "click outside to dismiss" handler of the currently
+// open popover so it can always be detached — including when the popover is closed
+// by clicking one of its own buttons. Without this, the handler would leak and a
+// stale listener bound to a detached popover would tear down the next popover before
+// its click could register.
+var activePopoverOutsideHandler = null;
+
 function closeLinkPopover() {
   var existing = document.querySelector(".link-popover");
   if (existing) existing.remove();
+  if (activePopoverOutsideHandler) {
+    document.removeEventListener("mousedown", activePopoverOutsideHandler);
+    activePopoverOutsideHandler = null;
+  }
+}
+
+function registerPopoverOutsideClose(popover) {
+  var handler = function (ev) {
+    if (!popover.contains(ev.target)) closeLinkPopover();
+  };
+  activePopoverOutsideHandler = handler;
+  setTimeout(function () {
+    document.addEventListener("mousedown", handler);
+  }, 0);
 }
 
 function showLinkPopover(e, childNode, parentId) {
@@ -598,7 +645,8 @@ function showLinkPopover(e, childNode, parentId) {
   var btn = document.createElement("button");
   btn.className = "link-popover-btn";
   btn.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Supprimer le lien';
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    escapeHtml(t("proj.popover.removeLink"));
   btn.onclick = async function (ev) {
     ev.stopPropagation();
     closeLinkPopover();
@@ -607,19 +655,145 @@ function showLinkPopover(e, childNode, parentId) {
     });
     await window.openhub.saveProject(childNode);
     drawConnections();
-    showToast("Lien supprimé", "success");
+    showToast(t("proj.toast.linkRemoved"), "success");
   };
   popover.appendChild(btn);
   canvasInner.appendChild(popover);
-  var closeOnOutside = function (ev) {
-    if (!popover.contains(ev.target)) {
-      closeLinkPopover();
-      document.removeEventListener("mousedown", closeOnOutside);
-    }
+  registerPopoverOutsideClose(popover);
+}
+
+function showNodeActionPopover(e, node) {
+  closeLinkPopover();
+  var canvasInner = document.getElementById("canvasInner");
+  var rect = canvasInner.getBoundingClientRect();
+  var x = (e.clientX - rect.left) / zoom;
+  var y = (e.clientY - rect.top) / zoom;
+  var popover = document.createElement("div");
+  popover.className = "link-popover";
+  popover.style.left = x + "px";
+  popover.style.top = y + "px";
+
+  var removeBtn = document.createElement("button");
+  removeBtn.className = "link-popover-btn link-popover-btn--neutral";
+  removeBtn.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6"/><circle cx="12" cy="12" r="9"/></svg>' +
+    escapeHtml(t("proj.popover.removeFromCanvas"));
+  removeBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    closeLinkPopover();
+    removeNodeFromCanvas(node);
   };
-  setTimeout(function () {
-    document.addEventListener("mousedown", closeOnOutside);
-  }, 0);
+
+  var deleteBtn = document.createElement("button");
+  deleteBtn.className = "link-popover-btn";
+  deleteBtn.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+    escapeHtml(t("proj.popover.deletePermanently"));
+  deleteBtn.onclick = function (ev) {
+    ev.stopPropagation();
+    closeLinkPopover();
+    deleteNodeProject(node);
+  };
+
+  popover.appendChild(removeBtn);
+  popover.appendChild(deleteBtn);
+  canvasInner.appendChild(popover);
+  registerPopoverOutsideClose(popover);
+}
+
+// Retirer ou supprimer un nœud en cours d'exécution doit aussi arrêter le run : le
+// backend exécute tout le workflow comme un seul job annulable, sinon l'agent supprimé
+// continuerait de tourner en arrière-plan.
+function stopRunIfNodeRunning(node) {
+  if (node.status === "running" && isOrchestrationRunning()) {
+    stopOrchestration();
+  }
+}
+
+// Dissocie l'agent du workflow actif (ou des liens hérités de l'orchestrateur) et
+// retire les dépendances qui le pointent — sans supprimer le projet du disque.
+function removeNodeFromCanvas(node) {
+  stopRunIfNodeRunning(node);
+  var saves = [];
+  var activeWf = workflows.find(function (w) {
+    return w.id === activeWorkflowId;
+  });
+  if (activeWf && (activeWf.linkedProjectIds || []).includes(node.id)) {
+    activeWf.linkedProjectIds = activeWf.linkedProjectIds.filter(function (id) {
+      return id !== node.id;
+    });
+    saves.push(window.openhub.saveWorkflow(activeWf));
+  }
+  var activeOrch = projects.find(function (p) {
+    return p.id === selectedOrchestratorId;
+  });
+  if (activeOrch && activeOrch.linked && activeOrch.linked.includes(node.id)) {
+    activeOrch.linked = activeOrch.linked.filter(function (id) {
+      return id !== node.id;
+    });
+    saves.push(window.openhub.saveProject(activeOrch));
+  }
+  projects.forEach(function (p) {
+    if (p.dependencies && p.dependencies.includes(node.id)) {
+      p.dependencies = p.dependencies.filter(function (id) {
+        return id !== node.id;
+      });
+      saves.push(window.openhub.saveProject(p));
+    }
+  });
+  Promise.all(saves)
+    .then(function () {
+      if (selectedNodeId === node.id) closeDetail();
+      renderCanvas();
+      showToast(t("proj.toast.agentRemoved"), "success");
+    })
+    .catch(function () {
+      showToast(t("proj.toast.agentRemoveFailed"), "error");
+    });
+}
+
+// Supprime définitivement le projet et nettoie toutes ses références (liens de
+// workflow, liens d'orchestrateur hérités, dépendances).
+function deleteNodeProject(node) {
+  if (!confirm(t("proj.confirm.deletePermanently", { name: node.name }))) return;
+  stopRunIfNodeRunning(node);
+  var saves = [];
+  workflows.forEach(function (w) {
+    if ((w.linkedProjectIds || []).includes(node.id)) {
+      w.linkedProjectIds = w.linkedProjectIds.filter(function (id) {
+        return id !== node.id;
+      });
+      saves.push(window.openhub.saveWorkflow(w));
+    }
+  });
+  projects.forEach(function (p) {
+    if (p.linked && p.linked.includes(node.id)) {
+      p.linked = p.linked.filter(function (id) {
+        return id !== node.id;
+      });
+      saves.push(window.openhub.saveProject(p));
+    }
+    if (p.dependencies && p.dependencies.includes(node.id)) {
+      p.dependencies = p.dependencies.filter(function (id) {
+        return id !== node.id;
+      });
+      saves.push(window.openhub.saveProject(p));
+    }
+  });
+  Promise.all(saves)
+    .then(function () {
+      return window.openhub.deleteProject(node.id);
+    })
+    .then(function () {
+      if (selectedNodeId === node.id) closeDetail();
+      return loadProjects();
+    })
+    .then(function () {
+      showToast(t("proj.toast.agentDeleted"), "success");
+    })
+    .catch(function () {
+      showToast(t("proj.toast.agentDeleteFailed"), "error");
+    });
 }
 
 document.addEventListener("mouseup", async function (e) {
@@ -642,7 +816,10 @@ document.addEventListener("mouseup", async function (e) {
             if (!childProject.dependencies.includes(linkStartNode)) {
               if (
                 !confirm(
-                  'Lier "' + parentProject.name + '" → "' + childProject.name + '" ?',
+                  t("proj.confirm.linkAgents", {
+                    parent: parentProject.name,
+                    child: childProject.name,
+                  }),
                 )
               ) {
                 linkStartNode = null;
@@ -651,7 +828,7 @@ document.addEventListener("mouseup", async function (e) {
               }
               childProject.dependencies.push(linkStartNode);
               await window.openhub.saveProject(childProject);
-              showToast("Agents liés avec succès", "success");
+              showToast(t("proj.toast.agentsLinked"), "success");
             }
           }
         }

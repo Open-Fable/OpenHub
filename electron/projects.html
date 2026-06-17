@@ -44,19 +44,19 @@
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Nouveau
+            <span data-i18n="proj.topbar.new">Nouveau</span>
           </button>
           <button class="btn btn--primary" id="btnExecuteOrch">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            Lancer
+            <span data-i18n="proj.topbar.run">Lancer</span>
           </button>
           <button class="btn btn--danger" id="btnStopOrch" style="display: none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="6" y="6" width="12" height="12" rx="2"></rect>
             </svg>
-            Arrêter
+            <span data-i18n="proj.topbar.stop">Arrêter</span>
           </button>
         </div>
       </div>
@@ -81,7 +81,7 @@
               >
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              Assistant
+              <span data-i18n="proj.tab.assistant">Assistant</span>
             </button>
             <button
               class="chat-tab"
@@ -98,7 +98,7 @@
               >
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
-              Activit&eacute;
+              <span data-i18n="proj.tab.activity">Activit&eacute;</span>
             </button>
             <button
               class="chat-tab"
@@ -116,14 +116,14 @@
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              Historique
+              <span data-i18n="proj.tab.history">Historique</span>
             </button>
           </div>
 
           <!-- Tab: Chat -->
           <div class="chat-tab-content active" id="tabContentChat">
             <div class="chat-header">
-              <div style="flex: 1; min-width: 0; position: relative">
+              <div class="chat-header-left">
                 <div
                   class="conv-selector"
                   id="convSelector"
@@ -149,16 +149,23 @@
                 <option value="openai/gpt-4o">GPT-4o</option>
                 <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
               </select>
-              <button class="chat-collapse-btn" id="btnCollapseChat" title="Replier">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
+              <div class="chat-header-right">
+                <button
+                  class="chat-collapse-btn"
+                  id="btnCollapseChat"
+                  title="Replier"
+                  data-i18n-title="proj.chat.collapse"
                 >
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-area">
@@ -166,6 +173,8 @@
                 class="chat-input"
                 id="chatInput"
                 placeholder="Message à l'assistant…"
+                data-i18n-placeholder="proj.chat.inputPlaceholder"
+                data-i18n-aria-label="proj.chat.inputAria"
                 rows="1"
                 aria-label="Message à l'assistant"
                 maxlength="16000"
@@ -193,7 +202,7 @@
               aria-live="polite"
               aria-atomic="false"
             >
-              <div class="activity-empty" id="activityEmpty">
+              <div class="activity-empty" id="activityEmpty" data-i18n="proj.activity.empty">
                 Lance une orchestration pour suivre l'activité ici.
               </div>
             </div>
@@ -202,17 +211,26 @@
           <!-- Tab: Historique -->
           <div class="chat-tab-content" id="tabContentHistory">
             <div class="history-panel-header">
-              <span class="history-panel-title">Exécutions passées</span>
+              <span class="history-panel-title" data-i18n="proj.history.pastRuns"
+                >Exécutions passées</span
+              >
             </div>
             <div class="orch-history" id="orchHistoryList">
-              <div class="history-empty">Tes exécutions passées s'afficheront ici.</div>
+              <div class="history-empty" data-i18n="proj.history.empty">
+                Tes exécutions passées s'afficheront ici.
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Chat collapsed bar -->
         <div class="chat-collapsed-bar" id="chatCollapsedBar" style="display: none">
-          <button class="chat-expand-btn" id="btnExpandChat" title="Ouvrir l'assistant">
+          <button
+            class="chat-expand-btn"
+            id="btnExpandChat"
+            title="Ouvrir l'assistant"
+            data-i18n-title="proj.chat.expand"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
@@ -226,9 +244,16 @@
               id="feedbackInput"
               rows="1"
               placeholder="Feedback sur le résultat… (ex : le header est moche, corrige la navigation)"
+              data-i18n-placeholder="proj.canvas.iteratePlaceholder"
               spellcheck="false"
             ></textarea>
-            <button class="btn btn--primary" id="btnIterateOrch">Itérer</button>
+            <button
+              class="btn btn--primary"
+              id="btnIterateOrch"
+              data-i18n="proj.canvas.iterate"
+            >
+              Itérer
+            </button>
           </div>
 
           <div class="canvas" id="orchestrationCanvas">
@@ -246,7 +271,7 @@
                   <line x1="9" y1="9" x2="9.01" y2="9" />
                   <line x1="15" y1="9" x2="15.01" y2="9" />
                 </svg>
-                <p class="welcome-text">
+                <p class="welcome-text" data-i18n="proj.canvas.welcome">
                   Décris ton idée à l'assistant, il crée ton équipe d'agents.
                 </p>
                 <div class="templates-grid">
@@ -255,14 +280,18 @@
                     data-action="importDemoTemplate"
                   >
                     <div class="template-card-header">
-                      <span class="template-card-title">Intégration &amp; QA</span>
-                      <span class="template-card-badge">6 agents</span>
+                      <span class="template-card-title" data-i18n="proj.template.qaTitle"
+                        >Intégration &amp; QA</span
+                      >
+                      <span class="template-card-badge" data-i18n="proj.template.qaBadge"
+                        >6 agents</span
+                      >
                     </div>
-                    <div class="template-card-desc">
+                    <div class="template-card-desc" data-i18n="proj.template.qaDesc">
                       Pipeline complète avec tests automatisés.
                     </div>
                     <button class="template-card-btn">
-                      Charger
+                      <span data-i18n="proj.template.load">Charger</span>
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -279,14 +308,22 @@
                     data-action="importWebsiteTemplate"
                   >
                     <div class="template-card-header">
-                      <span class="template-card-title">Site Web Vitrine</span>
-                      <span class="template-card-badge">4 agents</span>
+                      <span
+                        class="template-card-title"
+                        data-i18n="proj.template.websiteTitle"
+                        >Site Web Vitrine</span
+                      >
+                      <span
+                        class="template-card-badge"
+                        data-i18n="proj.template.websiteBadge"
+                        >4 agents</span
+                      >
                     </div>
-                    <div class="template-card-desc">
+                    <div class="template-card-desc" data-i18n="proj.template.websiteDesc">
                       Conception, rédaction et intégration.
                     </div>
                     <button class="template-card-btn">
-                      Charger
+                      <span data-i18n="proj.template.load">Charger</span>
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -303,14 +340,18 @@
                     data-action="importSEOContentTemplate"
                   >
                     <div class="template-card-header">
-                      <span class="template-card-title">Contenu SEO</span>
-                      <span class="template-card-badge">4 agents</span>
+                      <span class="template-card-title" data-i18n="proj.template.seoTitle"
+                        >Contenu SEO</span
+                      >
+                      <span class="template-card-badge" data-i18n="proj.template.seoBadge"
+                        >4 agents</span
+                      >
                     </div>
-                    <div class="template-card-desc">
+                    <div class="template-card-desc" data-i18n="proj.template.seoDesc">
                       Articles optimisés pour le référencement.
                     </div>
                     <button class="template-card-btn">
-                      Charger
+                      <span data-i18n="proj.template.load">Charger</span>
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -329,7 +370,12 @@
               <svg class="canvas-svg" id="canvasSvg"></svg>
             </div>
             <div class="canvas-controls">
-              <button class="control-btn" id="btnZoomIn" title="Zoomer">
+              <button
+                class="control-btn"
+                id="btnZoomIn"
+                title="Zoomer"
+                data-i18n-title="proj.canvas.zoomIn"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -340,7 +386,12 @@
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
               </button>
-              <button class="control-btn" id="btnZoomOut" title="Dézoomer">
+              <button
+                class="control-btn"
+                id="btnZoomOut"
+                title="Dézoomer"
+                data-i18n-title="proj.canvas.zoomOut"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -354,6 +405,7 @@
                 class="control-btn"
                 id="btnToggleLayout"
                 title="Changer le sens des liaisons (H/V)"
+                data-i18n-title="proj.canvas.toggleLayout"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -369,6 +421,7 @@
                 class="control-btn"
                 id="btnZoomReset"
                 title="Mode Zen (Plein écran)"
+                data-i18n-title="proj.canvas.zenMode"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -387,7 +440,12 @@
         <div class="detail-panel" id="orchestrationDetail" style="display: none">
           <div class="detail-header">
             <span class="detail-header-title" id="detailTitle">Workflow</span>
-            <button class="detail-close-btn" id="btnCloseDetail" title="Fermer">
+            <button
+              class="detail-close-btn"
+              id="btnCloseDetail"
+              title="Fermer"
+              data-i18n-title="proj.detail.close"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -398,16 +456,21 @@
             <!-- Workflow view -->
             <div class="detail-view" id="detailViewWorkflow" style="display: none">
               <div class="detail-section">
-                <span class="detail-label">Tâche globale à exécuter</span>
+                <span class="detail-label" data-i18n="proj.detail.globalTask"
+                  >Tâche globale à exécuter</span
+                >
                 <textarea
                   class="detail-textarea"
                   id="sharedTaskText"
                   placeholder="Décris ici l'objectif global de l'orchestration…"
+                  data-i18n-placeholder="proj.detail.globalTaskPlaceholder"
                 ></textarea>
               </div>
               <details class="detail-accordion">
                 <summary class="detail-accordion-trigger">
-                  <span>Instructions de l'équipe</span>
+                  <span data-i18n="proj.detail.teamInstructions"
+                    >Instructions de l'équipe</span
+                  >
                   <svg
                     class="detail-accordion-chevron"
                     viewBox="0 0 24 24"
@@ -423,17 +486,19 @@
                     class="detail-textarea detail-textarea--mono"
                     id="systemInstructionsText"
                     placeholder="Instructions système de l'orchestrateur…"
+                    data-i18n-placeholder="proj.detail.systemInstructionsPlaceholder"
                   ></textarea>
                 </div>
               </details>
               <details class="detail-accordion" id="consoleAccordion">
                 <summary class="detail-accordion-trigger">
-                  <span>Console</span>
+                  <span data-i18n="proj.detail.console">Console</span>
                   <div class="detail-accordion-actions">
                     <button
                       class="console-copy-btn"
                       id="consoleCopyBtn"
                       title="Copier la console"
+                      data-i18n-title="proj.detail.copyConsole"
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -460,13 +525,15 @@
                 </summary>
                 <div class="detail-accordion-body">
                   <div class="orchestration-console dcon" id="orchConsole">
-                    <span class="console-info">Console d'orchestration prête.</span>
+                    <span class="console-info" data-i18n="proj.detail.consoleReady"
+                      >Console d'orchestration prête.</span
+                    >
                   </div>
                 </div>
               </details>
               <details class="detail-accordion">
                 <summary class="detail-accordion-trigger">
-                  <span>Réglages</span>
+                  <span data-i18n="proj.detail.settings">Réglages</span>
                   <svg
                     class="detail-accordion-chevron"
                     viewBox="0 0 24 24"
@@ -479,8 +546,10 @@
                 </summary>
                 <div class="detail-accordion-body">
                   <div class="orch-setting-row">
-                    <span class="orch-setting-label"
-                      >Mod&egrave;le de l'orchestrateur</span
+                    <span
+                      class="orch-setting-label"
+                      data-i18n="proj.detail.modelAllAgents"
+                      >Mod&egrave;le (tous les agents)</span
                     >
                     <select
                       class="form-select"
@@ -489,7 +558,9 @@
                     ></select>
                   </div>
                   <div class="orch-setting-row">
-                    <span class="orch-setting-label"
+                    <span
+                      class="orch-setting-label"
+                      data-i18n="proj.detail.reasoningAllAgents"
                       >R&eacute;flexion (tous les agents)</span
                     >
                     <select
@@ -497,17 +568,25 @@
                       id="orchReasoningSelect"
                       style="flex: 1; font-size: 11px"
                     >
-                      <option value="">Par d&eacute;faut (medium)</option>
-                      <option value="none">Aucune</option>
-                      <option value="low">Faible</option>
-                      <option value="medium">Moyenne</option>
-                      <option value="high">Haute</option>
-                      <option value="xhigh">Tr&egrave;s haute</option>
-                      <option value="max">Maximum</option>
+                      <option value="" data-i18n="proj.reasoning.defaultMedium">
+                        Par d&eacute;faut (medium)
+                      </option>
+                      <option value="none" data-i18n="proj.reasoning.none">Aucune</option>
+                      <option value="low" data-i18n="proj.reasoning.low">Faible</option>
+                      <option value="medium" data-i18n="proj.reasoning.medium">
+                        Moyenne
+                      </option>
+                      <option value="high" data-i18n="proj.reasoning.high">Haute</option>
+                      <option value="xhigh" data-i18n="proj.reasoning.xhigh">
+                        Tr&egrave;s haute
+                      </option>
+                      <option value="max" data-i18n="proj.reasoning.max">Maximum</option>
                     </select>
                   </div>
                   <div class="orch-setting-row">
-                    <span class="orch-setting-label"
+                    <span
+                      class="orch-setting-label"
+                      data-i18n="proj.detail.adaptWeakModels"
                       >Adapter aux mod&egrave;les l&eacute;gers</span
                     >
                     <label class="switch"
@@ -529,7 +608,10 @@
                         d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
                       />
                     </svg>
-                    <span class="orch-workdir-label" id="orchWorkdirLabel"
+                    <span
+                      class="orch-workdir-label"
+                      id="orchWorkdirLabel"
+                      data-i18n="proj.detail.rootFolder"
                       >Dossier racine</span
                     >
                     <span class="orch-workdir-path" id="orchWorkdirPath">—</span>
@@ -537,6 +619,7 @@
                       class="btn btn--ghost"
                       id="btnPickOrchWorkdir"
                       style="font-size: 11px; padding: 2px 8px; height: auto"
+                      data-i18n="proj.common.choose"
                     >
                       Choisir
                     </button>
@@ -555,15 +638,16 @@
                   class="detail-textarea"
                   id="selectedNodeTaskText"
                   placeholder="Consigne spécifique à donner à cet agent…"
+                  data-i18n-placeholder="proj.detail.agentTaskPlaceholder"
                 ></textarea>
               </div>
               <div class="detail-section" id="agentStatusSection" style="display: none">
-                <span class="detail-label">Statut</span>
+                <span class="detail-label" data-i18n="proj.detail.status">Statut</span>
                 <div class="agent-status-row" id="agentStatusRow"></div>
               </div>
               <details class="detail-accordion">
                 <summary class="detail-accordion-trigger">
-                  <span>Instructions</span>
+                  <span data-i18n="proj.detail.instructions">Instructions</span>
                   <svg
                     class="detail-accordion-chevron"
                     viewBox="0 0 24 24"
@@ -580,12 +664,13 @@
                     id="selectedNodeInstructionsText"
                     readonly
                     placeholder="Instructions système de l'agent (lecture seule)"
+                    data-i18n-placeholder="proj.detail.agentInstructionsPlaceholder"
                   ></textarea>
                 </div>
               </details>
               <details class="detail-accordion" style="display: none">
                 <summary class="detail-accordion-trigger">
-                  <span>Prompt utilisateur</span>
+                  <span data-i18n="proj.detail.userPrompt">Prompt utilisateur</span>
                   <svg
                     class="detail-accordion-chevron"
                     viewBox="0 0 24 24"
@@ -602,7 +687,7 @@
               </details>
               <details class="detail-accordion" id="resultAccordion">
                 <summary class="detail-accordion-trigger">
-                  <span>Résultat</span>
+                  <span data-i18n="proj.detail.result">Résultat</span>
                   <svg
                     class="detail-accordion-chevron"
                     viewBox="0 0 24 24"
@@ -615,14 +700,18 @@
                 </summary>
                 <div class="detail-accordion-body" style="overflow: hidden">
                   <div class="orch-result-viewer" id="orchResultViewer">
-                    <div class="orch-result-empty">
+                    <div class="orch-result-empty" data-i18n="proj.detail.resultEmpty">
                       Le résultat s'affichera ici après l'exécution.
                     </div>
                   </div>
                 </div>
               </details>
               <div class="detail-agent-actions">
-                <button class="btn btn--secondary" id="btnEditSelectedNode">
+                <button
+                  class="btn btn--secondary"
+                  id="btnEditSelectedNode"
+                  data-i18n="proj.detail.editAgent"
+                >
                   Modifier l'agent
                 </button>
               </div>
@@ -642,6 +731,7 @@
             data-action="closeModal"
             data-arg="modalProject"
             aria-label="Fermer"
+            data-i18n-aria-label="proj.modal.close"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -652,90 +742,119 @@
         <div class="modal-body">
           <!-- Essential -->
           <div class="form-group">
-            <span class="form-label">Nom de l'agent</span>
+            <span class="form-label" data-i18n="proj.modal.agentName"
+              >Nom de l'agent</span
+            >
             <input
               type="text"
               class="form-input"
               id="projName"
               placeholder="Nom de l'agent…"
+              data-i18n-placeholder="proj.modal.agentNamePlaceholder"
               autocomplete="off"
               aria-label="Nom de l'agent"
+              data-i18n-aria-label="proj.modal.agentName"
               maxlength="100"
             />
           </div>
           <div class="form-group">
-            <span class="form-label">Type</span>
+            <span class="form-label" data-i18n="proj.modal.type">Type</span>
             <select class="form-select" id="projType" data-action="onProjectTypeChange">
-              <option value="code">OpenCode</option>
-              <option value="design">Open Design</option>
-              <option value="work">OpenWork</option>
-              <option value="recherche">Recherche</option>
-              <option value="orchestrator">Orchestrateur</option>
-              <option value="verifier">Vérificateur</option>
+              <option value="code" data-i18n="proj.modal.typeCode">OpenCode</option>
+              <option value="design" data-i18n="proj.modal.typeDesign">Open Design</option>
+              <option value="work" data-i18n="proj.modal.typeWork">OpenWork</option>
+              <option value="recherche" data-i18n="proj.modal.typeRecherche">
+                Recherche
+              </option>
+              <option value="orchestrator" data-i18n="proj.modal.typeOrchestrator">
+                Orchestrateur
+              </option>
+              <option value="verifier" data-i18n="proj.modal.typeVerifier">
+                Vérificateur
+              </option>
             </select>
           </div>
           <div class="form-group">
-            <span class="form-label">Tâche</span>
+            <span class="form-label" data-i18n="proj.modal.task">Tâche</span>
             <textarea
               class="form-textarea"
               id="projTask"
               placeholder="Décris ce que cet agent doit accomplir…"
+              data-i18n-placeholder="proj.modal.taskPlaceholder"
               style="min-height: 60px"
               aria-label="Tâche de l'agent"
+              data-i18n-aria-label="proj.modal.taskAria"
               maxlength="8000"
             ></textarea>
           </div>
 
           <!-- Accordion: Personnaliser l'agent -->
           <details class="modal-accordion">
-            <summary>Personnaliser l'agent</summary>
+            <summary data-i18n="proj.modal.customizeAgent">Personnaliser l'agent</summary>
             <div class="modal-accordion-body">
               <div class="form-group">
-                <span class="form-label">Mod&egrave;le d'IA</span>
+                <span class="form-label" data-i18n="proj.modal.aiModel"
+                  >Mod&egrave;le d'IA</span
+                >
                 <select class="form-select" id="projModel">
-                  <option value="">
+                  <option value="" data-i18n="proj.model.defaultApp">
                     — Mod&egrave;le par d&eacute;faut de l'application —
                   </option>
                 </select>
               </div>
               <div class="form-group">
-                <span class="form-label">Niveau de r&eacute;flexion</span>
+                <span class="form-label" data-i18n="proj.modal.reasoningLevel"
+                  >Niveau de r&eacute;flexion</span
+                >
                 <select class="form-select" id="projReasoning">
-                  <option value="">Par d&eacute;faut (medium)</option>
-                  <option value="none">Aucune</option>
-                  <option value="low">Faible</option>
-                  <option value="medium">Moyenne</option>
-                  <option value="high">Haute</option>
-                  <option value="xhigh">Tr&egrave;s haute</option>
-                  <option value="max">Maximum</option>
+                  <option value="" data-i18n="proj.reasoning.defaultMedium">
+                    Par d&eacute;faut (medium)
+                  </option>
+                  <option value="none" data-i18n="proj.reasoning.none">Aucune</option>
+                  <option value="low" data-i18n="proj.reasoning.low">Faible</option>
+                  <option value="medium" data-i18n="proj.reasoning.medium">Moyenne</option>
+                  <option value="high" data-i18n="proj.reasoning.high">Haute</option>
+                  <option value="xhigh" data-i18n="proj.reasoning.xhigh">
+                    Tr&egrave;s haute
+                  </option>
+                  <option value="max" data-i18n="proj.reasoning.max">Maximum</option>
                 </select>
               </div>
               <div class="form-group">
-                <span class="form-label">Instructions système</span>
+                <span class="form-label" data-i18n="proj.modal.systemInstructions"
+                  >Instructions système</span
+                >
                 <textarea
                   class="form-textarea"
                   id="projInstructions"
                   placeholder="Donne des instructions précises à l'agent…"
+                  data-i18n-placeholder="proj.modal.instructionsPlaceholder"
                   aria-label="Instructions système de l'agent"
+                  data-i18n-aria-label="proj.modal.instructionsAria"
                   maxlength="8000"
                 ></textarea>
               </div>
               <div class="form-group">
-                <span class="form-label">Dossier de travail</span>
+                <span class="form-label" data-i18n="proj.modal.workFolder"
+                  >Dossier de travail</span
+                >
                 <div style="display: flex; gap: 8px">
                   <input
                     type="text"
                     class="form-input"
                     id="projPath"
                     placeholder="Aucun dossier lié"
+                    data-i18n-placeholder="proj.modal.noFolderLinked"
                     readonly
                     aria-label="Dossier de travail"
+                    data-i18n-aria-label="proj.modal.workFolderAria"
                     style="flex: 1; cursor: default; opacity: 0.8"
                   />
                   <button
                     class="btn btn--secondary"
                     id="btnPickPath"
                     style="white-space: nowrap"
+                    data-i18n="proj.common.chooseEllipsis"
                   >
                     Choisir…
                   </button>
@@ -746,7 +865,7 @@
 
           <!-- Accordion: Options avancées -->
           <details class="modal-accordion">
-            <summary>Options avancées</summary>
+            <summary data-i18n="proj.modal.advancedOptions">Options avancées</summary>
             <div class="modal-accordion-body">
               <div class="switch-row">
                 <label class="switch"
@@ -755,8 +874,10 @@
                   ></span
                 ></label>
                 <div class="switch-info">
-                  <span class="switch-label">Découper la tâche en étapes</span>
-                  <span class="switch-help"
+                  <span class="switch-label" data-i18n="proj.modal.splitTaskSteps"
+                    >Découper la tâche en étapes</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.splitTaskStepsHelp"
                     >L'orchestrateur planifie les étapes automatiquement.</span
                   >
                 </div>
@@ -766,11 +887,13 @@
                   class="form-textarea"
                   id="projSteps"
                   placeholder="Étapes manuelles (une par bloc, séparées par ---)&#10;Exemple :&#10;Analyse le besoin&#10;---&#10;Propose une maquette"
+                  data-i18n-placeholder="proj.modal.manualStepsPlaceholder"
                   style="min-height: 80px"
                   aria-label="Étapes manuelles de l'agent"
+                  data-i18n-aria-label="proj.modal.manualStepsAria"
                   maxlength="8000"
                 ></textarea>
-                <span class="form-hint"
+                <span class="form-hint" data-i18n="proj.modal.manualStepsHint"
                   >Si tu définis des étapes ici, elles remplacent la planification
                   automatique.</span
                 >
@@ -782,16 +905,20 @@
                   ></span
                 ></label>
                 <div class="switch-info">
-                  <span class="switch-label">Ignorer la mémoire du projet</span>
-                  <span class="switch-help"
+                  <span class="switch-label" data-i18n="proj.modal.bypassMemory"
+                    >Ignorer la mémoire du projet</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.bypassMemoryHelp"
                     >L'agent travaille sans le contexte des sessions précédentes.</span
                   >
                 </div>
               </div>
               <div class="form-group" id="dependencySelectGroup">
-                <span class="form-label">Attend la fin de…</span>
+                <span class="form-label" data-i18n="proj.modal.waitsFor"
+                  >Attend la fin de…</span
+                >
                 <div class="dependency-checkbox-list" id="dependencyList"></div>
-                <span class="form-hint"
+                <span class="form-hint" data-i18n="proj.modal.waitsForHint"
                   >Cet agent ne démarrera que quand ses prérequis auront terminé.</span
                 >
               </div>
@@ -800,7 +927,7 @@
 
           <!-- Accordion: Pilotage automatique (orchestrator only) -->
           <details class="modal-accordion" id="orchAutoSection" style="display: none">
-            <summary>Pilotage automatique</summary>
+            <summary data-i18n="proj.modal.autoPilot">Pilotage automatique</summary>
             <div class="modal-accordion-body">
               <div class="switch-row">
                 <label class="switch"
@@ -809,8 +936,10 @@
                   ></span
                 ></label>
                 <div class="switch-info">
-                  <span class="switch-label">Répartir la tâche entre les agents</span>
-                  <span class="switch-help"
+                  <span class="switch-label" data-i18n="proj.modal.distributeTask"
+                    >Répartir la tâche entre les agents</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.distributeTaskHelp"
                     >L'orchestrateur distribue le travail à chaque agent du
                     workflow.</span
                   >
@@ -823,8 +952,10 @@
                   ></span
                 ></label>
                 <div class="switch-info">
-                  <span class="switch-label">Faire vérifier le travail</span>
-                  <span class="switch-help"
+                  <span class="switch-label" data-i18n="proj.modal.checkWork"
+                    >Faire vérifier le travail</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.checkWorkHelp"
                     >Vérifie la cohérence globale après chaque étape.</span
                   >
                 </div>
@@ -836,8 +967,10 @@
                   ></span
                 ></label>
                 <div class="switch-info">
-                  <span class="switch-label">Réessayer en cas d'erreur</span>
-                  <span class="switch-help"
+                  <span class="switch-label" data-i18n="proj.modal.retryOnError"
+                    >Réessayer en cas d'erreur</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.retryOnErrorHelp"
                     >Relance automatiquement un agent si sa tâche échoue.</span
                   >
                 </div>
@@ -849,9 +982,34 @@
                   ></span
                 ></label>
                 <div class="switch-info">
-                  <span class="switch-label">Adapter aux modèles légers</span>
-                  <span class="switch-help"
+                  <span class="switch-label" data-i18n="proj.modal.adaptWeakModels"
+                    >Adapter aux modèles légers</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.adaptWeakModelsHelp"
                     >Prompts compacts et plus d'itérations pour Flash, mini, Haiku…</span
+                  >
+                </div>
+              </div>
+              <div class="switch-row">
+                <input
+                  type="number"
+                  class="form-input"
+                  id="inpMaxParallel"
+                  min="1"
+                  max="4"
+                  value="3"
+                  style="width: 64px"
+                  aria-label="Agents en parallèle"
+                  data-i18n-aria-label="proj.modal.parallelAgentsAria"
+                />
+                <div class="switch-info">
+                  <span class="switch-label" data-i18n="proj.modal.parallelAgents"
+                    >Agents en parallèle</span
+                  >
+                  <span class="switch-help" data-i18n="proj.modal.parallelAgentsHelp"
+                    >Agents indépendants exécutés en même temps (1 = séquentiel,
+                    max 4). Les agents de code parallèles sont isolés dans des
+                    copies git séparées.</span
                   >
                 </div>
               </div>
@@ -859,10 +1017,21 @@
           </details>
         </div>
         <div class="modal-footer">
-          <button class="btn btn--ghost" data-action="closeModal" data-arg="modalProject">
+          <button
+            class="btn btn--ghost"
+            data-action="closeModal"
+            data-arg="modalProject"
+            data-i18n="proj.common.cancel"
+          >
             Annuler
           </button>
-          <button class="btn btn--primary" id="btnSaveProjectConfirm">Enregistrer</button>
+          <button
+            class="btn btn--primary"
+            id="btnSaveProjectConfirm"
+            data-i18n="proj.modal.save"
+          >
+            Enregistrer
+          </button>
         </div>
       </div>
     </div>
@@ -874,14 +1043,22 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Retour
+          <span data-i18n="proj.mgmt.back">Retour</span>
         </div>
-        <span class="topbar-title">Gestion des workflows</span>
+        <span class="topbar-title" data-i18n="proj.mgmt.title">Gestion des workflows</span>
         <div class="topbar-actions">
-          <button class="btn btn--secondary" data-action="showAllProjectsModal">
+          <button
+            class="btn btn--secondary"
+            data-action="showAllProjectsModal"
+            data-i18n="proj.mgmt.allAgents"
+          >
             Tous les agents
           </button>
-          <button class="btn btn--primary" data-action="openNewProjectFromMgmt">
+          <button
+            class="btn btn--primary"
+            data-action="openNewProjectFromMgmt"
+            data-i18n="proj.mgmt.newAgent"
+          >
             Nouvel agent
           </button>
         </div>
@@ -889,11 +1066,17 @@
       <div class="mgmt-body">
         <div class="mgmt-wf-list">
           <div class="mgmt-wf-list-header">
-            <span class="mgmt-wf-list-title">Workflows</span>
+            <span class="mgmt-wf-list-title" data-i18n="proj.mgmt.workflows"
+              >Workflows</span
+            >
             <span class="mgmt-wf-list-count" id="mgmtWfCount">0</span>
           </div>
           <div class="mgmt-wf-items" id="mgmtWfList"></div>
-          <button class="mgmt-wf-add" data-action="createWorkflow">
+          <button
+            class="mgmt-wf-add"
+            data-action="createWorkflow"
+            data-i18n="proj.mgmt.newWorkflow"
+          >
             Nouveau workflow
           </button>
         </div>
@@ -910,6 +1093,7 @@
                 class="btn btn--primary"
                 id="mgmtOpenBtn"
                 data-action="openWorkflowInOrch"
+                data-i18n="proj.mgmt.open"
               >
                 Ouvrir
               </button>
@@ -919,6 +1103,7 @@
                   id="mgmtMenuBtn"
                   data-action="toggleMgmtMenu"
                   aria-label="Plus d'options"
+                  data-i18n-aria-label="proj.mgmt.moreOptions"
                   aria-haspopup="true"
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -928,12 +1113,17 @@
                   </svg>
                 </button>
                 <div class="mgmt-menu" id="mgmtMenu">
-                  <div class="mgmt-menu-item" data-action="renameCurrentWorkflow">
+                  <div
+                    class="mgmt-menu-item"
+                    data-action="renameCurrentWorkflow"
+                    data-i18n="proj.mgmt.rename"
+                  >
                     Renommer
                   </div>
                   <div
                     class="mgmt-menu-item mgmt-menu-item--danger"
                     data-action="deleteCurrentWorkflow"
+                    data-i18n="proj.mgmt.delete"
                   >
                     Supprimer
                   </div>
@@ -951,6 +1141,7 @@
                 color: var(--text-muted);
                 font-size: 13px;
               "
+              data-i18n="proj.mgmt.selectWorkflowInList"
             >
               Sélectionne un workflow dans la liste pour voir ses agents.
             </div>
@@ -963,12 +1154,15 @@
     <div class="modal-overlay" id="modalWorkflowPrompt" style="display: none">
       <div class="modal-dialog" style="max-width: 400px">
         <div class="modal-header">
-          <span class="modal-title">Renommer le workflow</span>
+          <span class="modal-title" data-i18n="proj.modalWf.title"
+            >Renommer le workflow</span
+          >
           <button
             class="modal-close"
             data-action="closeModal"
             data-arg="modalWorkflowPrompt"
             aria-label="Fermer"
+            data-i18n-aria-label="proj.modal.close"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -978,12 +1172,13 @@
         </div>
         <div class="modal-body" style="gap: 8px">
           <div class="form-group">
-            <span class="form-label">Nom du workflow</span>
+            <span class="form-label" data-i18n="proj.modalWf.name">Nom du workflow</span>
             <input
               type="text"
               class="form-input"
               id="wfNameInput"
               placeholder="Ex: Refonte Site Web"
+              data-i18n-placeholder="proj.modalWf.placeholder"
               autocomplete="off"
             />
           </div>
@@ -993,10 +1188,17 @@
             class="btn btn--ghost"
             data-action="closeModal"
             data-arg="modalWorkflowPrompt"
+            data-i18n="proj.common.cancel"
           >
             Annuler
           </button>
-          <button class="btn btn--primary" id="btnConfirmWorkflow">Renommer</button>
+          <button
+            class="btn btn--primary"
+            id="btnConfirmWorkflow"
+            data-i18n="proj.modalWf.confirm"
+          >
+            Renommer
+          </button>
         </div>
       </div>
     </div>
@@ -1005,12 +1207,13 @@
     <div class="modal-overlay" id="modal-all-projects" style="display: none">
       <div class="modal-dialog" style="max-width: 560px">
         <div class="modal-header">
-          <span class="modal-title">Tous les agents</span>
+          <span class="modal-title" data-i18n="proj.allProj.title">Tous les agents</span>
           <button
             class="modal-close"
             data-action="closeModal"
             data-arg="modal-all-projects"
             aria-label="Fermer"
+            data-i18n-aria-label="proj.modal.close"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -1029,6 +1232,7 @@
             id="btnLinkSelectedProjs"
             style="display: none"
             data-action="linkSelectedProjects"
+            data-i18n="proj.allProj.linkToWorkflow"
           >
             Lier au workflow (0)
           </button>
@@ -1037,6 +1241,7 @@
             id="btnDeleteSelectedProjs"
             style="display: none"
             data-action="deleteSelectedProjects"
+            data-i18n="proj.allProj.deleteCount"
           >
             Supprimer (0)
           </button>
@@ -1044,6 +1249,7 @@
             class="btn btn--ghost"
             data-action="closeModal"
             data-arg="modal-all-projects"
+            data-i18n="proj.allProj.close"
           >
             Fermer
           </button>
@@ -1071,18 +1277,34 @@
             <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
           </svg>
         </div>
-        <p class="confirm-title">Supprimer cet agent ?</p>
-        <p class="confirm-desc">
+        <p class="confirm-title" data-i18n="proj.confirmDelete.title">
+          Supprimer cet agent ?
+        </p>
+        <p class="confirm-desc" data-i18n="proj.confirmDelete.desc">
           Cette action est irréversible. Tous les liens seront supprimés.
         </p>
         <div class="confirm-actions">
-          <button class="confirm-btn-cancel" id="cancelDeleteBtn">Annuler</button>
-          <button class="confirm-btn-delete" id="confirmDeleteBtn">Supprimer</button>
+          <button
+            class="confirm-btn-cancel"
+            id="cancelDeleteBtn"
+            data-i18n="proj.common.cancel"
+          >
+            Annuler
+          </button>
+          <button
+            class="confirm-btn-delete"
+            id="confirmDeleteBtn"
+            data-i18n="proj.common.delete"
+          >
+            Supprimer
+          </button>
         </div>
       </div>
     </div>
 
     <!-- JS: load order matters — state first, then features, then bootstrap -->
+    <script src="i18n/runtime.js"></script>
+    <script src="i18n/projects.js"></script>
     <script src="projects/state.js"></script>
     <script src="projects/canvas.js"></script>
     <script src="projects/detail.js"></script>

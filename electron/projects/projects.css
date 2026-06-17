@@ -823,32 +823,65 @@ select:focus-visible {
 }
 .node-link-handle {
   position: absolute;
-  bottom: -4px;
+  bottom: -6.5px;
   left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
+  transform: translateX(-50%) scale(var(--inv-zoom, 1));
+  transform-origin: center center;
+  width: 13px;
+  height: 13px;
   background: var(--bg-surface);
   border: 1.5px solid var(--text-muted);
   border-radius: var(--oh-radius-full);
   cursor: crosshair;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity var(--duration-150) var(--ease-default);
+  z-index: 12;
+  opacity: 1;
+  transition:
+    background var(--duration-150) var(--ease-default),
+    border-color var(--duration-150) var(--ease-default);
 }
 .layout-horizontal .node-link-handle {
   bottom: auto;
   top: 50%;
-  right: -4px;
+  right: -6.5px;
   left: auto;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--inv-zoom, 1));
 }
 .node-link-handle:hover {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
 }
-.node-card:hover .node-link-handle {
+.node-delete-handle {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--oh-radius-full);
+  color: var(--text-muted);
+  cursor: pointer;
+  z-index: 11;
+  opacity: 0;
+  transition:
+    opacity var(--duration-150) var(--ease-default),
+    color var(--duration-150) var(--ease-default),
+    border-color var(--duration-150) var(--ease-default);
+}
+.node-delete-handle svg {
+  width: 12px;
+  height: 12px;
+}
+.node-card:hover .node-delete-handle {
   opacity: 1;
+}
+.node-delete-handle:hover {
+  color: var(--error);
+  border-color: var(--error);
 }
 
 /* ── Link popover ── */
@@ -875,6 +908,9 @@ select:focus-visible {
   color: var(--error);
   cursor: pointer;
   font-family: inherit;
+}
+.link-popover-btn--neutral {
+  color: var(--text-primary);
 }
 .link-popover-btn:hover {
   background: var(--bg-surface);
@@ -2791,7 +2827,25 @@ select:focus-visible {
 .chat-header {
   gap: var(--space-1);
 }
+.chat-header-left {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.chat-header-right {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.chat-model-select {
+  flex: 0 0 auto;
+}
 .conv-selector {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
