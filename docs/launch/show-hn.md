@@ -36,7 +36,8 @@ The key ideas:
 
 Stack: Electron + TypeScript + Express proxy + keytar (Keychain).
 
-MIT licensed. Standalone .dmg available (Apple Silicon).
+MIT licensed. Download the .dmg from Releases (Apple Silicon), or
+clone and build from source.
 
 https://github.com/Open-Fable/OpenHub
 

@@ -44,7 +44,7 @@ Under the hood:
 
 **Post 5:**
 
-It's MIT licensed. Standalone .dmg for Apple Silicon.
+MIT licensed. Download the .dmg (Apple Silicon) — no setup needed.
 
 Would love feedback — especially on the multi-agent orchestrator.
 

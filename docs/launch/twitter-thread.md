@@ -59,7 +59,7 @@ How it works under the hood:
 
 **Tweet 6 (CTA):**
 
-It's MIT licensed, standalone .dmg available (Apple Silicon).
+MIT licensed. Download the .dmg (Apple Silicon) and you're running in 30 seconds.
 
 Star it, fork it, break it:
 → github.com/Open-Fable/OpenHub

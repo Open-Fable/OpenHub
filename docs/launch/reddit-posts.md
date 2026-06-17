@@ -31,7 +31,7 @@ I've been working on OpenHub, a free macOS desktop app that brings together seve
 
 GitHub: https://github.com/Open-Fable/OpenHub
 
-Standalone .dmg for Apple Silicon is available in Releases.
+Download the .dmg from Releases (Apple Silicon) — no clone or setup needed.
 
 Looking for feedback, especially on the orchestrator architecture and the override system.
 
@@ -63,16 +63,16 @@ Open source, MIT: https://github.com/Open-Fable/OpenHub
 
 I've been building an AI desktop app for macOS that combines several tools I was using separately.
 
-- Native macOS app (Electron, Apple Silicon .dmg available)
+- Native macOS app — download the .dmg, drag to Applications, done
 - Five sidebar slots: Chat, Code, Work, Design, Orchestrator
 - API keys stored in macOS Keychain
-- One-click setup, no Docker
+- No setup, no Docker
 
 It wraps three open-source projects (OpenCode, OpenWork, Open Design) and adds a built-in chat and multi-agent orchestrator on top. The upstream apps run unmodified.
 
 Free, MIT licensed: https://github.com/Open-Fable/OpenHub
 
-Note: the .dmg isn't code-signed yet (open-source project), so you'll need to right-click → Open on first launch.
+Note: the .dmg isn't code-signed yet (open-source project), so right-click → Open on first launch.
 
 ---
 
