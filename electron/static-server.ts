@@ -23,6 +23,17 @@ export async function startStaticServer(
   const indexFile = path.join(rootDir, "index.html");
   const app = express();
 
+  // Security headers on every static response — parity with the proxy. Even on
+  // loopback, a DNS-rebinding or compromised-renderer vector could fetch these
+  // assets; nosniff blocks MIME-confusion, DENY blocks clickjacking via <iframe>,
+  // and no-referrer stops the loopback URL leaking in outbound Referer headers.
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    next();
+  });
+
   // express.static rejects path traversal by design; serve assets first.
   app.use(express.static(rootDir, { fallthrough: true, index: "index.html" }));
 
