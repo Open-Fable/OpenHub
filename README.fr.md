@@ -42,22 +42,18 @@ La plupart des outils IA tournent dans des fenêtres séparées avec des clés A
 
 ## Installation
 
-**Prérequis :** macOS 14+, Node.js 22+, Git
+**Prérequis :** macOS 14+ (Apple Silicon)
 
-```bash
-git clone https://github.com/Open-Fable/OpenHub.git
-cd OpenHub
-bash scripts/setup.sh
-npm run dev
-```
+Télécharge le dernier `.dmg` depuis les [GitHub Releases](https://github.com/Open-Fable/OpenHub/releases), ouvre-le et glisse OpenHub dans ton dossier Applications.
 
-`setup.sh` :
-
-- Vérifie Node.js, Git, pnpm
-- Installe le binaire CLI `opencode`
-- Clone les 3 apps upstream dans `apps/`
-- Crée les fichiers de config dans `~/.config/`
-- Compile le TypeScript et copie les assets
+> [!IMPORTANT]
+> Le `.dmg` n'est pas signé avec un certificat Apple Developer (build open-source). macOS Gatekeeper le bloquera au premier lancement. Pour l'ouvrir :
+>
+> - **Clic droit** sur `OpenHub.app` → **Ouvrir** → confirmer, **ou**
+> - supprimer le flag de quarantaine :
+>   ```bash
+>   xattr -cr /Applications/OpenHub.app
+>   ```
 
 ### Premier lancement
 
@@ -69,6 +65,17 @@ npm run dev
 > Pour utiliser les modèles Google Gemini directement (sans OpenRouter), lance `opencode auth login` dans ton terminal.
 
 Voir le [guide d'usage](docs/USAGE.fr.md) pour utiliser le chat, les projets et l'orchestrateur au quotidien.
+
+### Compiler depuis les sources
+
+Pour les contributeurs ou pour la version de développement :
+
+```bash
+git clone https://github.com/Open-Fable/OpenHub.git
+cd OpenHub
+bash scripts/setup.sh
+npm run dev
+```
 
 ---
 
@@ -89,16 +96,17 @@ Pour la spec complète — ports, modèle de sécurité, cascade de config et sy
 
 ---
 
-## Commandes
+## Développement
 
-| Commande                | Description                          |
-| ----------------------- | ------------------------------------ |
-| `npm run dev`           | Démarre en mode développement        |
-| `npm run build`         | Build et package l'app               |
-| `npm run typecheck`     | Vérification TypeScript              |
-| `npm run lint`          | ESLint                               |
-| `npm test`              | Tests unitaires (Vitest)             |
-| `bash scripts/setup.sh` | Setup complet / mise à jour des apps |
+Voir [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md) pour le workflow contributeur complet. Référence rapide :
+
+| Commande            | Description                   |
+| ------------------- | ----------------------------- |
+| `npm run dev`       | Démarre en mode développement |
+| `npm run build`     | Compile le `.dmg`             |
+| `npm run typecheck` | Vérification TypeScript       |
+| `npm run lint`      | ESLint                        |
+| `npm test`          | Tests unitaires (Vitest)      |
 
 ---
 

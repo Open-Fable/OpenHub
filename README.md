@@ -44,22 +44,18 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 
 ## Installation
 
-**Prerequisites:** macOS 14+, Node.js 22+, Git
+**Requirements:** macOS 14+ (Apple Silicon)
 
-```bash
-git clone https://github.com/Open-Fable/OpenHub.git
-cd OpenHub
-bash scripts/setup.sh
-npm run dev
-```
+Download the latest `.dmg` from [GitHub Releases](https://github.com/Open-Fable/OpenHub/releases), open it, and drag OpenHub to your Applications folder.
 
-`setup.sh`:
-
-- Verifies Node.js, Git, pnpm
-- Installs the `opencode` CLI binary
-- Clones the 3 upstream apps into `apps/`
-- Creates config files in `~/.config/`
-- Compiles TypeScript and copies assets
+> [!IMPORTANT]
+> The `.dmg` is not signed with an Apple Developer certificate (open-source build). macOS Gatekeeper will block it on first launch. To open it:
+>
+> - **Right-click** `OpenHub.app` → **Open** → confirm, **or**
+> - clear the quarantine flag:
+>   ```bash
+>   xattr -cr /Applications/OpenHub.app
+>   ```
 
 ### First launch
 
@@ -72,24 +68,15 @@ npm run dev
 
 See the [Usage guide](docs/USAGE.md) for how to use the chat, projects, and orchestrator day-to-day.
 
-### Standalone `.dmg`
+### Build from source
 
-A self-contained `.dmg` (Apple Silicon / arm64) is attached to each [GitHub Release](https://github.com/Open-Fable/OpenHub/releases). It bundles the three upstream apps and a Node 24 runtime — no clone or `setup.sh` required.
-
-> [!IMPORTANT]
-> The `.dmg` is **not signed with an Apple Developer certificate** (this is a free, open-source build). macOS Gatekeeper will block it on first launch. To open it:
->
-> - **Right-click** `OpenHub.app` → **Open** → confirm, **or**
-> - clear the quarantine flag (recursive `-r` also covers the bundled `opencode`/`node` binaries):
->   ```bash
->   xattr -cr /Applications/OpenHub.app
->   ```
-
-**Build the `.dmg` yourself** (macOS arm64, Node 24 active):
+For contributors or if you want to run the development version:
 
 ```bash
-bash scripts/setup.sh   # clone apps + install opencode CLI (once)
-npm run build           # builds the 3 apps + packages → release/OpenHub-*.dmg
+git clone https://github.com/Open-Fable/OpenHub.git
+cd OpenHub
+bash scripts/setup.sh
+npm run dev
 ```
 
 ---
@@ -111,16 +98,17 @@ For the full spec — ports, security model, config cascade, and overlay system 
 
 ---
 
-## Commands
+## Development
 
-| Command                 | Description                       |
-| ----------------------- | --------------------------------- |
-| `npm run dev`           | Start in development mode         |
-| `npm run build`         | Build and package the app         |
-| `npm run typecheck`     | TypeScript check                  |
-| `npm run lint`          | ESLint                            |
-| `npm test`              | Unit tests (Vitest)               |
-| `bash scripts/setup.sh` | Full setup / update upstream apps |
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow. Quick reference:
+
+| Command             | Description               |
+| ------------------- | ------------------------- |
+| `npm run dev`       | Start in development mode |
+| `npm run build`     | Build the `.dmg`          |
+| `npm run typecheck` | TypeScript check          |
+| `npm run lint`      | ESLint                    |
+| `npm test`          | Unit tests (Vitest)       |
 
 ---
 
