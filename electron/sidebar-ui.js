@@ -1460,6 +1460,10 @@ if (window.openhub.onOllamaPullProgress) {
 // Dynamic service status polling
 function pollServiceStatuses() {
   if (!window.openhub || !window.openhub.getSlotStatus) return;
+  // Skip the round-trip while the shell window is hidden/occluded: the slot
+  // badges aren't visible, so polling main + the proxy every 3s would be pure
+  // wasted IPC and HTTP. Resumes automatically when the window is shown again.
+  if (document.hidden) return;
   window.openhub
     .getSlotStatus()
     .then(function (status) {
