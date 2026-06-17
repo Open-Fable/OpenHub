@@ -62,7 +62,7 @@ How it works under the hood:
 It's MIT licensed, standalone .dmg available (Apple Silicon).
 
 Star it, fork it, break it:
-→ github.com/1zalt/OpenHub
+→ github.com/Open-Fable/OpenHub
 
 Feedback welcome — especially on the orchestrator engine.
 

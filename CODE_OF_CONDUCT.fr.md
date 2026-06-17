@@ -38,7 +38,7 @@ Ce code de conduite s'applique dans tous les espaces communautaires, ainsi que l
 
 ## Application
 
-Les cas de comportement abusif, harcelant ou autrement inacceptable peuvent être signalés aux responsables de la communauté chargés de l'application à 164648322+1zalt@users.noreply.github.com. Toutes les plaintes seront examinées et feront l'objet d'une enquête rapide et équitable.
+Les cas de comportement abusif, harcelant ou autrement inacceptable peuvent être signalés aux responsables de la communauté chargés de l'application à arc.au.ciel78@gmail.com. Toutes les plaintes seront examinées et feront l'objet d'une enquête rapide et équitable.
 
 Tous les responsables de la communauté sont tenus de respecter la vie privée et la sécurité de la personne ayant signalé un incident.
 

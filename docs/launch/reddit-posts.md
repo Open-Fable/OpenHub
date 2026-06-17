@@ -29,7 +29,7 @@ I've been working on OpenHub, a free macOS desktop app that brings together seve
 - Secrets stored in macOS Keychain, never on disk
 - MIT licensed
 
-GitHub: https://github.com/1zalt/OpenHub
+GitHub: https://github.com/Open-Fable/OpenHub
 
 Standalone .dmg for Apple Silicon is available in Releases.
 
@@ -51,7 +51,7 @@ OpenHub is a macOS desktop app that puts 5 AI tools behind one sidebar: chat, co
 
 The orchestrator can use your local models too — it creates a team of agents that plan, build, and verify a deliverable.
 
-Open source, MIT: https://github.com/1zalt/OpenHub
+Open source, MIT: https://github.com/Open-Fable/OpenHub
 
 ---
 
@@ -70,7 +70,7 @@ I've been building an AI desktop app for macOS that combines several tools I was
 
 It wraps three open-source projects (OpenCode, OpenWork, Open Design) and adds a built-in chat and multi-agent orchestrator on top. The upstream apps run unmodified.
 
-Free, MIT licensed: https://github.com/1zalt/OpenHub
+Free, MIT licensed: https://github.com/Open-Fable/OpenHub
 
 Note: the .dmg isn't code-signed yet (open-source project), so you'll need to right-click → Open on first launch.
 
@@ -92,7 +92,7 @@ OpenHub is a desktop AI workspace that runs entirely on your machine — no clou
 
 Everything runs as native macOS processes. The proxy is localhost-only with Bearer auth.
 
-MIT licensed: https://github.com/1zalt/OpenHub
+MIT licensed: https://github.com/Open-Fable/OpenHub
 
 macOS 14+ only for now (the Keychain integration is macOS-specific). Would love input on what it would take to make a Linux version viable.
 

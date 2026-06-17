@@ -30,7 +30,7 @@ OpenHub is a local macOS desktop app. It runs entirely on your machine — no cl
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Use the GitHub Security Advisory tab: [Report a Vulnerability](https://github.com/1zalt/OpenHub/security/advisories/new)
+Use the GitHub Security Advisory tab: [Report a Vulnerability](https://github.com/Open-Fable/OpenHub/security/advisories/new)
 
 Response within 5 business days. After the initial reply, you will be kept informed of progress toward a fix.
 

@@ -10,7 +10,7 @@
 
 Most AI tools run in their own window with their own API keys and their own configuration. I had OpenCode open for coding, OpenWork for task management, Open Design for mockups, and a separate chat window. Four windows, four configs, four sets of API keys.
 
-So I built [OpenHub](https://github.com/1zalt/OpenHub) — a macOS app that puts all of them (plus a multi-agent orchestrator) behind a single sidebar.
+So I built [OpenHub](https://github.com/Open-Fable/OpenHub) — a macOS app that puts all of them (plus a multi-agent orchestrator) behind a single sidebar.
 
 ## The constraint that shaped everything
 
@@ -73,6 +73,6 @@ It's like a tiny CI pipeline for creative work.
 
 ---
 
-[OpenHub on GitHub](https://github.com/1zalt/OpenHub) — MIT licensed, standalone .dmg available.
+[OpenHub on GitHub](https://github.com/Open-Fable/OpenHub) — MIT licensed, standalone .dmg available.
 
 I'd love feedback on the architecture, especially the override system and the orchestrator engine.

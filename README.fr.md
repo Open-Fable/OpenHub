@@ -10,7 +10,7 @@ Un espace de travail IA local : discute avec n'importe quel modèle, orchestre u
 [![macOS](https://img.shields.io/badge/platform-macOS_14+-black?logo=apple)](https://www.apple.com/macos)
 [![Electron](https://img.shields.io/badge/Electron-42+-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![tests](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/test.yml?label=tests&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/test.yml)
+[![tests](https://img.shields.io/github/actions/workflow/status/Open-Fable/OpenHub/test.yml?label=tests&style=flat)](https://github.com/Open-Fable/OpenHub/actions/workflows/test.yml)
 
 [English](README.md) · **Français**
 
@@ -45,7 +45,7 @@ La plupart des outils IA tournent dans des fenêtres séparées avec des clés A
 **Prérequis :** macOS 14+, Node.js 22+, Git
 
 ```bash
-git clone https://github.com/1zalt/OpenHub.git
+git clone https://github.com/Open-Fable/OpenHub.git
 cd OpenHub
 bash scripts/setup.sh
 npm run dev
@@ -129,6 +129,6 @@ outils wrappés gardent leurs propres licences.
 
 ---
 
-**[Ouvrir une issue](https://github.com/1zalt/OpenHub/issues) · [Usage](docs/USAGE.fr.md) · [Orchestrateur](docs/ORCHESTRATOR.fr.md) · [FAQ](docs/FAQ.fr.md) · [Architecture](ARCHITECTURE.fr.md) · [Remerciements](ACKNOWLEDGEMENTS.fr.md) · [Contribuer](CONTRIBUTING.fr.md)**
+**[Ouvrir une issue](https://github.com/Open-Fable/OpenHub/issues) · [Usage](docs/USAGE.fr.md) · [Orchestrateur](docs/ORCHESTRATOR.fr.md) · [FAQ](docs/FAQ.fr.md) · [Architecture](ARCHITECTURE.fr.md) · [Remerciements](ACKNOWLEDGEMENTS.fr.md) · [Contribuer](CONTRIBUTING.fr.md)**
 
 ---

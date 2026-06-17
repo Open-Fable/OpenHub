@@ -5,19 +5,19 @@ Run these commands to set up repo metadata for discoverability.
 ## Repository description
 
 ```bash
-gh repo edit 1zalt/OpenHub --description "macOS AI workspace — chat, multi-agent orchestrator, code agent, design tool in one sidebar. Supports Anthropic, OpenAI, Ollama, Gemini. MIT."
+gh repo edit Open-Fable/OpenHub --description "macOS AI workspace — chat, multi-agent orchestrator, code agent, design tool in one sidebar. Supports Anthropic, OpenAI, Ollama, Gemini. MIT."
 ```
 
 ## Topics (appear in GitHub Explore and search)
 
 ```bash
-gh repo edit 1zalt/OpenHub --add-topic electron,macos,ai,llm,desktop-app,open-source,typescript,multi-agent,orchestrator,ollama,anthropic,openai,developer-tools,ai-tools,code-assistant
+gh repo edit Open-Fable/OpenHub --add-topic electron,macos,ai,llm,desktop-app,open-source,typescript,multi-agent,orchestrator,ollama,anthropic,openai,developer-tools,ai-tools,code-assistant
 ```
 
 ## Homepage URL (if you set up GitHub Pages)
 
 ```bash
-gh repo edit 1zalt/OpenHub --homepage "https://1zalt.github.io/OpenHub"
+gh repo edit Open-Fable/OpenHub --homepage "https://open-fable.github.io/OpenHub"
 ```
 
 ## Social preview image
@@ -48,5 +48,5 @@ Create these categories:
 
 ## Enable Sponsors
 
-Go to https://github.com/sponsors/1zalt/dashboard to set up GitHub Sponsors
+Go to https://github.com/sponsors/Open-Fable/dashboard to set up GitHub Sponsors
 (the FUNDING.yml is already created).

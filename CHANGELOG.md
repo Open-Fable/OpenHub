@@ -41,4 +41,4 @@ First public release. A macOS desktop shell unifying three open-source AI tools.
   password, never logged.
 - Minimal `contextBridge` bridge, with no disk path parameter.
 
-[0.1.0]: https://github.com/1zalt/OpenHub/releases/tag/v0.1.0
+[0.1.0]: https://github.com/Open-Fable/OpenHub/releases/tag/v0.1.0

@@ -10,9 +10,9 @@ A local AI workspace: chat with any model, orchestrate a team of agents that bui
 [![macOS](https://img.shields.io/badge/platform-macOS_14+-black?logo=apple)](https://www.apple.com/macos)
 [![Electron](https://img.shields.io/badge/Electron-42+-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![typecheck](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/typecheck.yml?label=typecheck&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/typecheck.yml)
-[![lint](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/lint.yml?label=lint&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/lint.yml)
-[![tests](https://img.shields.io/github/actions/workflow/status/1zalt/OpenHub/test.yml?label=tests&style=flat)](https://github.com/1zalt/OpenHub/actions/workflows/test.yml)
+[![typecheck](https://img.shields.io/github/actions/workflow/status/Open-Fable/OpenHub/typecheck.yml?label=typecheck&style=flat)](https://github.com/Open-Fable/OpenHub/actions/workflows/typecheck.yml)
+[![lint](https://img.shields.io/github/actions/workflow/status/Open-Fable/OpenHub/lint.yml?label=lint&style=flat)](https://github.com/Open-Fable/OpenHub/actions/workflows/lint.yml)
+[![tests](https://img.shields.io/github/actions/workflow/status/Open-Fable/OpenHub/test.yml?label=tests&style=flat)](https://github.com/Open-Fable/OpenHub/actions/workflows/test.yml)
 
 **English** · [Français](README.fr.md)
 
@@ -47,7 +47,7 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 **Prerequisites:** macOS 14+, Node.js 22+, Git
 
 ```bash
-git clone https://github.com/1zalt/OpenHub.git
+git clone https://github.com/Open-Fable/OpenHub.git
 cd OpenHub
 bash scripts/setup.sh
 npm run dev
@@ -74,7 +74,7 @@ See the [Usage guide](docs/USAGE.md) for how to use the chat, projects, and orch
 
 ### Standalone `.dmg`
 
-A self-contained `.dmg` (Apple Silicon / arm64) is attached to each [GitHub Release](https://github.com/1zalt/OpenHub/releases). It bundles the three upstream apps and a Node 24 runtime — no clone or `setup.sh` required.
+A self-contained `.dmg` (Apple Silicon / arm64) is attached to each [GitHub Release](https://github.com/Open-Fable/OpenHub/releases). It bundles the three upstream apps and a Node 24 runtime — no clone or `setup.sh` required.
 
 > [!IMPORTANT]
 > The `.dmg` is **not signed with an Apple Developer certificate** (this is a free, open-source build). macOS Gatekeeper will block it on first launch. To open it:
@@ -151,6 +151,6 @@ keep their own licenses.
 
 ---
 
-**[Open an issue](https://github.com/1zalt/OpenHub/issues) · [Usage](docs/USAGE.md) · [Orchestrator](docs/ORCHESTRATOR.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Acknowledgements](ACKNOWLEDGEMENTS.md) · [Contribute](CONTRIBUTING.md)**
+**[Open an issue](https://github.com/Open-Fable/OpenHub/issues) · [Usage](docs/USAGE.md) · [Orchestrator](docs/ORCHESTRATOR.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Acknowledgements](ACKNOWLEDGEMENTS.md) · [Contribute](CONTRIBUTING.md)**
 
 ---

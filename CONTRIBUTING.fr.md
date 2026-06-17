@@ -16,7 +16,7 @@ le respecter.
 ## Setup local
 
 ```bash
-git clone https://github.com/1zalt/OpenHub.git
+git clone https://github.com/Open-Fable/OpenHub.git
 cd OpenHub
 bash scripts/setup.sh
 npm run dev
@@ -41,11 +41,11 @@ npm run dev
 
 ## Signaler un bug
 
-Utilise le template [Bug Report](https://github.com/1zalt/OpenHub/issues/new?template=bug_report.yml).
+Utilise le template [Bug Report](https://github.com/Open-Fable/OpenHub/issues/new?template=bug_report.yml).
 
 ## Proposer une fonctionnalité
 
-Utilise le template [Feature Request](https://github.com/1zalt/OpenHub/issues/new?template=feature_request.yml).
+Utilise le template [Feature Request](https://github.com/Open-Fable/OpenHub/issues/new?template=feature_request.yml).
 
 ## Licence
 

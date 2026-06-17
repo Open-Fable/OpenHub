@@ -38,7 +38,7 @@ Stack: Electron + TypeScript + Express proxy + keytar (Keychain).
 
 MIT licensed. Standalone .dmg available (Apple Silicon).
 
-https://github.com/1zalt/OpenHub
+https://github.com/Open-Fable/OpenHub
 
 Would love feedback on the architecture and the orchestrator engine.
 ```

@@ -73,5 +73,5 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md). In short: fork, branch, tests
 
 ### How do I report a bug or request a feature?
 
-Via the [GitHub issues](https://github.com/1zalt/OpenHub/issues) — templates are
+Via the [GitHub issues](https://github.com/Open-Fable/OpenHub/issues) — templates are
 provided for bugs, features, and questions.

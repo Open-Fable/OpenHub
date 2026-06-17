@@ -8,7 +8,7 @@ I built OpenHub — a free macOS app that puts chat, code agents, design tools, 
 
 Enter your API keys once. All tools share the same proxy. Open source, MIT licensed.
 
-github.com/1zalt/OpenHub
+github.com/Open-Fable/OpenHub
 
 Thread →
 
@@ -48,4 +48,4 @@ It's MIT licensed. Standalone .dmg for Apple Silicon.
 
 Would love feedback — especially on the multi-agent orchestrator.
 
-github.com/1zalt/OpenHub
+github.com/Open-Fable/OpenHub

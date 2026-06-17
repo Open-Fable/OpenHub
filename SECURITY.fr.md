@@ -30,7 +30,7 @@ OpenHub est une application desktop macOS locale. Elle s'exécute entièrement s
 
 **N'ouvrez pas d'issue GitHub publique pour les vulnérabilités de sécurité.**
 
-Utilisez l'onglet GitHub Security Advisory : [Signaler une vulnérabilité](https://github.com/1zalt/OpenHub/security/advisories/new)
+Utilisez l'onglet GitHub Security Advisory : [Signaler une vulnérabilité](https://github.com/Open-Fable/OpenHub/security/advisories/new)
 
 Réponse sous 5 jours ouvrés. Après la première réponse, vous serez tenu informé de l'avancement vers un correctif.
 

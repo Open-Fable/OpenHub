@@ -16,7 +16,7 @@ expected to uphold it.
 ## Local setup
 
 ```bash
-git clone https://github.com/1zalt/OpenHub.git
+git clone https://github.com/Open-Fable/OpenHub.git
 cd OpenHub
 bash scripts/setup.sh
 npm run dev
@@ -41,11 +41,11 @@ npm run dev
 
 ## Reporting a bug
 
-Use the [Bug Report](https://github.com/1zalt/OpenHub/issues/new?template=bug_report.yml) template.
+Use the [Bug Report](https://github.com/Open-Fable/OpenHub/issues/new?template=bug_report.yml) template.
 
 ## Proposing a feature
 
-Use the [Feature Request](https://github.com/1zalt/OpenHub/issues/new?template=feature_request.yml) template.
+Use the [Feature Request](https://github.com/Open-Fable/OpenHub/issues/new?template=feature_request.yml) template.
 
 ## License
 

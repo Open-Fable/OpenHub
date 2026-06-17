@@ -18,7 +18,7 @@ Hi! I built OpenHub, an open-source macOS desktop app that integrates OpenCode a
 OpenCode runs unmodified inside a sandboxed WebView. A shared LLM proxy handles API key management (macOS Keychain) so users configure their keys once.
 
 I wanted to let you know in case you have any concerns or feedback. The project is MIT licensed:
-https://github.com/1zalt/OpenHub
+https://github.com/Open-Fable/OpenHub
 
 Thanks for building OpenCode — it's the backbone of the whole thing.
 
@@ -37,7 +37,7 @@ Hi! I built an open-source macOS app called OpenHub that integrates OpenWork alo
 OpenWork runs unmodified — all customization is done through CSS/JS injection (hiding native settings, unified dark theme). The app's LLM proxy routes API calls and injects project context.
 
 Wanted to share in case you have questions or feedback:
-https://github.com/1zalt/OpenHub
+https://github.com/Open-Fable/OpenHub
 
 Thanks for building OpenWork!
 
@@ -56,7 +56,7 @@ Hi! I built OpenHub, an open-source macOS desktop app that brings together Open 
 Open Design runs as a native daemon, unmodified. The shell captures the port at spawn and displays the UI in a sandboxed WebView.
 
 Sharing in case you'd like to take a look or have concerns:
-https://github.com/1zalt/OpenHub
+https://github.com/Open-Fable/OpenHub
 
 Thanks for building Open Design!
 
