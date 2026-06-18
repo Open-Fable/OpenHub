@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "bash scripts/dev.sh",
-    "build": "tsc && bash scripts/copy-assets.sh && npm run package:apps && npm run build:package",
+    "build": "tsc && tsc -p electron/tsconfig.preload.json && bash scripts/copy-assets.sh && npm run package:apps && npm run build:package",
     "package:apps": "bash scripts/package-apps.sh",
     "build:package": "electron-builder --config electron-builder.json",
     "typecheck": "tsc --noEmit",

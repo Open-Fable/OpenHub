@@ -160,7 +160,15 @@
       groups[src].push(m);
     });
 
-    var order = ["direct", "gemini", "openrouter", "local"];
+    var order = [
+      "openai",
+      "anthropic",
+      "deepseek",
+      "direct",
+      "gemini",
+      "openrouter",
+      "local",
+    ];
     Object.keys(groups).forEach(function (k) {
       if (order.indexOf(k) === -1) order.push(k);
     });

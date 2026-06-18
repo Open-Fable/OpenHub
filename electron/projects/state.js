@@ -108,8 +108,13 @@ function getReasoningCategory(modelId) {
   )
     return "openai";
 
-  // DeepSeek R1 / reasoning models
-  if (l.includes("deepseek-r1") || l.includes("deepseek/r1")) return "deepseek";
+  // DeepSeek reasoning: deepseek-r1, deepseek/r1, deepseek-reasoner
+  if (
+    l.includes("deepseek-r1") ||
+    l.includes("deepseek/r1") ||
+    l.includes("deepseek-reasoner")
+  )
+    return "deepseek";
 
   // Gemini 2.5+, Gemini 3+ and thinking models
   if (
@@ -199,11 +204,20 @@ async function loadModels() {
   }
   try {
     var config = await window.openhub.getChatConfig();
-    var res = await fetch(config.proxyUrl + "/v1/models", {
-      headers: { Authorization: "Bearer " + config.token },
-    });
+    var headers = { Authorization: "Bearer " + config.token };
+    var [res, selRes] = await Promise.all([
+      fetch(config.proxyUrl + "/v1/models/full", { headers: headers }),
+      fetch(config.proxyUrl + "/v1/models/selected", { headers: headers }),
+    ]);
     var data = await res.json();
-    models = data.data || [];
+    var selData = await selRes.json();
+    var allModels = data.data || [];
+    var selectedIds = selData.selectedModels || [];
+    models = selectedIds.length
+      ? allModels.filter(function (m) {
+          return selectedIds.indexOf(m.id) !== -1;
+        })
+      : allModels;
     var modelSelect = document.getElementById("projModel");
     modelSelect.innerHTML =
       '<option value="">' +
