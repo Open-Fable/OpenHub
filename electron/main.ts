@@ -1377,11 +1377,21 @@ ipcHandle("save-api-keys", async (_e, keys: Record<string, string>) => {
     braveSearchKey: "brave-search-key",
     googleOauthClientSecret: "google-oauth-client-secret",
   };
+  // Garde-fou de frontière : un secret ne dépasse jamais raisonnablement cette taille.
+  const MAX_SECRET_LENGTH = 8192;
   for (const [field, account] of Object.entries(map)) {
-    const value = keys[field];
-    if (!value) continue;
+    const raw = keys[field];
+    if (!raw) continue;
     // Never overwrite a real secret with the masked preview echoed back by the UI.
-    if (isMaskedValue(value)) continue;
+    if (isMaskedValue(raw)) continue;
+    // Retirer espaces de bord et caractères de contrôle insérés par un copier-coller fautif.
+
+    const value = raw.trim().replace(/[\x00-\x1F\x7F]/g, "");
+    if (!value) continue;
+    if (value.length > MAX_SECRET_LENGTH) {
+      console.warn(`[main] save-api-keys: ${account} rejected (trop long)`);
+      continue;
+    }
     if (field === "ollamaUrl" && !isSafeOllamaUrl(value)) {
       console.warn("[main] save-api-keys: ollama-url rejected (unsafe host)");
       continue;
