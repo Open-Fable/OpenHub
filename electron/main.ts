@@ -2614,12 +2614,84 @@ function applyPermissionHardening(): void {
   }
 }
 
+async function enrichPathGlobally(): Promise<void> {
+  const home = homedir();
+  const extraDirs = [
+    path.join(home, ".local", "bin"),
+    path.join(home, ".nvm", "versions", "node"),
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+  ];
+
+  // NVM
+  try {
+    const nvmBase = path.join(home, ".nvm", "versions", "node");
+    const versions = await fs.readdir(nvmBase);
+    if (versions.length > 0) {
+      versions.sort();
+      extraDirs.push(path.join(nvmBase, versions[versions.length - 1], "bin"));
+    }
+  } catch {
+    // ignore
+  }
+
+  // FNM
+  try {
+    const fnmDir = path.join(
+      home,
+      "Library",
+      "Application Support",
+      "fnm",
+      "aliases",
+      "default",
+      "bin",
+    );
+    extraDirs.push(path.join(home, ".fnm"));
+    extraDirs.push(path.join(home, "Library", "Application Support", "fnm"));
+    extraDirs.push(fnmDir);
+  } catch {
+    // ignore
+  }
+
+  // Volta
+  extraDirs.push(path.join(home, ".volta", "bin"));
+
+  // npm-global / yarn / bun / pnpm
+  extraDirs.push(
+    path.join(home, ".npm-global", "bin"),
+    path.join(home, ".npm-packages", "bin"),
+    path.join(home, ".bun", "bin"),
+    path.join(home, "Library", "pnpm"),
+  );
+
+  const existingPath = process.env.PATH ?? "";
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (const dir of [...extraDirs, ...existingPath.split(path.delimiter)]) {
+    if (!dir) continue;
+    try {
+      const resolved = path.resolve(dir);
+      if (!seen.has(resolved)) {
+        seen.add(resolved);
+        merged.push(dir);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  process.env.PATH = merged.join(path.delimiter);
+}
+
 app
   .whenReady()
   .then(async () => {
     const bootT0 = Date.now();
     const bootT = (label: string) =>
       console.warn(`[boot-timing] ${label} +${Date.now() - bootT0}ms`);
+
+    await enrichPathGlobally();
 
     nativeTheme.themeSource = "dark";
     applyNavigationHardening();
