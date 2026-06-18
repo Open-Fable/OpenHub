@@ -142,6 +142,10 @@
     label.style.border = "1px solid #2a2a2a";
     label.style.color = "#ececec";
     label.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.3)";
+    label.style.padding = "14px 28px";
+    label.style.borderRadius = "12px";
+    label.style.fontSize = "15px";
+    label.style.fontWeight = "600";
     label.textContent =
       _lang === "en" ? "Drop files to import" : "Déposer les fichiers à importer";
 
