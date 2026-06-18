@@ -30,6 +30,7 @@ import {
   deleteProject,
   setActiveProject,
   getActiveProject,
+  getProjectById,
   getWorkflows,
   saveWorkflow,
   deleteWorkflow,
@@ -164,6 +165,7 @@ async function createWindow(): Promise<void> {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      webSecurity: false,
     },
   });
 
@@ -427,6 +429,18 @@ const SLOT_ALLOWED_CHANNELS = new Set<string>([
   "od-pet:set-visible",
   "get-language-sync",
   "onboarding-pending-sync",
+  "get-projects",
+  "get-active-project",
+  "set-active-project",
+  "save-project",
+  "delete-project",
+  "get-project-files",
+  "delete-project-file",
+  "get-folders",
+  "create-folder",
+  "rename-folder",
+  "delete-folder",
+  "read-chat-backup",
 ]);
 
 function senderIsTrusted(e: IpcMainInvokeEvent | IpcMainEvent, channel: string): boolean {
@@ -561,6 +575,7 @@ async function switchSlot(slot: SlotName): Promise<void> {
           contextIsolation: true,
           sandbox: true,
           nodeIntegration: false,
+          webSecurity: false,
           preload: path.join(__dirname, "preload.cjs"),
         },
       });
@@ -603,6 +618,7 @@ async function switchSlot(slot: SlotName): Promise<void> {
           contextIsolation: true,
           sandbox: true,
           nodeIntegration: false,
+          webSecurity: false,
           preload: path.join(__dirname, "preload.cjs"),
         },
       });
@@ -956,6 +972,38 @@ ipcHandle("save-project", (_e, project: Parameters<typeof saveProject>[0]) =>
   saveProject(project),
 );
 ipcHandle("delete-project", (_e, id: string) => deleteProject(id));
+ipcHandle("get-project-files", async (_e, projectId: string) => {
+  const p = await getProjectById(projectId);
+  if (!p || !p.path) return [];
+  try {
+    const entries = await fs.readdir(p.path, { withFileTypes: true });
+    return entries
+      .filter((entry) => !entry.name.startsWith("."))
+      .map((entry) => ({
+        name: entry.name,
+        path: path.join(p.path!, entry.name),
+        isDirectory: entry.isDirectory(),
+      }));
+  } catch (error) {
+    console.error("Error reading project files:", error);
+    return [];
+  }
+});
+ipcHandle("delete-project-file", async (_e, projectId: string, filePath: string) => {
+  const p = await getProjectById(projectId);
+  if (!p || !p.path) return { ok: false, error: "Project path not found" };
+  const relative = path.relative(p.path, filePath);
+  const isSafe = relative && !relative.startsWith("..") && !path.isAbsolute(relative);
+  if (!isSafe) {
+    return { ok: false, error: "Access denied: file is outside the project workspace" };
+  }
+  try {
+    await fs.rm(filePath, { recursive: true, force: true });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
 
 // ── Folder management ───────────────────────────────────────────────────────
 ipcHandle("get-folders", () => getFolders());
@@ -1354,22 +1402,29 @@ ipcHandle("get-api-keys", async () => {
   const keys = await readAllApiKeys();
   // Secrets are NEVER returned in clear to the renderer — only a masked preview.
   // ollamaUrl is not a secret and must stay editable, so it is returned in full.
-  return {
+  const res: Record<string, string | null> = {
     anthropic: maskSecret(keys.anthropic),
     openai: maskSecret(keys.openai),
+    deepseek: maskSecret(keys.deepseek),
     openrouterKey: maskSecret(keys.openrouterKey),
     googleAiKey: maskSecret(keys.googleAiKey),
     githubToken: maskSecret(keys.githubToken),
     braveSearchKey: maskSecret(keys.braveSearchKey),
     ollamaUrl: keys.ollamaUrl,
   };
+  for (const [id, val] of Object.entries(keys.customKeys)) {
+    res[`custom-provider-key-${id}`] = maskSecret(val);
+  }
+  return res;
 });
 
 ipcHandle("save-api-keys", async (_e, keys: Record<string, string>) => {
-  const { writeSecret, isMaskedValue, isSafeOllamaUrl } = await import("./keychain.js");
+  const { writeSecret, deleteSecret, isMaskedValue, isSafeOllamaUrl } =
+    await import("./keychain.js");
   const map: Record<string, string> = {
     anthropic: "anthropic-api-key",
     openai: "openai-api-key",
+    deepseek: "deepseek-api-key",
     openrouterKey: "openrouter-api-key",
     googleAiKey: "google-ai-key",
     ollamaUrl: "ollama-url",
@@ -1381,13 +1436,19 @@ ipcHandle("save-api-keys", async (_e, keys: Record<string, string>) => {
   const MAX_SECRET_LENGTH = 8192;
   for (const [field, account] of Object.entries(map)) {
     const raw = keys[field];
-    if (!raw) continue;
-    // Never overwrite a real secret with the masked preview echoed back by the UI.
-    if (isMaskedValue(raw)) continue;
-    // Retirer espaces de bord et caractères de contrôle insérés par un copier-coller fautif.
+    if (raw === undefined) continue;
 
     const value = raw.trim().replace(/[\x00-\x1F\x7F]/g, "");
-    if (!value) continue;
+    if (value === "") {
+      await deleteSecret("openhub", account).catch((err) => {
+        console.warn(`[main] Failed to delete secret ${account}:`, err);
+      });
+      continue;
+    }
+
+    // Never overwrite a real secret with the masked preview echoed back by the UI.
+    if (isMaskedValue(value)) continue;
+
     if (value.length > MAX_SECRET_LENGTH) {
       console.warn(`[main] save-api-keys: ${account} rejected (trop long)`);
       continue;
@@ -1398,10 +1459,106 @@ ipcHandle("save-api-keys", async (_e, keys: Record<string, string>) => {
     }
     await writeSecret("openhub", account, value);
   }
+
+  // Save custom provider keys
+  for (const [field, raw] of Object.entries(keys)) {
+    if (field.startsWith("custom-provider-key-") && raw !== undefined) {
+      const value = raw.trim().replace(/[\x00-\x1F\x7F]/g, "");
+      if (value === "") {
+        await deleteSecret("openhub", field).catch((err) => {
+          console.warn(`[main] Failed to delete custom provider secret ${field}:`, err);
+        });
+        continue;
+      }
+      if (isMaskedValue(value)) continue;
+      if (value.length > MAX_SECRET_LENGTH) {
+        console.warn(`[main] save-api-keys: ${field} rejected (trop long)`);
+        continue;
+      }
+      await writeSecret("openhub", field, value);
+    }
+  }
+
+  // Sync the generated opencode.json configuration immediately so the models list matches the new keys
+  const updatedKeys = await (await import("./keychain.js")).readAllApiKeys();
+  await generateOpenCodeConfig({
+    proxyToken: proxyToken ?? "",
+    anthropicKey: updatedKeys.anthropic,
+    openaiKey: updatedKeys.openai,
+    deepseekKey: updatedKeys.deepseek,
+    openrouterKey: updatedKeys.openrouterKey,
+    customProviders: customProviders,
+  });
+
   // Notify chat view to refresh its model list
   const chatView = views.get("chat");
   if (chatView) chatView.webContents.send("api-keys-updated");
 });
+
+ipcHandle("get-custom-providers", () => {
+  return customProviders;
+});
+
+ipcHandle(
+  "save-custom-providers",
+  async (
+    _e,
+    list: Array<{ id: string; name: string; baseUrl: string; models: string[] }>,
+  ) => {
+    if (!Array.isArray(list)) {
+      throw new Error("save-custom-providers: list must be an array");
+    }
+
+    // Validate and sanitize custom providers
+    const validatedList = list
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const id = String(item.id || "").trim();
+        const name = String(item.name || "").trim();
+        const baseUrl = String(item.baseUrl || "").trim();
+        const models = Array.isArray(item.models)
+          ? item.models.map((m) => String(m || "").trim()).filter(Boolean)
+          : [];
+        if (!id || !name || !baseUrl) return null;
+        return { id, name, baseUrl, models };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      name: string;
+      baseUrl: string;
+      models: string[];
+    }>;
+
+    // Compare old and new providers to delete removed keys from Keychain
+    const { deleteSecret } = await import("./keychain.js");
+    for (const old of customProviders) {
+      if (!validatedList.some((p) => p.id === old.id)) {
+        await deleteSecret("openhub", `custom-provider-key-${old.id}`).catch((err) => {
+          console.warn(`[main] Failed to delete custom provider key for ${old.id}:`, err);
+        });
+      }
+    }
+
+    customProviders = validatedList;
+    await saveSettings();
+
+    // Reload opencode config so that custom models are included in opencode config
+    const { readAllApiKeys } = await import("./keychain.js");
+    const keys = await readAllApiKeys();
+    await generateOpenCodeConfig({
+      proxyToken: proxyToken ?? "",
+      anthropicKey: keys.anthropic,
+      openaiKey: keys.openai,
+      deepseekKey: keys.deepseek,
+      openrouterKey: keys.openrouterKey,
+      customProviders: customProviders,
+    });
+
+    // Notify chat view to refresh its model list
+    const chatView = views.get("chat");
+    if (chatView) chatView.webContents.send("api-keys-updated");
+  },
+);
 
 // ── Google OAuth login for Gemini (in-app) ──────────────────────────────────
 ipcHandle("gemini-login", async () => {
@@ -1822,6 +1979,12 @@ let visionDetailLevel = "high";
 let aiWorkflowProModel = "deepseek/deepseek-v4-pro";
 let aiWorkflowFlashModel = "deepseek/deepseek-v4-flash";
 let aiClassifierModel = "deepseek/deepseek-v4-flash";
+let customProviders: Array<{
+  id: string;
+  name: string;
+  baseUrl: string;
+  models: string[];
+}> = [];
 let notifyMode: NotifyMode = DEFAULT_NOTIFY_MODE;
 let notifySources: NotifySources = defaultNotifySources();
 type AppLanguage = "fr" | "en";
@@ -1887,6 +2050,7 @@ async function loadSettings(): Promise<void> {
     language = parseLanguage(parsed.language);
     onboardingCompleted =
       parsed.onboardingCompleted !== undefined ? !!parsed.onboardingCompleted : true; // existing settings file without the flag → existing user, skip onboarding
+    customProviders = Array.isArray(parsed.customProviders) ? parsed.customProviders : [];
   } catch {
     navMode = "topbar";
     headerHeight = HEADER_HEIGHT_TOPBAR;
@@ -1903,6 +2067,7 @@ async function loadSettings(): Promise<void> {
     notifySources = defaultNotifySources();
     language = detectDefaultLanguage();
     onboardingCompleted = false;
+    customProviders = [];
   }
 }
 
@@ -1927,6 +2092,7 @@ async function saveSettings(): Promise<void> {
           notifySources,
           language,
           onboardingCompleted,
+          customProviders,
         },
         null,
         2,
@@ -2473,12 +2639,14 @@ app
     bootT("startProxy done");
 
     bootT("readSecrets start");
-    const [anthropicKey, openaiKey, openrouterKey, googleAiKey] = await Promise.all([
-      readSecret("openhub", "anthropic-api-key"),
-      readSecret("openhub", "openai-api-key"),
-      readSecret("openhub", "openrouter-api-key"),
-      readSecret("openhub", "google-ai-key"),
-    ]);
+    const [anthropicKey, openaiKey, deepseekKey, openrouterKey, googleAiKey] =
+      await Promise.all([
+        readSecret("openhub", "anthropic-api-key"),
+        readSecret("openhub", "openai-api-key"),
+        readSecret("openhub", "deepseek-api-key"),
+        readSecret("openhub", "openrouter-api-key"),
+        readSecret("openhub", "google-ai-key"),
+      ]);
     bootT("readSecrets done");
 
     processManager = new ProcessManager(
@@ -2506,7 +2674,14 @@ app
     }
 
     bootT("generateOpenCodeConfig start");
-    await generateOpenCodeConfig({ proxyToken, anthropicKey, openaiKey, openrouterKey });
+    await generateOpenCodeConfig({
+      proxyToken,
+      anthropicKey,
+      openaiKey,
+      deepseekKey,
+      openrouterKey,
+      customProviders,
+    });
     bootT("generateOpenCodeConfig done");
 
     // Start opencode ASAP — don't let the gh token lookup (up to 5s timeout)

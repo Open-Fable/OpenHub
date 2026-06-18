@@ -104,7 +104,10 @@ export async function startProxy(): Promise<string> {
   });
 
   // ── CORS — restrict to known local origins ──
+  // "null" is the origin sent by file:// pages (the Electron shell's chat/sidebar
+  // views load via loadFile, which produces origin "null" for cross-origin fetch).
   const ALLOWED_ORIGINS = new Set([
+    "null",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:4096",
@@ -114,11 +117,15 @@ export async function startProxy(): Promise<string> {
   ]);
   app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin ?? "";
-    const allowed = ALLOWED_ORIGINS.has(origin);
-    res.setHeader(
-      "Access-Control-Allow-Origin",
-      allowed ? origin : "http://127.0.0.1:9999",
-    );
+    if (origin.startsWith("file://") || origin === "null") {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    } else {
+      const allowed = ALLOWED_ORIGINS.has(origin);
+      res.setHeader(
+        "Access-Control-Allow-Origin",
+        allowed ? origin : "http://127.0.0.1:9999",
+      );
+    }
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     res.setHeader(
@@ -157,7 +164,11 @@ export async function startProxy(): Promise<string> {
       return;
     }
     const auth = req.headers["authorization"] ?? "";
-    if (!auth.startsWith("Bearer ") || !tokenMatches(auth.slice(7))) {
+    const clientToken = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!auth.startsWith("Bearer ") || !tokenMatches(clientToken)) {
+      console.warn(
+        `[proxy] Auth failed for ${req.method} ${req.path}. Expected len=${sessionToken.length} prefix="${sessionToken.slice(0, 6)}...", got len=${clientToken.length} prefix="${clientToken.slice(0, 6)}..."`,
+      );
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
@@ -800,6 +811,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
     res.socket?.setTimeout(0);
 
     try {
+      await loadCustomProviders();
       const keys = await readAllApiKeys();
       const route = resolveRoute(model, keys);
       const targetUrl = route.targetUrl;
@@ -994,8 +1006,30 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
   }
 
   app.get("/v1/models", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     const keys = await readAllApiKeys();
     const all = await buildModelList(keys);
+
+    // Refresh selected models from disk if expired to stay in sync with config-generator
+    const now = Date.now();
+    if (!cachedSelectedModels || now > selectedModelsExpiry) {
+      try {
+        const configPath = path.join(homedir(), ".config", "opencode", "opencode.json");
+        const raw = await fs.readFile(configPath, "utf-8");
+        const cfg = JSON.parse(raw) as Record<string, unknown>;
+        const providers = cfg.provider as Record<string, unknown> | undefined;
+        const ohub = providers?.openhub as Record<string, unknown> | undefined;
+        if (ohub?.models) {
+          cachedSelectedModels = Object.keys(ohub.models as Record<string, unknown>);
+        } else {
+          cachedSelectedModels = [];
+        }
+      } catch {
+        cachedSelectedModels = [];
+      }
+      selectedModelsExpiry = now + 5000; // 5s cache
+    }
+    selectedModelIds = cachedSelectedModels || [];
 
     // Migration: if selectedModelIds contains legacy names, map them to current names
     const legacyToNew: Record<string, string> = {
@@ -1028,14 +1062,14 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
   });
 
   app.get("/v1/models/full", async (_req, res) => {
-    const catalog = getFullModelCatalog();
-    const catalogIds = new Set(catalog.map((c) => c.id));
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     try {
       const keys = await readAllApiKeys();
-      const all = await appendDynamicModels(catalog, catalogIds, keys);
+      const all = await buildModelList(keys);
       res.json({ object: "list", data: all });
-    } catch {
-      res.json({ object: "list", data: catalog });
+    } catch (err) {
+      console.error("[proxy] /v1/models/full error:", err);
+      res.json({ object: "list", data: getFullModelCatalog() });
     }
   });
 
@@ -1043,6 +1077,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
   let selectedModelsExpiry = 0;
 
   app.get("/v1/models/selected", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     const now = Date.now();
     if (!cachedSelectedModels || now > selectedModelsExpiry) {
       try {
@@ -1059,7 +1094,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
       } catch {
         cachedSelectedModels = [];
       }
-      selectedModelsExpiry = now + 30_000;
+      selectedModelsExpiry = now + 5000;
     }
     res.json({ selectedModels: cachedSelectedModels });
   });
@@ -1069,7 +1104,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
       const body = req.body as { models?: string[] };
       selectedModelIds = body.models ?? [];
       cachedSelectedModels = selectedModelIds;
-      selectedModelsExpiry = Date.now() + 30_000;
+      selectedModelsExpiry = Date.now() + 5000;
 
       // Persist to opencode.json as the openhub provider model list
       const configPath = path.join(homedir(), ".config", "opencode", "opencode.json");
@@ -1127,6 +1162,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
 
   app.post("/v1/chat/completions", async (req: Request, res: Response) => {
     try {
+      await loadCustomProviders();
       const keys = await readAllApiKeys();
       const { model, bypassInjection, ...rest } = req.body as {
         model: string;
@@ -1441,6 +1477,10 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
 
       const finalRest = { ...rest };
 
+      if (route.isCustom) {
+        delete (finalRest as Record<string, unknown>).reasoning_effort;
+      }
+
       // Apply global default if effort is missing (e.g. from OpenCode)
       if (
         !finalRest.reasoning_effort &&
@@ -1477,15 +1517,20 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         }
         // --- OpenAI/OpenRouter Mapping (reasoning_effort) ---
         else if (provider === "openai" || isOpenRouter) {
-          // Map OpenHub's expanded levels back to OpenAI's supported 3 levels
-          if (effort === "minimal") finalRest.reasoning_effort = "low";
-          else if (effort === "xhigh" || effort === "max")
-            finalRest.reasoning_effort = "high";
-          // others (low, medium, high) pass through as is
+          const isDirectDeepSeek = targetUrl.includes("api.deepseek.com");
+          if (isDirectDeepSeek) {
+            delete (finalRest as Record<string, unknown>).reasoning_effort;
+          } else {
+            // Map OpenHub's expanded levels back to OpenAI's supported 3 levels
+            if (effort === "minimal") finalRest.reasoning_effort = "low";
+            else if (effort === "xhigh" || effort === "max")
+              finalRest.reasoning_effort = "high";
+            // others (low, medium, high) pass through as is
 
-          // For OpenRouter: force reasoning content to be included
-          if (isOpenRouter) {
-            (finalRest as Record<string, unknown>).include_reasoning = true;
+            // For OpenRouter: force reasoning content to be included
+            if (isOpenRouter) {
+              (finalRest as Record<string, unknown>).include_reasoning = true;
+            }
           }
         }
       } else if (finalRest.reasoning_effort === "none") {
@@ -2286,6 +2331,29 @@ function resolveReasoningStyle(model: string): "anthropic" | "openai" {
   return "openai";
 }
 
+interface CustomProvider {
+  id: string;
+  name: string;
+  baseUrl: string;
+  models: string[];
+}
+
+let cachedCustomProviders: CustomProvider[] = [];
+
+export async function loadCustomProviders(): Promise<CustomProvider[]> {
+  try {
+    const settingsPath = path.join(homedir(), ".config", "openhub", "settings.json");
+    const raw = await fs.readFile(settingsPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    cachedCustomProviders = Array.isArray(parsed.customProviders)
+      ? parsed.customProviders
+      : [];
+  } catch {
+    cachedCustomProviders = [];
+  }
+  return cachedCustomProviders;
+}
+
 export function resolveRoute(
   model: string,
   keys: Awaited<ReturnType<typeof readAllApiKeys>>,
@@ -2294,7 +2362,21 @@ export function resolveRoute(
   headers: Record<string, string>;
   model?: string;
   provider: string;
+  isCustom?: boolean;
 } {
+  // Custom OpenAI-compatible Providers routing
+  for (const provider of cachedCustomProviders) {
+    if (provider.models.includes(model)) {
+      const cleanBaseUrl = provider.baseUrl.replace(/\/$/, "");
+      return {
+        targetUrl: `${cleanBaseUrl}/chat/completions`,
+        headers: { Authorization: `Bearer ${keys.customKeys[provider.id] ?? ""}` },
+        model: model,
+        provider: "openai",
+        isCustom: true,
+      };
+    }
+  }
   // Aliases for Direct providers
   let upstreamModel = model;
   if (model === "claude-3-7-sonnet-latest") upstreamModel = "claude-3-7-sonnet-20250219";
@@ -2352,6 +2434,14 @@ export function resolveRoute(
     throw new Error(
       `Le modèle "${model}" (format fournisseur/modèle) nécessite une clé OpenRouter. Configure une clé OpenRouter, ou choisis un modèle direct (claude-*, gpt-*, google/*) ou un modèle Ollama local.`,
     );
+  }
+  if (model.startsWith("deepseek-")) {
+    return {
+      targetUrl: "https://api.deepseek.com/v1/chat/completions",
+      headers: { Authorization: `Bearer ${keys.deepseek ?? ""}` },
+      model: upstreamModel,
+      provider: "openai",
+    };
   }
   if (model.startsWith("claude-")) {
     return {
@@ -2476,20 +2566,17 @@ export function getFullModelCatalog(): Array<{
   source: string;
 }> {
   return [
-    // --- Direct Models ---
-    { id: "claude-3-7-sonnet-latest", object: "model", source: "direct" },
-    { id: "claude-3-5-sonnet-latest", object: "model", source: "direct" },
-    { id: "claude-3-5-haiku-latest", object: "model", source: "direct" },
-    { id: "claude-3-opus-latest", object: "model", source: "direct" },
-    { id: "claude-sonnet-4-6", object: "model", source: "direct" }, // Legacy Alias
-    { id: "claude-opus-4-6", object: "model", source: "direct" }, // Legacy Alias
-    { id: "claude-haiku-4-5", object: "model", source: "direct" }, // Legacy Alias
-    { id: "gpt-4o", object: "model", source: "direct" },
-    { id: "gpt-4o-mini", object: "model", source: "direct" },
-    { id: "o1", object: "model", source: "direct" },
-    { id: "o1-preview", object: "model", source: "direct" },
-    { id: "o1-mini", object: "model", source: "direct" },
-    { id: "o3-mini", object: "model", source: "direct" },
+    // --- Direct Models (Anthropic remains static as they lack a discovery API) ---
+    { id: "claude-3-7-sonnet-latest", object: "model", source: "anthropic" },
+    { id: "claude-3-5-sonnet-latest", object: "model", source: "anthropic" },
+    { id: "claude-3-5-haiku-latest", object: "model", source: "anthropic" },
+    { id: "claude-3-opus-latest", object: "model", source: "anthropic" },
+    { id: "claude-sonnet-4-6", object: "model", source: "anthropic" },
+    { id: "claude-opus-4-6", object: "model", source: "anthropic" },
+    { id: "claude-haiku-4-5", object: "model", source: "anthropic" },
+
+    // OpenAI and DeepSeek are now DISCOVERED DYNAMICALLY.
+    // No more hardcoded IDs here for them.
 
     // --- Gemini Models (Cloud Code Assist via OAuth) ---
     { id: "google/gemini-2.5-flash", object: "model", source: "gemini" },
@@ -2519,6 +2606,28 @@ export function getFullModelCatalog(): Array<{
   ];
 }
 
+async function fetchOpenAICompatibleModels(
+  baseUrl: string,
+  apiKey: string,
+  source: string,
+): Promise<Array<{ id: string; object: string; source: string }>> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { data?: Array<{ id: string }> };
+    return (data.data ?? []).map((m) => ({
+      id: m.id,
+      object: "model",
+      source: source,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function appendDynamicModels(
   base: ReadonlyArray<{ id: string; object: string; source: string }>,
   catalogIds: ReadonlySet<string>,
@@ -2526,6 +2635,45 @@ export async function appendDynamicModels(
 ): Promise<Array<{ id: string; object: string; source: string }>> {
   const dynamic: Array<{ id: string; object: string; source: string }> = [];
 
+  // 1. OpenAI Dynamic Discovery
+  if (keys.openai) {
+    const oaModels = await fetchOpenAICompatibleModels(
+      "https://api.openai.com/v1",
+      keys.openai,
+      "openai",
+    );
+    for (const m of oaModels) {
+      if (!catalogIds.has(m.id)) dynamic.push(m);
+    }
+    // Force discovery of primary models
+    const forceIds = ["gpt-4o", "gpt-4o-mini", "o1", "o3-mini"];
+    for (const id of forceIds) {
+      if (!dynamic.some((m) => m.id === id) && !catalogIds.has(id)) {
+        dynamic.push({ id, object: "model", source: "openai" });
+      }
+    }
+  }
+
+  // 2. DeepSeek Dynamic Discovery
+  if (keys.deepseek) {
+    const dsModels = await fetchOpenAICompatibleModels(
+      "https://api.deepseek.com",
+      keys.deepseek,
+      "deepseek",
+    );
+    for (const m of dsModels) {
+      if (!catalogIds.has(m.id)) dynamic.push(m);
+    }
+    // Force discovery of deprecated but still functional models
+    const forceIds = ["deepseek-chat", "deepseek-reasoner"];
+    for (const id of forceIds) {
+      if (!dynamic.some((m) => m.id === id) && !catalogIds.has(id)) {
+        dynamic.push({ id, object: "model", source: "deepseek" });
+      }
+    }
+  }
+
+  // 3. OpenRouter Dynamic Discovery
   if (keys.openrouterKey) {
     const orModels = await fetchOpenRouterModels(keys.openrouterKey);
     for (const m of orModels) {
@@ -2542,24 +2690,36 @@ export async function appendDynamicModels(
     }
   }
 
+  // Add custom provider models (those with unique IDs not in static catalog)
+  for (const provider of cachedCustomProviders) {
+    for (const modelId of provider.models) {
+      if (!catalogIds.has(modelId)) {
+        dynamic.push({ id: modelId, object: "model", source: "custom" });
+      }
+    }
+  }
+
   return [...base, ...dynamic];
 }
 
 export async function buildModelList(
   keys: Awaited<ReturnType<typeof readAllApiKeys>>,
 ): Promise<Array<{ id: string; object: string; source: string }>> {
+  await loadCustomProviders();
   const catalog = getFullModelCatalog();
   const catalogIds = new Set(catalog.map((c) => c.id));
 
   const available: Array<{ id: string; object: string; source: string }> = [];
 
   for (const m of catalog) {
-    if (m.source === "direct") {
-      const isAnthropic = m.id.startsWith("claude-") && !m.id.includes("/");
-      const isOpenAI =
-        m.id.startsWith("gpt-") || m.id.startsWith("o1") || m.id.startsWith("o3");
-      if (isAnthropic && !keys.anthropic) continue;
-      if (isOpenAI && !keys.openai) continue;
+    if (m.source === "openai") {
+      if (!keys.openai) continue;
+      available.push(m);
+    } else if (m.source === "anthropic") {
+      if (!keys.anthropic) continue;
+      available.push(m);
+    } else if (m.source === "deepseek") {
+      if (!keys.deepseek) continue;
       available.push(m);
     } else if (m.source === "gemini") {
       available.push(m);
@@ -2572,7 +2732,23 @@ export async function buildModelList(
     }
   }
 
-  return appendDynamicModels(available, catalogIds, keys);
+  const result = await appendDynamicModels(available, catalogIds, keys);
+
+  // Also inject custom provider models that share IDs with static catalog entries.
+  // appendDynamicModels skips them (dedup), but we need them in the catalogue
+  // so the user can select their custom endpoint even for "known" model IDs.
+  for (const provider of cachedCustomProviders) {
+    for (const modelId of provider.models) {
+      if (catalogIds.has(modelId) && !result.some((m) => m.id === modelId)) {
+        result.push({ id: modelId, object: "model", source: "custom" });
+      }
+    }
+  }
+
+  console.log(
+    `[proxy] buildModelList: ${result.length} models (${cachedCustomProviders.length} custom providers)`,
+  );
+  return result;
 }
 
 const EXTRACTION_MODEL = "qwen2.5:1.5b";

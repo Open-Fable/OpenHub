@@ -14,6 +14,26 @@ vi.mock("keytar", () => ({
   },
 }));
 
+vi.mock("fs", () => ({
+  promises: {
+    readFile: vi.fn(async (p: string) => {
+      if (p.includes("settings.json")) {
+        return JSON.stringify({
+          customProviders: [
+            {
+              id: "custom-groq",
+              name: "Groq",
+              baseUrl: "https://api.groq.com/openai/v1",
+              models: ["llama3-8b"],
+            },
+          ],
+        });
+      }
+      throw new Error("ENOENT");
+    }),
+  },
+}));
+
 vi.mock("express", () => {
   const app = {
     use: vi.fn(),
@@ -70,6 +90,8 @@ function makeKeys(overrides: Record<string, unknown> = {}) {
     githubToken: null as string | null,
     braveSearchKey: null as string | null,
     ollamaUrl: "http://127.0.0.1:11434",
+    deepseek: null as string | null,
+    customKeys: {} as Record<string, string>,
     ...overrides,
   };
 }
@@ -154,6 +176,18 @@ describe("buildModelList", () => {
     expect(list.some((m) => m.id === "gpt-4o")).toBe(true);
   });
 
+  it("excludes DeepSeek direct models when no deepseek key is set", async () => {
+    const list = await buildModelList(makeKeys());
+
+    expect(list.some((m) => m.id === "deepseek-chat")).toBe(false);
+  });
+
+  it("includes DeepSeek direct models when the deepseek key is set", async () => {
+    const list = await buildModelList(makeKeys({ deepseek: "sk-ds-test" }));
+
+    expect(list.some((m) => m.id === "deepseek-chat")).toBe(true);
+  });
+
   it("excludes OpenRouter catalog models without an openrouter key", async () => {
     const list = await buildModelList(makeKeys());
 
@@ -164,6 +198,12 @@ describe("buildModelList", () => {
     const list = await buildModelList(makeKeys());
 
     expect(list.some((m) => m.source === "gemini")).toBe(true);
+  });
+
+  it("includes custom provider models in buildModelList", async () => {
+    const list = await buildModelList(makeKeys());
+
+    expect(list.some((m) => m.id === "llama3-8b" && m.source === "custom")).toBe(true);
   });
 });
 
@@ -203,6 +243,14 @@ describe("resolveRoute — direct providers", () => {
     expect(route.headers.Authorization).toBe("Bearer sk-oai");
   });
 
+  it("routes deepseek-* to DeepSeek official API with a Bearer header", () => {
+    const route = resolveRoute("deepseek-chat", makeKeys({ deepseek: "sk-ds-xyz" }));
+
+    expect(route.provider).toBe("openai");
+    expect(route.targetUrl).toBe("https://api.deepseek.com/v1/chat/completions");
+    expect(route.headers.Authorization).toBe("Bearer sk-ds-xyz");
+  });
+
   it("routes o3 reasoning models to OpenAI", () => {
     const route = resolveRoute("o3-mini", makeKeys({ openai: "sk-oai" }));
 
@@ -230,9 +278,9 @@ describe("resolveRoute — direct providers", () => {
   });
 
   it("throws for a namespaced model without an OpenRouter key", () => {
-    expect(() =>
-      resolveRoute("deepseek/deepseek-chat", makeKeys()),
-    ).toThrow(/nécessite une clé OpenRouter/);
+    expect(() => resolveRoute("deepseek/deepseek-chat", makeKeys())).toThrow(
+      /nécessite une clé OpenRouter/,
+    );
   });
 
   it("does not leak a missing key as undefined in the auth header", () => {
@@ -240,5 +288,24 @@ describe("resolveRoute — direct providers", () => {
     const route = resolveRoute("claude-3-opus-latest", makeKeys());
 
     expect(route.headers["x-api-key"]).toBe("");
+  });
+
+  it("routes custom provider models to their baseUrl with custom key", async () => {
+    const { loadCustomProviders } = await import("./index.js");
+    await loadCustomProviders();
+
+    const route = resolveRoute(
+      "llama3-8b",
+      makeKeys({
+        customKeys: {
+          "custom-groq": "sk-groq-123",
+        },
+      }),
+    );
+
+    expect(route.provider).toBe("openai");
+    expect(route.targetUrl).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(route.headers.Authorization).toBe("Bearer sk-groq-123");
+    expect(route.isCustom).toBe(true);
   });
 });

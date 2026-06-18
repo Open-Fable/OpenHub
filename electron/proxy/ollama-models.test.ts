@@ -83,6 +83,8 @@ function makeKeys(overrides: Record<string, unknown> = {}) {
     githubToken: null as string | null,
     braveSearchKey: null as string | null,
     ollamaUrl: "http://127.0.0.1:11434",
+    deepseek: null as string | null,
+    customKeys: {} as Record<string, string>,
     ...overrides,
   };
 }
