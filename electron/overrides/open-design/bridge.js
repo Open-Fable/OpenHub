@@ -25,8 +25,17 @@
 
   hideTrigger();
 
+  // Coalescer les rafales de mutations en un seul appel par frame : la SPA
+  // peut muter le body des centaines de fois pendant un re-render, inutile de
+  // relancer querySelectorAll à chaque mutation individuelle.
+  var rafScheduled = false;
   var observer = new MutationObserver(function () {
-    hideTrigger();
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(function () {
+      rafScheduled = false;
+      hideTrigger();
+    });
   });
 
   if (document.body) {
