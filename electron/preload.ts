@@ -84,11 +84,16 @@ contextBridge.exposeInMainWorld("openhub", {
   saveApiKeys: (keys: {
     anthropic?: string;
     openai?: string;
+    deepseek?: string;
     openrouterKey?: string;
     ollamaUrl?: string;
     githubToken?: string;
     braveSearchKey?: string;
   }) => ipcRenderer.invoke("save-api-keys", keys),
+
+  getCustomProviders: () => ipcRenderer.invoke("get-custom-providers"),
+  saveCustomProviders: (list: unknown[]) =>
+    ipcRenderer.invoke("save-custom-providers", list),
 
   reloadProjectStore: () => ipcRenderer.invoke("reload-project-store"),
   getProjects: () => ipcRenderer.invoke("get-projects"),
@@ -115,6 +120,10 @@ contextBridge.exposeInMainWorld("openhub", {
   }) => ipcRenderer.invoke("save-project", project),
   deleteProject: (id: string) => ipcRenderer.invoke("delete-project", id),
   pickProjectPath: () => ipcRenderer.invoke("pick-project-path"),
+  getProjectFiles: (projectId: string) =>
+    ipcRenderer.invoke("get-project-files", projectId),
+  deleteProjectFile: (projectId: string, filePath: string) =>
+    ipcRenderer.invoke("delete-project-file", projectId, filePath),
 
   getFolders: () => ipcRenderer.invoke("get-folders"),
   createFolder: (name: string) => ipcRenderer.invoke("create-folder", name),

@@ -1,5 +1,6 @@
 import { app } from "electron";
 import { promises as fs, readFileSync, mkdirSync, writeFileSync } from "fs";
+import { homedir } from "os";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { execFileSync } from "child_process";
 import path from "path";
@@ -286,9 +287,29 @@ export async function readAllApiKeys(): Promise<{
   githubToken: string | null;
   braveSearchKey: string | null;
   ollamaUrl: string;
+  deepseek: string | null;
+  customKeys: Record<string, string>;
 }> {
   const s = await loadStore();
   const svc = s[SERVICE] ?? {};
+
+  const customKeys: Record<string, string> = {};
+  try {
+    const settingsPath = path.join(homedir(), ".config", "openhub", "settings.json");
+    const raw = await fs.readFile(settingsPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    const providers = parsed.customProviders || [];
+    for (const p of providers) {
+      const field = `custom-provider-key-${p.id}`;
+      const val = svc[field];
+      if (val) {
+        customKeys[p.id] = val;
+      }
+    }
+  } catch {
+    // Ignore settings.json read errors
+  }
+
   return {
     anthropic: svc["anthropic-api-key"] ?? null,
     openai: svc["openai-api-key"] ?? null,
@@ -297,5 +318,7 @@ export async function readAllApiKeys(): Promise<{
     githubToken: svc["github-token"] ?? null,
     braveSearchKey: svc["brave-search-key"] ?? null,
     ollamaUrl: svc["ollama-url"] ?? "http://127.0.0.1:11434",
+    deepseek: svc["deepseek-api-key"] ?? null,
+    customKeys,
   };
 }

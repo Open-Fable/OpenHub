@@ -1645,6 +1645,35 @@
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
+                      <label class="setting-label" for="key-deepseek">DeepSeek</label>
+                      <p class="setting-desc" data-i18n="cfg.keys.deepseek.desc">Modèles DeepSeek officiels</p>
+                    </div>
+                    <div class="key-input-group">
+                      <input
+                        class="form-input form-input--mono"
+                        type="password"
+                        id="key-deepseek"
+                        placeholder="sk-..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                      <button
+                        type="button"
+                        class="btn-reveal"
+                        data-target="key-deepseek"
+                        aria-label="Afficher la clé"
+                        data-i18n-aria-label="cfg.keys.reveal"
+                        aria-pressed="false"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="setting-row-text">
                       <label class="setting-label" for="key-openrouter">OpenRouter</label>
                       <p class="setting-desc" data-i18n="cfg.keys.openrouter.desc">
                         Routage multi-fournisseurs
@@ -1696,6 +1725,23 @@
                     Modèles Ollama requis
                   </div>
                   <div id="ollama-model-list"></div>
+                </div>
+              </fieldset>
+
+              <fieldset class="settings-group">
+                <legend class="settings-group-title">Fournisseurs Personnalisés</legend>
+                <div class="settings-group-card" id="custom-providers-list" style="display: flex; flex-direction: column; gap: 12px; padding: 12px 16px;">
+                  <!-- Custom providers list will be rendered here -->
+                </div>
+                <div class="settings-group-card" style="margin-top: 12px; padding: 16px;">
+                  <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-normal);">Ajouter un fournisseur</h4>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <input class="form-input" type="text" id="cust-prov-name" placeholder="Nom (ex: Groq, Together)" style="width: 100%; box-sizing: border-box;" />
+                    <input class="form-input" type="text" id="cust-prov-url" placeholder="URL de base (ex: https://api.groq.com/openai/v1)" style="width: 100%; box-sizing: border-box;" />
+                    <input class="form-input form-input--mono" type="password" id="cust-prov-key" placeholder="Clé d'API" style="width: 100%; box-sizing: border-box;" />
+                    <input class="form-input" type="text" id="cust-prov-models" placeholder="Modèles (séparés par des virgules, ex: llama3-8b-8192)" style="width: 100%; box-sizing: border-box;" />
+                    <button type="button" class="btn-update" id="btn-add-custom-provider" style="align-self: flex-end; margin-top: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">Ajouter</button>
+                  </div>
                 </div>
               </fieldset>
 
@@ -2122,15 +2168,6 @@
                       <option value="dropdown" data-i18n="cfg.updates.nav.dropdown">Menu déroulant</option>
                     </select>
                   </div>
-                </div>
-                <div class="setting-row">
-                  <div class="setting-row-text">
-                    <label class="setting-label" data-i18n="cfg.updates.redo.label"
-                      >Refaire l'onboarding</label
-                    >
-                    <p class="setting-desc" data-i18n="cfg.updates.redo.desc">Relancer l'assistant de premier lancement.</p>
-                  </div>
-                  <button id="redo-onboarding" class="btn-secondary" data-i18n="cfg.updates.redo.btn">Relancer</button>
                 </div>
               </fieldset>
 

@@ -422,6 +422,7 @@ function openConfig() {
         if (keys.anthropic)
           document.getElementById("key-anthropic").value = keys.anthropic;
         if (keys.openai) document.getElementById("key-openai").value = keys.openai;
+        if (keys.deepseek) document.getElementById("key-deepseek").value = keys.deepseek;
         if (keys.openrouterKey)
           document.getElementById("key-openrouter").value = keys.openrouterKey;
         if (keys.ollamaUrl && keys.ollamaUrl !== "http://127.0.0.1:11434")
@@ -434,6 +435,7 @@ function openConfig() {
         [
           "key-anthropic",
           "key-openai",
+          "key-deepseek",
           "key-openrouter",
           "key-ollama",
           "key-github",
@@ -442,6 +444,14 @@ function openConfig() {
           var el = document.getElementById(id);
           if (el) el.dataset.initial = el.value;
         });
+      })
+      .catch(function () {});
+  }
+  if (window.openhub.getCustomProviders) {
+    window.openhub
+      .getCustomProviders()
+      .then(function (providers) {
+        renderCustomProviders(providers);
       })
       .catch(function () {});
   }
@@ -546,25 +556,11 @@ window.openhub.onShowConfig(openConfig);
 document.getElementById("close-config").addEventListener("click", closeConfig);
 backdrop.addEventListener("click", closeConfig);
 
-// Redo onboarding from settings
-var redoBtn = document.getElementById("redo-onboarding");
-if (redoBtn) {
-  redoBtn.addEventListener("click", async function () {
-    await window.openhub.resetOnboarding();
-    closeConfig();
-    var overlay = document.getElementById("onboarding-overlay");
-    if (overlay) {
-      overlay.classList.add("open");
-      window.openhub.notifyOnboardingVisibility(true);
-      overlay.dispatchEvent(new CustomEvent("onboarding-restart"));
-    }
-  });
-}
-
 // Auto-save API keys on blur when value changed
 [
   "key-anthropic",
   "key-openai",
+  "key-deepseek",
   "key-openrouter",
   "key-ollama",
   "key-github",
@@ -583,6 +579,7 @@ if (redoBtn) {
       .saveApiKeys({
         anthropic: document.getElementById("key-anthropic").value.trim(),
         openai: document.getElementById("key-openai").value.trim(),
+        deepseek: document.getElementById("key-deepseek").value.trim(),
         openrouterKey: document.getElementById("key-openrouter").value.trim(),
         ollamaUrl: document.getElementById("key-ollama").value.trim(),
         githubToken: document.getElementById("key-github").value.trim(),
@@ -1667,6 +1664,148 @@ function rebindResetCache() {
         t("cfg.cache.reset") +
         "</button>";
       rebindResetCache();
+    });
+  });
+}
+
+// ── Custom Providers Management ──
+function escapeHtml(str) {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderCustomProviders(providers) {
+  var container = document.getElementById("custom-providers-list");
+  if (!container) return;
+  if (!providers || providers.length === 0) {
+    container.innerHTML =
+      '<div style="padding: 8px 12px; color: var(--text-muted); font-size: 12px;">Aucun fournisseur personnalisé configuré.</div>';
+    return;
+  }
+
+  container.innerHTML = providers
+    .map(function (p) {
+      return (
+        '<div class="setting-row" style="align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; margin-bottom: 8px;">' +
+        '<div class="setting-row-text" style="flex: 1;">' +
+        '<span class="setting-label" style="font-weight: 600; font-size: 13px; color: var(--text-normal);">' +
+        escapeHtml(p.name) +
+        "</span>" +
+        '<p class="setting-desc" style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-muted);">' +
+        escapeHtml(p.baseUrl) +
+        " | " +
+        p.models.length +
+        " modèles</p>" +
+        "</div>" +
+        '<button type="button" class="btn-delete-custom-provider" data-id="' +
+        escapeHtml(p.id) +
+        '" style="background: none; border: none; color: var(--error); cursor: pointer; padding: 4px 8px; font-size: 12px; font-weight: 500;">Supprimer</button>' +
+        "</div>"
+      );
+    })
+    .join("");
+
+  container.querySelectorAll(".btn-delete-custom-provider").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      deleteCustomProvider(btn.dataset.id);
+    });
+  });
+}
+
+function deleteCustomProvider(id) {
+  if (!window.openhub.getCustomProviders || !window.openhub.saveCustomProviders) return;
+  window.openhub.getCustomProviders().then(function (providers) {
+    var list = (providers || []).filter(function (p) {
+      return p.id !== id;
+    });
+    window.openhub
+      .saveCustomProviders(list)
+      .then(function () {
+        showSaveToast("Fournisseur supprimé.");
+        renderCustomProviders(list);
+        loadModelsUI();
+      })
+      .catch(function (err) {
+        showSaveToast("Erreur lors de la suppression.");
+        console.error(err);
+      });
+  });
+}
+
+var btnAddCustom = document.getElementById("btn-add-custom-provider");
+if (btnAddCustom) {
+  btnAddCustom.addEventListener("click", function () {
+    var nameInput = document.getElementById("cust-prov-name");
+    var urlInput = document.getElementById("cust-prov-url");
+    var keyInput = document.getElementById("cust-prov-key");
+    var modelsInput = document.getElementById("cust-prov-models");
+
+    if (!nameInput || !urlInput || !keyInput || !modelsInput) return;
+
+    var name = nameInput.value.trim();
+    var url = urlInput.value.trim();
+    var key = keyInput.value.trim();
+    var modelsRaw = modelsInput.value.trim();
+
+    if (!name || !url || !key || !modelsRaw) {
+      showSaveToast("Veuillez remplir tous les champs.");
+      return;
+    }
+
+    var models = modelsRaw
+      .split(",")
+      .map(function (m) {
+        return m.trim();
+      })
+      .filter(Boolean);
+
+    if (models.length === 0) {
+      showSaveToast("Veuillez spécifier au moins un modèle.");
+      return;
+    }
+
+    var id = "custom-" + name.toLowerCase().replace(/[^a-z0-9]/g, "-");
+
+    window.openhub.getCustomProviders().then(function (providers) {
+      var list = providers || [];
+      if (
+        list.some(function (p) {
+          return p.id === id;
+        })
+      ) {
+        showSaveToast("Ce fournisseur existe déjà.");
+        return;
+      }
+
+      var newProvider = { id: id, name: name, baseUrl: url, models: models };
+      list.push(newProvider);
+
+      var keyData = {};
+      keyData["custom-provider-key-" + id] = key;
+
+      window.openhub
+        .saveApiKeys(keyData)
+        .then(function () {
+          return window.openhub.saveCustomProviders(list);
+        })
+        .then(function () {
+          showSaveToast("Fournisseur enregistré !");
+          nameInput.value = "";
+          urlInput.value = "";
+          keyInput.value = "";
+          modelsInput.value = "";
+          renderCustomProviders(list);
+          loadModelsUI();
+        })
+        .catch(function (err) {
+          showSaveToast("Erreur lors de l'enregistrement.");
+          console.error(err);
+        });
     });
   });
 }

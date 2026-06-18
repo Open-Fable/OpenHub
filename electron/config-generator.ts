@@ -9,7 +9,14 @@ interface GenerateOptions {
   proxyToken: string;
   anthropicKey: string | null;
   openaiKey: string | null;
+  deepseekKey: string | null;
   openrouterKey: string | null;
+  customProviders?: Array<{
+    id: string;
+    name: string;
+    baseUrl: string;
+    models: string[];
+  }> | null;
 }
 
 export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<void> {
@@ -58,6 +65,12 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
       models["o1-mini"] = {};
       models["o3-mini"] = {};
     }
+    if (opts.deepseekKey) {
+      models["deepseek-v4-flash"] = {};
+      models["deepseek-v4-pro"] = {};
+      models["deepseek-chat"] = {};
+      models["deepseek-reasoner"] = {};
+    }
     models["google/gemini-2.0-flash-thinking-exp"] = {};
     models["google/gemini-2.0-pro-exp-02-05"] = {};
     models["google/gemini-2.0-flash"] = {};
@@ -76,6 +89,13 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
     }
     models["llama3"] = {};
     models["mistral"] = {};
+  }
+  if (opts.customProviders) {
+    for (const provider of opts.customProviders) {
+      for (const mId of provider.models) {
+        models[mId] = {};
+      }
+    }
   }
 
   // Ensure we don't carry over the invalid key from existing config

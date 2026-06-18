@@ -877,12 +877,16 @@ async function openCatalogModal() {
       fetch(state.proxyUrl + "/v1/models/full", { headers: headers }),
       fetch(state.proxyUrl + "/v1/models/selected", { headers: headers }),
     ]);
+    if (!r1.ok || !r2.ok) {
+      throw new Error("HTTP " + r1.status + "/" + r2.status);
+    }
     var d1 = await r1.json();
     var d2 = await r2.json();
     catalogState.allModels = d1.data || [];
     catalogState.selectedIds = d2.selectedModels || [];
     renderCatalogList();
   } catch (err) {
+    console.error("[chat] catalog load failed:", err);
     list.innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--error)">' +
       escapeHtml(t("chat.catalog.loadError")) +
@@ -909,10 +913,20 @@ function renderCatalogList() {
       var p = t("chat.catalog.group.direct");
       if (source === "openrouter") {
         p = "OpenRouter";
+      } else if (source === "gemini") {
+        p = t("chat.catalog.group.gemini");
       } else if (source === "local") {
         p = t("chat.catalog.group.local");
       } else if (source === "workflow") {
         p = t("chat.catalog.group.workflow");
+      } else if (source === "custom") {
+        p = "Perso";
+      } else if (source === "deepseek") {
+        p = "DeepSeek";
+      } else if (source === "openai") {
+        p = "OpenAI";
+      } else if (source === "anthropic") {
+        p = "Anthropic";
       }
 
       if (!otherGroups[p]) otherGroups[p] = [];
@@ -929,6 +943,14 @@ function renderCatalogList() {
       return '<span class="oh-catalog-source-badge" style="background:var(--success-subtle);color:var(--success);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Local</span>';
     } else if (source === "workflow") {
       return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Workflow</span>';
+    } else if (source === "custom") {
+      return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Perso</span>';
+    } else if (source === "deepseek") {
+      return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">DeepSeek</span>';
+    } else if (source === "openai") {
+      return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">OpenAI</span>';
+    } else if (source === "anthropic") {
+      return '<span class="oh-catalog-source-badge" style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Anthropic</span>';
     } else {
       return '<span class="oh-catalog-source-badge" style="background:var(--bg-surface);color:var(--text-muted);border-radius:var(--radius-sm);padding:2px 6px;font-size:10px;margin-left:8px;font-weight:600;display:inline-block;vertical-align:middle">Direct</span>';
     }
@@ -1390,6 +1412,9 @@ function toggleModelDropdown() {
       } else if (m.source === "workflow") {
         badge =
           '<span style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Workflow</span>';
+      } else if (m.source === "custom") {
+        badge =
+          '<span style="background:var(--accent-subtle);color:var(--accent-primary);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Perso</span>';
       } else {
         badge =
           '<span style="background:var(--bg-surface);color:var(--text-muted);border-radius:var(--radius-sm);padding:1px 5px;font-size:9.5px;margin-left:auto;font-weight:600">Direct</span>';

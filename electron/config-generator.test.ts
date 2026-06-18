@@ -53,7 +53,12 @@ function getModels(config: Record<string, unknown>): Record<string, unknown> {
   return openhub.models as Record<string, unknown>;
 }
 
-const noKeys = { anthropicKey: null, openaiKey: null, openrouterKey: null };
+const noKeys = {
+  anthropicKey: null,
+  openaiKey: null,
+  deepseekKey: null,
+  openrouterKey: null,
+};
 
 describe("config-generator — generateOpenCodeConfig", () => {
   beforeEach(() => {
@@ -82,6 +87,7 @@ describe("config-generator — generateOpenCodeConfig", () => {
       proxyToken: "t",
       anthropicKey: "sk-ant",
       openaiKey: null,
+      deepseekKey: null,
       openrouterKey: null,
     });
     const models = getModels(readGeneratedConfig().config);
@@ -94,12 +100,27 @@ describe("config-generator — generateOpenCodeConfig", () => {
       proxyToken: "t",
       anthropicKey: null,
       openaiKey: "sk-oai",
+      deepseekKey: null,
       openrouterKey: "sk-or",
     });
     const models = getModels(readGeneratedConfig().config);
     expect(models["gpt-4o"]).toBeDefined();
     expect(models["deepseek/deepseek-r1"]).toBeDefined();
     expect(models["claude-sonnet-4-6"]).toBeUndefined();
+  });
+
+  it("inclut les modèles DeepSeek uniquement si une clé DeepSeek est fournie", async () => {
+    await generateOpenCodeConfig({
+      proxyToken: "t",
+      anthropicKey: null,
+      openaiKey: null,
+      deepseekKey: "sk-ds",
+      openrouterKey: null,
+    });
+    const models = getModels(readGeneratedConfig().config);
+    expect(models["deepseek-chat"]).toBeDefined();
+    expect(models["deepseek-reasoner"]).toBeDefined();
+    expect(models["gpt-4o"]).toBeUndefined();
   });
 
   it("inclut toujours les modèles Gemini et locaux (llama3, mistral) par défaut", async () => {
@@ -122,6 +143,7 @@ describe("config-generator — generateOpenCodeConfig", () => {
       proxyToken: "t",
       anthropicKey: "sk-ant",
       openaiKey: null,
+      deepseekKey: null,
       openrouterKey: null,
     });
     const models = getModels(readGeneratedConfig().config);
@@ -152,5 +174,23 @@ describe("config-generator — generateOpenCodeConfig", () => {
     await generateOpenCodeConfig({ proxyToken: "t", ...noKeys });
     const { config } = readGeneratedConfig();
     expect((config.provider as Record<string, unknown>).openhub).toBeDefined();
+  });
+
+  it("inclut les modèles des customProviders configurés", async () => {
+    await generateOpenCodeConfig({
+      proxyToken: "t",
+      ...noKeys,
+      customProviders: [
+        {
+          id: "custom-groq",
+          name: "Groq",
+          baseUrl: "https://api.groq.com/openai/v1",
+          models: ["llama3-70b", "mixtral-8x7b"],
+        },
+      ],
+    });
+    const models = getModels(readGeneratedConfig().config);
+    expect(models["llama3-70b"]).toBeDefined();
+    expect(models["mixtral-8x7b"]).toBeDefined();
   });
 });

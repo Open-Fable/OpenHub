@@ -92,6 +92,7 @@
       "chat.catalog.loadError": "Erreur de chargement",
       "chat.catalog.group.direct": "Connexion Directe (OpenHub)",
       "chat.catalog.group.local": "Modèles Locaux (Ollama)",
+      "chat.catalog.group.gemini": "Google Gemini",
       "chat.catalog.group.workflow": "Workflow Agentique",
       "chat.catalog.group.selected": "Sélectionnés",
       "chat.catalog.ollamaStopped":
@@ -410,6 +411,7 @@
       "chat.catalog.loadError": "Loading error",
       "chat.catalog.group.direct": "Direct Connection (OpenHub)",
       "chat.catalog.group.local": "Local Models (Ollama)",
+      "chat.catalog.group.gemini": "Google Gemini",
       "chat.catalog.group.workflow": "Agentic Workflow",
       "chat.catalog.group.selected": "Selected",
       "chat.catalog.ollamaStopped":
