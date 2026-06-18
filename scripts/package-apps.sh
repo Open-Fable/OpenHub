@@ -147,83 +147,17 @@ if [ ! -f "$OD/apps/web/out/index.html" ]; then
   exit 1
 fi
 
-# 4c. Assemble un node_modules autoportant pour le daemon.
-#
-# PROBLÈME pnpm : cp -RL daemon/node_modules copie les FICHIERS du package
-# (ex. @modelcontextprotocol/sdk) mais PAS ses peer-deps (ex. zod) qui sont
-# identifiés dans le nom du répertoire virtuel pnpm :
-#   .pnpm/@modelcontextprotocol+sdk@1.29.0_zod@4.4.2/node_modules/
-# Le suffixe "_zod@4.4.2" indique que zod est un peer-dep résolu dans ce
-# répertoire virtuel. Node le trouve en remontant dans le workspace mais plus
-# dans le bundle isolé → ERR_MODULE_NOT_FOUND.
-#
-# SOLUTION : pour chaque symlink dans daemon/node_modules, on lit le nom du
-# répertoire virtuel pnpm et on extrait les noms de peer-deps (suffixe après
-# la version). On copie seulement ces packages ciblés depuis le répertoire
-# virtuel vers daemon/node_modules du bundle.
+# 4c. Assemble un node_modules autoportant pour le daemon en mettant à plat
+# toutes les dépendances de production (directes et transitives).
 OD_OUT="$BUNDLE/apps/open-design"
 DAEMON_NM="$OD/apps/daemon/node_modules"
 OUT_NM="$OD_OUT/apps/daemon/node_modules"
 mkdir -p "$OD_OUT/apps/daemon" "$OD_OUT/apps/web"
 cp -R "$OD/apps/daemon/bin"  "$OD_OUT/apps/daemon/bin"
 cp -R "$OD/apps/daemon/dist" "$OD_OUT/apps/daemon/dist"
-cp -RL "$DAEMON_NM" "$OUT_NM"
 
-# copy_pnpm_peer_deps : copie les peer-deps pnpm manquants dans le bundle.
-# Pour chaque symlink dans DAEMON_NM :
-#  1. Résoudre le répertoire virtuel pnpm (.pnpm/<name>@<ver>_<peer>@<v>/node_modules/)
-#  2. Parser le nom du répertoire pour extraire les peer deps (tout ce qui suit
-#     le premier token @version dans le nom : "_peer@version")
-#  3. Copier seulement ces packages précis s'ils sont absents du bundle.
-copy_pnpm_peer_deps() {
-  local nm_src="$1"  # daemon/node_modules d'origine (symlinks pnpm intacts)
-  local nm_dst="$2"  # bundle daemon/node_modules (déjà copié avec cp -RL)
-
-  find "$nm_src" -maxdepth 2 -type l | while read -r link; do
-    target=$(readlink -f "$link" 2>/dev/null) || continue
-    [ -d "$target" ] || continue
-
-    rel="${link#$nm_src/}"
-    if [[ "$rel" == @*/* ]]; then
-      # @scope/name → répertoire virtuel est 2 niveaux au-dessus de la cible
-      virt_nm="$(dirname "$(dirname "$target")")"
-    else
-      # name → répertoire virtuel est 1 niveau au-dessus
-      virt_nm="$(dirname "$target")"
-    fi
-
-    # Nom du répertoire virtuel, ex: @modelcontextprotocol+sdk@1.29.0_zod@4.4.2
-    virt_dir_name="$(basename "$(dirname "$virt_nm")")"
-
-    # Extraire les peer dep specs du nom : tout après le premier _X@Y
-    # Format: pkgname@version[_peer1@v1[_peer2@v2...]]
-    # On découpe sur "_" et on garde les tokens qui commencent par [a-z@]
-    # et contiennent "@" (= peer@version), en sautant le premier (pkg@version).
-    peers=$(printf '%s' "$virt_dir_name" | tr '_' '\n' | tail -n +2)
-
-    for peer_spec in $peers; do
-      # peer_spec = "zod@4.4.2" ou "@hono+node-server@1.0.0" etc.
-      # Extraire le nom du package (avant le @version final)
-      # pnpm encode "@" en "+" dans le nom du dir, on inverse pour le chemin
-      peer_name="${peer_spec%@*}"         # "zod" ou "+hono+node-server"
-      peer_name="${peer_name//+//}"       # "+hono+node-server" → "/hono/node-server"
-      # Reconstruire le chemin dans virt_nm
-      peer_path="$virt_nm/$peer_name"
-      [ -d "$peer_path" ] || [ -L "$peer_path" ] || continue
-
-      # Copier dans le bundle si absent
-      dest="$nm_dst/$peer_name"
-      if [ ! -d "$dest" ]; then
-        mkdir -p "$(dirname "$dest")"
-        cp -RL "$peer_path" "$dest" 2>/dev/null && \
-          echo "  [peer-dep] copié $peer_name (requis par $(basename "$link"))"
-      fi
-    done
-  done
-}
-
-copy_pnpm_peer_deps "$DAEMON_NM" "$OUT_NM"
-info "open-design peer-deps pnpm copiés dans node_modules"
+node "$ROOT/scripts/flatten-node-modules.cjs" "$DAEMON_NM" "$OUT_NM"
+info "open-design node_modules mis à plat et copié ✓"
 
 # Le web n'a besoin que de l'export statique au runtime.
 cp -R "$OD/apps/web/out" "$OD_OUT/apps/web/out"

@@ -506,6 +506,7 @@ exec "\$REAL_PATH" "\${args[@]}"
       const nodeBin = path.join(this.ctx.resourcesPath, "bin", "node");
       const odEntry = path.join(odCwd, "apps", "daemon", "bin", "od.mjs");
       const dataDir = path.join(this.ctx.userDataDir, "open-design");
+      const odCli = path.join(odCwd, "apps", "daemon", "dist", "cli.js");
       // OD_DATA_DIR overrides the daemon's default <projectRoot>/.od. We point it
       // at a writable userData dir AND expose it to our own process.env so the
       // design backend (design-backend.ts) reads the SAME .od/projects the daemon
@@ -518,6 +519,7 @@ exec "\$REAL_PATH" "\${args[@]}"
       }
       process.env.OD_DATA_DIR = odDataDir;
       env.OD_DATA_DIR = odDataDir;
+      env.OD_DAEMON_CLI_PATH = odCli;
       console.warn(`[design] spawning daemon: ${nodeBin} ${odEntry} --no-open`);
       const proc = spawn(nodeBin, [odEntry, "--no-open"], {
         cwd: dataDir,
