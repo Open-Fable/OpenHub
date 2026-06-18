@@ -116,7 +116,10 @@
     if (!str) return "";
     const div = document.createElement("div");
     div.textContent = str;
-    return div.innerHTML;
+    // Échappe aussi les guillemets : div.innerHTML ne les encode pas, donc une
+    // valeur réinjectée dans un attribut HTML pourrait s'en échapper (XSS stocké).
+    // Cohérent avec le helper durci de projects.js.
+    return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   // Un projet "orchestrateur" (agent de workflow, nœud de canvas ou sous-agent généré)
