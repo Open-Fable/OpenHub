@@ -128,6 +128,7 @@
       "chat.project.cancel": "Annuler",
       "chat.project.save": "Enregistrer",
       "chat.project.create": "Créer",
+      "chat.project.saveError": "Erreur lors de la sauvegarde du projet : {msg}",
 
       // ── Skills modal / editor ──
       "chat.skills.empty": "Aucune compétence.",
@@ -444,6 +445,7 @@
       "chat.project.cancel": "Cancel",
       "chat.project.save": "Save",
       "chat.project.create": "Create",
+      "chat.project.saveError": "Error while saving the project: {msg}",
 
       // ── Skills modal / editor ──
       "chat.skills.empty": "No skills.",

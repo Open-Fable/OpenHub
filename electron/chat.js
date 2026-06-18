@@ -1699,18 +1699,30 @@ function openProjModal(proj) {
   var saveBtn = document.createElement("button");
   saveBtn.className = "oh-btn oh-btn-primary";
   saveBtn.textContent = isEdit ? t("chat.project.save") : t("chat.project.create");
+  nameInput.addEventListener("input", function () {
+    nameInput.style.borderColor = "";
+  });
   saveBtn.addEventListener("click", function () {
     var name = nameInput.value.trim();
     if (!name) {
       nameInput.style.borderColor = "var(--error)";
       return;
     }
+    // Protection double-submit : ignorer les clics répétés pendant l'écriture
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     var data = { name: name, instructions: instrTA.value, color: selectedColor };
     if (isEdit) data.id = proj.id;
-    saveProjectData(data).then(function (np) {
-      overlay.remove();
-      if (!isEdit && np) activateProject(np.id);
-    });
+    saveProjectData(data)
+      .then(function (np) {
+        overlay.remove();
+        if (!isEdit && np) activateProject(np.id);
+      })
+      .catch(function (err) {
+        // Ne pas avaler l'erreur : réactiver le bouton et prévenir l'utilisateur
+        saveBtn.disabled = false;
+        alert(t("chat.project.saveError", { msg: String(err) }));
+      });
   });
   ftr.appendChild(saveBtn);
   modal.appendChild(hdr);
@@ -1874,6 +1886,13 @@ function openSkillEditorModal(skill) {
     (skill ? escapeHtml(skill.content) : "") +
     "</textarea>";
   var contentTA = contentField.querySelector("textarea");
+  // Réinitialiser le surlignage d'erreur dès que l'utilisateur corrige le champ
+  titleInput.addEventListener("input", function () {
+    titleInput.style.borderColor = "";
+  });
+  contentTA.addEventListener("input", function () {
+    contentTA.style.borderColor = "";
+  });
   var ftr = document.createElement("div");
   ftr.className = "oh-modal-ftr";
   if (isEdit) {
@@ -1917,6 +1936,9 @@ function openSkillEditorModal(skill) {
       contentTA.style.borderColor = "var(--error)";
       return;
     }
+    // Protection double-submit : ignorer les clics répétés pendant l'écriture
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     window.openhub
       .saveSkill({ filename: skill ? skill.filename : undefined, title, content })
       .then(function () {
@@ -1925,6 +1947,7 @@ function openSkillEditorModal(skill) {
         renderSkillsModal();
       })
       .catch(function (err) {
+        saveBtn.disabled = false;
         alert(t("chat.skills.saveError", { msg: String(err) }));
       });
   });
