@@ -241,33 +241,7 @@
       });
     });
 
-    // Google login
-    var btnGoogle = document.getElementById("ob-google-login");
-    if (btnGoogle) {
-      btnGoogle.addEventListener("click", async function () {
-        if (!window.openhub) return;
-        btnGoogle.disabled = true;
-        btnGoogle.textContent = window.t ? window.t("gemini.connecting") : "Connecting…";
-        try {
-          await window.openhub.geminiLogin();
-          var status = await window.openhub.geminiAuthStatus();
-          btnGoogle.textContent =
-            status && status.email
-              ? window.t
-                ? window.t("gemini.connectedWith", { email: status.email })
-                : "Connected: " + status.email
-              : window.t
-                ? window.t("gemini.connected")
-                : "Connected";
-          refreshModelSelects();
-        } catch {
-          btnGoogle.textContent = window.t
-            ? window.t("gemini.connectFailed")
-            : "Connection failed";
-          btnGoogle.disabled = false;
-        }
-      });
-    }
+    // Google login — désactivé depuis le 18 juin 2026. opencode auth login dans le terminal.
 
     // Reveal buttons
     document

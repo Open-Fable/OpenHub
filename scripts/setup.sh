@@ -200,7 +200,7 @@ if [ -f "$ROOT/package.json" ]; then
   if [ -d "$ROOT/node_modules" ]; then
     info "node_modules déjà présent — vérification rapide..."
     # Juste vérifier que les dépendances critiques sont là
-    if [ ! -d "$ROOT/node_modules/express" ] || [ ! -d "$ROOT/node_modules/keytar" ]; then
+    if [ ! -d "$ROOT/node_modules/express" ]; then
       warn "Dépendances manquantes — réinstallation..."
       cd "$ROOT" && npm install
     fi

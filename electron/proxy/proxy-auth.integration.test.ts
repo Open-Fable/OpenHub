@@ -57,14 +57,6 @@ vi.mock("electron", () => ({
   app: { getPath: vi.fn(() => "/tmp/openhub-proxy-auth-test") },
 }));
 
-vi.mock("keytar", () => ({
-  default: {
-    getPassword: vi.fn(() => Promise.resolve(null)),
-    setPassword: vi.fn(() => Promise.resolve()),
-    deletePassword: vi.fn(() => Promise.resolve(true)),
-  },
-}));
-
 vi.mock("../project-store.js", () => ({
   getActiveProject: vi.fn(() => null),
   getProjectById: vi.fn(() => null),

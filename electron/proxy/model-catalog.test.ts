@@ -6,14 +6,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // booting the Express server or touching the real keychain.
 // ---------------------------------------------------------------------------
 
-vi.mock("keytar", () => ({
-  default: {
-    getPassword: vi.fn(() => Promise.resolve(null)),
-    setPassword: vi.fn(() => Promise.resolve()),
-    deletePassword: vi.fn(() => Promise.resolve(true)),
-  },
-}));
-
 vi.mock("fs", () => ({
   promises: {
     readFile: vi.fn(async (p: string) => {

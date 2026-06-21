@@ -1545,7 +1545,7 @@ ipcHandle(
       models: string[];
     }>;
 
-    // Compare old and new providers to delete removed keys from Keychain
+    // Compare old and new providers to delete removed keys from secrets.enc
     const { deleteSecret } = await import("./keychain.js");
     for (const old of customProviders) {
       if (!validatedList.some((p) => p.id === old.id)) {

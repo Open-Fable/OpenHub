@@ -4,14 +4,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Mocks — declared before any SUT import so vi.mock hoisting works
 // ---------------------------------------------------------------------------
 
-vi.mock("keytar", () => ({
-  default: {
-    getPassword: vi.fn(() => Promise.resolve(null)),
-    setPassword: vi.fn(() => Promise.resolve()),
-    deletePassword: vi.fn(() => Promise.resolve(true)),
-  },
-}));
-
 vi.mock("express", () => {
   const app = {
     use: vi.fn(),

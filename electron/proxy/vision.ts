@@ -89,7 +89,7 @@ export function shouldBypassVisionProxy(modelName: string): boolean {
 
 /**
  * Lit la configuration de vision depuis settings.json
- * Accepte une URL optionnelle pour écraser celle par défaut (provenant du Keychain)
+ * Accepte une URL optionnelle pour écraser celle par défaut (depuis les réglages)
  */
 export async function getVisionConfig(
   overrideOllamaUrl?: string | null,

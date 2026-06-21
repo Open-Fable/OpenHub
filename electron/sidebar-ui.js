@@ -365,54 +365,8 @@ function showSaveToast(msg) {
   }, 1800);
 }
 
-// ── Google Gemini OAuth login ──
-function setGeminiStatus(connected, email) {
-  var statusEl = document.getElementById("google-login-status");
-  var btn = document.getElementById("btn-google-login");
-  if (statusEl) {
-    statusEl.textContent = connected
-      ? email
-        ? t("gemini.connectedWith", { email: email })
-        : t("gemini.connected")
-      : t("gemini.disconnected");
-  }
-  if (btn) btn.textContent = connected ? t("gemini.reconnect") : t("gemini.connect");
-}
-
-function loadGeminiAuthStatus() {
-  if (!window.openhub || !window.openhub.geminiAuthStatus) return;
-  window.openhub
-    .geminiAuthStatus()
-    .then(function (s) {
-      setGeminiStatus(!!(s && s.connected), s && s.email);
-    })
-    .catch(function () {});
-}
-
-(function wireGeminiLogin() {
-  var btn = document.getElementById("btn-google-login");
-  if (!btn || !window.openhub || !window.openhub.geminiLogin) return;
-  btn.addEventListener("click", function () {
-    btn.disabled = true;
-    var prev = btn.textContent;
-    btn.textContent = t("gemini.connecting");
-    window.openhub
-      .geminiLogin()
-      .then(function (res) {
-        setGeminiStatus(true, res && res.email);
-        showSaveToast(t("gemini.connectedToast"));
-      })
-      .catch(function (err) {
-        btn.textContent = prev;
-        var raw = err && err.message ? String(err.message) : t("gemini.connectFailed");
-        // Strip Electron's "Error invoking remote method '…': Error: " wrapper.
-        showSaveToast(raw.split("Error: ").pop());
-      })
-      .finally(function () {
-        btn.disabled = false;
-      });
-  });
-})();
+// Google Gemini OAuth — désactivé depuis le 18 juin 2026.
+// Utiliser `opencode auth login` dans le terminal à la place.
 
 // ── Config panel ──
 var configFocusTrigger = null;
@@ -474,7 +428,6 @@ function openConfig() {
   loadModelsUI();
   loadMemoryUI();
   loadCacheMetrics();
-  loadGeminiAuthStatus();
   // Adapt updates pane based on packaged vs dev mode
   if (window.openhub.getAppMode) {
     window.openhub

@@ -1610,7 +1610,7 @@
               <rect x="3" y="11" width="18" height="11" rx="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
             </svg>
-            <span data-i18n="cfg.nav.hint">Keychain macOS</span>
+            <span>Secrets</span>
           </div>
         </nav>
 
@@ -1619,8 +1619,8 @@
           <header class="config-main-header">
             <div class="config-main-heading">
               <h2 id="config-section-title" data-i18n="cfg.tab.keys">Clés API</h2>
-              <p id="config-section-desc" data-i18n="cfg.keys.desc">
-                Stockées en sécurité dans le Keychain macOS.
+              <p id="config-section-desc">
+                Chiffrées dans ~/Library/Application Support/openhub/secrets.enc (AES-256-GCM).
               </p>
             </div>
             <button
@@ -1878,21 +1878,9 @@
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
-                      <label class="setting-label" for="btn-google-login"
-                        >Google Gemini</label
-                      >
-                      <p class="setting-desc" id="google-login-status" data-i18n="gemini.disconnected">
-                        Non connecté
-                      </p>
+                      <label class="setting-label">Google Gemini</label>
+                      <p class="setting-desc">Pour utiliser Google Gemini, lancez la commande <code>opencode auth login</code> dans votre terminal.</p>
                     </div>
-                    <button
-                      type="button"
-                      class="btn-update primary"
-                      id="btn-google-login"
-                      data-i18n="gemini.connect"
-                    >
-                      Se connecter avec Google
-                    </button>
                   </div>
                 </div>
               </fieldset>
@@ -2650,9 +2638,8 @@
               <div class="ob-prefs-row">
                 <div class="ob-prefs-row-text">
                   <span class="ob-prefs-label">Google Gemini</span>
+                  <span class="ob-prefs-desc">Pour utiliser Google Gemini, lancez la commande <code>opencode auth login</code> dans votre terminal.</span>
                 </div>
-                <button class="ob-btn ob-btn--outline" id="ob-google-login"
-                        data-i18n="onboarding.prefs.google">Se connecter avec Google</button>
               </div>
             </div>
 
