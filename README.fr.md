@@ -26,7 +26,7 @@ Un espace de travail IA local : orchestre une équipe d'agents qui produit un vr
 
 ## Pourquoi OpenHub ?
 
-Les outils IA sont des silos. Ils tournent dans des apps séparées avec leurs propres clés et mémoire. Rien ne suit quand tu changes de fenêtre. OpenHub met cinq outils dans une seule fenêtre macOS — mémoire partagée, contexte projet partagé, un seul proxy LLM. Les clés vont dans le Trousseau une fois. C'est tout.
+Les outils IA sont des silos. Ils tournent dans des apps séparées avec leurs propres clés et mémoire. Rien ne suit quand tu changes de fenêtre. OpenHub met cinq outils dans une seule fenêtre macOS avec mémoire partagée, contexte projet partagé et un seul proxy LLM. Les clés sont chiffrées dans `~/Library/Application Support/openhub/secrets.enc` une fois. C'est tout.
 
 **Cinq slots dans la sidebar :** Chat · Code · Work · Design · Orchestrateur (plus un panneau Config).
 
@@ -42,7 +42,7 @@ En coulisses, un **proxy LLM** unique sur `127.0.0.1:9999` route tout via un seu
 
 Ton **profil et tes faits clés** suivent d'une session à l'autre. Le système les extrait automatiquement après chaque chat avec des modèles Ollama locaux (Qwen) et une déduplication sémantique de Jaccard.
 
-**Sécurité :** les clés API sont dans le Trousseau macOS — pas de stockage disque. Les WebViews sont sandboxées avec auth Bearer localhost.
+**Sécurité :** les clés API sont chiffrées dans `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM). Les WebViews sont sandboxées avec auth Bearer localhost.
 
 ### Captures d'écran
 
@@ -123,7 +123,7 @@ Attrape le dernier `.dmg` depuis les [GitHub Releases](https://github.com/Open-F
 ### Premier lancement
 
 1. Ouvre le panneau **Config** (icône engrenage dans la sidebar)
-2. Ajoute tes clés API (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — dans le Trousseau
+2. Ajoute tes clés API (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — chiffrées dans `~/Library/Application Support/openhub/secrets.enc`
 3. Choisis tes modèles
 
 > [!TIP]
@@ -158,7 +158,7 @@ Compiler depuis les sources, corriger un bug, ajouter une fonctionnalité — vo
 
 ## Sécurité
 
-- Les clés vont dans le Trousseau macOS via `keytar`. Pas de stockage disque.
+- Les clés sont chiffrées dans `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM).
 - Le proxy tourne sur `127.0.0.1:9999` avec auth Bearer par session.
 - Les WebViews sont sandboxées : `contextIsolation`, `sandbox`, sans `nodeIntegration`.
 - Les overrides sont CSS/JS uniquement — le code upstream reste inchangé.

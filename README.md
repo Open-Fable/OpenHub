@@ -28,7 +28,7 @@ A local AI workspace: orchestrate a team of agents that builds real deliverables
 
 ## Why OpenHub?
 
-AI tools are silos. They run in separate apps with their own API keys and memory. Nothing carries over when you switch windows. OpenHub puts five tools in one macOS window — shared memory, shared project context, a single LLM proxy. Keys go in the Keychain once. That's it.
+AI tools are silos. They run in separate apps with their own API keys and memory. Nothing carries over when you switch windows. OpenHub puts five tools in one macOS window — shared memory, shared project context, a single LLM proxy. Keys are encrypted to `~/Library/Application Support/openhub/secrets.enc` once. That's it.
 
 **Five sidebar slots:** Chat · Code · Work · Design · Orchestrator (plus a Config panel).
 
@@ -44,7 +44,7 @@ Behind the scenes, a **single LLM proxy** at `127.0.0.1:9999` routes everything 
 
 Your **profile and key facts** carry over between sessions. The system extracts them automatically after each chat using local Ollama models (Qwen) with Jaccard semantic deduplication.
 
-**Security**: API credentials live in the macOS Keychain — no disk storage. WebViews are sandboxed with localhost-only Bearer auth.
+**Security**: API credentials are encrypted to `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM). WebViews are sandboxed with localhost-only Bearer auth.
 
 ### Screenshots
 
@@ -125,7 +125,7 @@ Grab the latest `.dmg` from [GitHub Releases](https://github.com/Open-Fable/Open
 ### First launch
 
 1. Open the **Config** panel (gear icon in the sidebar)
-2. Add your API keys (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — stored in the Keychain
+2. Add your API keys (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — encrypted to `~/Library/Application Support/openhub/secrets.enc`
 3. Pick your models
 
 > [!TIP]
@@ -160,7 +160,7 @@ Build from source, fix a bug, add a feature — see [docs/CONTRIBUTING.md](docs/
 
 ## Security
 
-- Keys go in the macOS Keychain via `keytar`. No disk storage.
+- Keys are encrypted to `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM).
 - The proxy runs on `127.0.0.1:9999` with per-session Bearer auth.
 - WebViews are sandboxed: `contextIsolation`, `sandbox`, no `nodeIntegration`.
 - Overrides are CSS/JS only — upstream source stays unmodified.
