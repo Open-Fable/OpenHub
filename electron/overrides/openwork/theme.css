@@ -82,3 +82,10 @@ samp,
 [class*="mono"] {
   font-family: "SF Mono", "Menlo", "Monaco", "Courier New", monospace !important;
 }
+
+/* Disable window dragging from inside the webview to restore clickability to header elements */
+html,
+body,
+* {
+  -webkit-app-region: no-drag !important;
+}

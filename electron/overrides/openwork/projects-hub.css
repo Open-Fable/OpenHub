@@ -16,7 +16,6 @@
     "SF Pro Text",
     sans-serif
   );
-  animation: fadeIn var(--duration-250, 0.2s) var(--ease-out);
 }
 
 #oh-projects-hub-overlay.oh-visible,
@@ -735,4 +734,305 @@
 #oh-project-detail-view .project-detail-danger-label {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+/* ── Boutons oh-btn (manquants dans le commit 13a311e) ── */
+.oh-btn-primary {
+  background: var(--accent-primary, #14b8a6);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--radius-lg, 12px);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.oh-btn-primary:hover {
+  background: var(--accent-hover, #2dd4bf);
+}
+
+.oh-btn-ghost {
+  background: transparent;
+  color: var(--text-muted, #666666);
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+}
+
+.oh-btn-ghost:hover {
+  color: var(--text-primary, #ececec);
+  background: var(--bg-fill-tertiary, rgba(255, 255, 255, 0.05));
+}
+
+.oh-btn,
+.oh-btn-danger {
+  background: transparent;
+  color: var(--error, #ef4444);
+  border: 1px solid var(--error, #ef4444);
+  padding: 8px 16px;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.oh-btn-danger:hover {
+  background: var(--error, #ef4444);
+  color: white;
+}
+
+/* ── Hub buttons ghost & danger (manquants) ── */
+#oh-projects-hub-overlay .hub-btn-ghost {
+  background: transparent;
+  color: var(--text-muted, #666);
+  border: none;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+#oh-projects-hub-overlay .hub-btn-ghost:hover {
+  background: var(--bg-surface, #1e1e1e);
+  color: var(--text-primary, #ececec);
+}
+
+#oh-projects-hub-overlay .hub-btn-danger {
+  background: var(--error-subtle, rgba(239, 68, 68, 0.1));
+  color: var(--error, #ef4444);
+  border: 1px solid var(--error, #ef4444);
+  padding: 7px 14px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#oh-projects-hub-overlay .hub-btn-danger:hover {
+  background: var(--error, #ef4444);
+  color: white;
+}
+
+/* ── Detail view — title wrapper ── */
+#oh-project-detail-view .project-details-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+/* ── Context panel (detail sections) ── */
+#oh-project-detail-view .context-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: none;
+}
+
+/* ── Projets Hub — classes globales perdues ── */
+#oh-projects-hub-overlay .oh-hub-title {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+#oh-projects-hub-overlay .oh-project-card-name {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+#oh-projects-hub-overlay .oh-project-meta-row {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+#oh-projects-hub-overlay .oh-gen-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Etats de carte manquants ── */
+#oh-projects-hub-overlay .p-card-pinned {
+  border-color: var(--border-default, #2a2a2a);
+}
+#oh-projects-hub-overlay .p-card-muted {
+  min-height: 60px;
+  opacity: 0.65;
+}
+#oh-projects-hub-overlay .p-card-muted:hover {
+  opacity: 1;
+}
+
+/* ── Vue liste ── */
+#oh-projects-hub-overlay .projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#oh-projects-hub-overlay .projects-list .p-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 0;
+  padding: 10px 14px;
+}
+#oh-projects-hub-overlay .projects-list .p-card-top {
+  flex-shrink: 0;
+}
+#oh-projects-hub-overlay .projects-list .p-card-icon {
+  width: 30px;
+  height: 30px;
+}
+#oh-projects-hub-overlay .projects-list .p-card-icon svg {
+  width: 14px;
+  height: 14px;
+}
+#oh-projects-hub-overlay .projects-list .p-card-body {
+  margin-top: 0;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+#oh-projects-hub-overlay .projects-list .p-card-name {
+  flex: 1;
+  min-width: 0;
+  -webkit-line-clamp: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: block;
+}
+#oh-projects-hub-overlay .projects-list .p-card-meta {
+  flex-shrink: 0;
+  gap: 8px;
+}
+#oh-projects-hub-overlay .projects-list .p-card-menu {
+  flex-shrink: 0;
+}
+
+/* ── Boutons de vue grille/liste ── */
+#oh-projects-hub-overlay .hub-view-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#oh-projects-hub-overlay .hub-view-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--text-muted, #666);
+  transition: all 0.15s;
+}
+#oh-projects-hub-overlay .hub-view-btn:hover {
+  color: var(--text-primary, #ececec);
+  background: var(--bg-surface, #1e1e1e);
+}
+#oh-projects-hub-overlay .hub-view-btn-active {
+  color: var(--text-primary, #ececec);
+  background: var(--bg-surface, #1e1e1e);
+  border-color: var(--border-subtle, #1f1f1f);
+}
+#oh-projects-hub-overlay .hub-view-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Contexte menu actif ── */
+#oh-projects-hub-overlay .hub-ctx-item-active {
+  color: var(--accent-primary, #14b8a6);
+}
+#oh-projects-hub-overlay .hub-ctx-item-active svg {
+  color: var(--accent-primary, #14b8a6);
+}
+
+/* ── Toast notifications (identiques au Chat) ── */
+#oh-projects-hub-overlay .oh-toast-wrap {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+#oh-projects-hub-overlay .oh-toast {
+  padding: 10px 20px;
+  border-radius: var(--radius-lg, 12px);
+  font-size: 13px;
+  font-family: var(--font-sans, -apple-system, sans-serif);
+  color: var(--bg-deepest, #0a0a0a);
+  background: var(--text-primary, #ececec);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  animation: ohToastIn 0.25s ease-out;
+  white-space: nowrap;
+}
+#oh-projects-hub-overlay .oh-toast-success {
+  background: var(--success, #22c55e);
+  color: white;
+}
+#oh-projects-hub-overlay .oh-toast-error {
+  background: var(--error, #ef4444);
+  color: white;
+}
+#oh-projects-hub-overlay .oh-toast-out {
+  animation: ohToastOut 0.2s ease-in forwards;
+}
+@keyframes ohToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ohToastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+/* ── Accessibilité ── */
+#oh-projects-hub-overlay .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

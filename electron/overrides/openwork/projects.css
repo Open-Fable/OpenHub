@@ -45,7 +45,6 @@
   justify-content: center;
   z-index: 99999;
   backdrop-filter: blur(8px);
-  animation: fadeIn var(--duration-250) var(--ease-out);
 }
 
 #oh-project-modal {

@@ -398,6 +398,24 @@
   document.addEventListener("click", async (e) => {
     const target = e.target;
 
+    // Toggle context menu on left-click of three dots button
+    const menuBtn = target.closest(".p-card-menu");
+    if (menuBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      const pid = menuBtn.dataset.pid;
+      const p = cachedProjects.find((x) => x.id === pid);
+      if (p) {
+        const menu = document.getElementById("hubCtxMenu");
+        if (menu && menu.style.display === "block" && hubCtxTarget === p) {
+          hubHideCtxMenu();
+        } else {
+          hubShowCtxMenu(p, menuBtn);
+        }
+      }
+      return;
+    }
+
     // Selection mode
     if (target.id === "oh-select-mode-btn" || target.closest("#oh-select-mode-btn")) {
       enterSelectMode();
@@ -810,7 +828,6 @@
       t("ctxDelete") +
       "</button>";
 
-    hubCtxAnchor = anchorEl;
     const rect = anchorEl.getBoundingClientRect();
     const hubEl = document.getElementById("oh-projects-hub-overlay");
     const hubRect = hubEl
@@ -827,7 +844,6 @@
     const menu = document.getElementById("hubCtxMenu");
     if (menu) menu.style.display = "none";
     hubCtxTarget = null;
-    hubCtxAnchor = null;
   }
 
   async function hubHandleCtxAction(action, extraValue) {
