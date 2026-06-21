@@ -20,6 +20,10 @@ A local AI workspace: chat with any model, orchestrate a team of agents that bui
 
 </div>
 
+<p align="center">
+  <img src="screen_github/apercu_general.png" alt="OpenHub Dashboard Overview" width="100%">
+</p>
+
 ---
 
 ## Why OpenHub?
@@ -30,15 +34,78 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 
 ## Features
 
-|                              |                                                                                                                                                       |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Multi-agent orchestrator** | Give it a goal and a DAG of agents will plan, build, and verify the result (site, report, code library...). See [the deep dive](docs/ORCHESTRATOR.md) |
-| **Built-in chat**            | Talk to any model with history, attachments, web search, and per-model reasoning effort                                                               |
-| **3 integrated tools**       | OpenCode (code agent), OpenWork (structured work), Open Design (visual mockups) in a single sidebar that keeps each view's state                      |
-| **Unified LLM proxy**        | One endpoint (`127.0.0.1:9999`) routing to Anthropic, OpenAI, OpenRouter, Ollama, and Google Gemini                                                   |
-| **Persistent memory**        | Profile and tagged facts that carry over between sessions                                                                                             |
-| **Project management**       | Multiple projects with custom instructions, injected into the AI context                                                                              |
-| **Secure by default**        | API keys in macOS Keychain, never on disk. Sandboxed WebViews. Localhost-only proxy with Bearer auth                                                  |
+<table>
+<tr><td><b>Multi-agent orchestrator</b></td><td>Give it a goal and a DAG of agents will plan, build, and verify the result (website, data report, ebook, code library...). Features a deterministic Quality Gate with automatic corrective loops and watchdogs. See <a href="docs/ORCHESTRATOR.md">the deep dive</a>.</td></tr>
+<tr><td><b>Built-in chat UI</b></td><td>Interact with any model (Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini) with session history, file attachments, automatic Brave web search, and reasoning effort controls.</td></tr>
+<tr><td><b>3 integrated tools</b></td><td>Switch between OpenCode (code-agent server), OpenWork (structured projects workspace), and Open Design (visual UI mockups) in a single sidebar that preserves execution state and session memory.</td></tr>
+<tr><td><b>Unified LLM proxy</b></td><td>A single OpenAI-compatible local endpoint (<code>127.0.0.1:9999</code>) routing all requests, enforcing a Stable Prefix Strategy for DeepSeek/Anthropic prompt caching, and normalizing tool schemas.</td></tr>
+<tr><td><b>Persistent context memory</b></td><td>Your personal profile and facts carry over between sessions. Extracted automatically post-chat using local Ollama models (Qwen) with Jaccard semantic deduplication.</td></tr>
+<tr><td><b>Keychain security</b></td><td>API credentials are stored securely in the macOS Keychain—never written to disk or local storage. Sandboxed WebViews with localhost-only tokenized Bearer authorization.</td></tr>
+</table>
+
+### Visual Walkthrough (Slots & Tabs)
+
+<details>
+<summary>💬 Chat & Projects Interface</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_chat.png" alt="Chat Slot" width="90%">
+</p>
+<p align="center">
+  <img src="screen_github/projet_dans_chat.png" alt="Project Context in Chat" width="90%">
+</p>
+</details>
+
+<details>
+<summary>🤖 Multi-Agent Orchestrator DAG</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_orchestrateur.png" alt="Orchestrator Slot" width="90%">
+</p>
+<p align="center">
+  <img src="screen_github/orchestrateur_avec_un_projet_Actife.png" alt="Active Project in Orchestrator" width="90%">
+</p>
+<p align="center">
+  <img src="screen_github/workflow.png" alt="Active Orchestration Workflow Diagram" width="90%">
+</p>
+</details>
+
+<details>
+<summary>💻 Code Agent (OpenCode)</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_code.png" alt="Code Slot" width="90%">
+</p>
+</details>
+
+<details>
+<summary>💼 Workspace (OpenWork) & Project Hub</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_work.png" alt="Work Slot" width="90%">
+</p>
+</details>
+
+<details>
+<summary>🎨 Visual Mockups (Open Design)</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_Design.png" alt="Design Slot" width="90%">
+</p>
+</details>
+
+<details>
+<summary>⚙️ Configurations & API Keys</summary>
+<br>
+<p align="center">
+  <img src="screen_github/parametre.png" alt="Parameters/Config Panel" width="90%">
+</p>
+</details>
+
+> [!TIP]
+> **Recommended GitHub Repository Topics:**
+> Add these tags in your repository settings on GitHub to improve search discoverability:
+> `electron`, `macos`, `ai-agent`, `multi-agent`, `local-llm`, `prompt-caching`, `llm-proxy`, `developer-tools`.
 
 ---
 

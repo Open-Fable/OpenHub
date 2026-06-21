@@ -18,6 +18,10 @@ Un espace de travail IA local : discute avec n'importe quel modèle, orchestre u
 
 </div>
 
+<p align="center">
+  <img src="screen_github/apercu_general.png" alt="Aperçu de l'interface OpenHub" width="100%">
+</p>
+
 ---
 
 ## Pourquoi OpenHub ?
@@ -28,15 +32,78 @@ La plupart des outils IA tournent dans des fenêtres séparées avec des clés A
 
 ## Fonctionnalités
 
-|                                |                                                                                                                                                                         |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Orchestrateur multi-agents** | Donne-lui un objectif et un DAG d'agents planifie, construit et vérifie le résultat (site, rapport, librairie de code...). Voir [le deep-dive](docs/ORCHESTRATOR.fr.md) |
-| **Chat intégré**               | Discute avec n'importe quel modèle : historique, pièces jointes, recherche web, effort de raisonnement par modèle                                                       |
-| **3 outils intégrés**          | OpenCode (agent de code), OpenWork (travail structuré), Open Design (maquettes visuelles) dans une seule sidebar qui garde l'état de chaque vue                         |
-| **Proxy LLM unifié**           | Un seul endpoint (`127.0.0.1:9999`) qui route vers Anthropic, OpenAI, OpenRouter, Ollama et Google Gemini                                                               |
-| **Mémoire persistante**        | Profil et faits taggés qui persistent entre les sessions                                                                                                                |
-| **Gestion de projets**         | Projets multiples avec instructions personnalisées, injectées dans le contexte IA                                                                                       |
-| **Sécurisé par défaut**        | Clés API dans le Trousseau macOS, jamais sur disque. WebViews sandboxées. Proxy localhost-only avec auth Bearer                                                         |
+<table>
+<tr><td><b>Orchestrateur multi-agents</b></td><td>Donne-lui un objectif et un DAG d'agents planifie, construit et vérifie le résultat (site web, rapport de données, ebook, librairie de code...). Dispose d'une Quality Gate déterministe avec boucles correctives automatiques et watchdogs. Voir <a href="docs/ORCHESTRATOR.fr.md">le guide détaillé</a>.</td></tr>
+<tr><td><b>Chat intégré</b></td><td>Discute avec n'importe quel modèle (Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini) avec historique des sessions, pièces jointes, recherche web Brave automatique et contrôle de l'effort de raisonnement.</td></tr>
+<tr><td><b>3 outils intégrés</b></td><td>Bascule entre OpenCode (agent de code), OpenWork (travail structuré) et Open Design (maquettes visuelles) dans une seule sidebar qui préserve l'état d'exécution et la mémoire de session.</td></tr>
+<tr><td><b>Proxy LLM unifié</b></td><td>Un seul endpoint local compatible OpenAI (<code>127.0.0.1:9999</code>) qui route toutes les requêtes, applique une stratégie de préfixe stable pour le cache prompt DeepSeek/Anthropic, et normalise les schémas d'outils.</td></tr>
+<tr><td><b>Mémoire persistante</b></td><td>Ton profil utilisateur et tes faits clés persistent d'une session à l'autre. Extraits automatiquement après chaque chat via des modèles locaux Ollama (Qwen) avec déduplication sémantique de Jaccard.</td></tr>
+<tr><td><b>Sécurité Trousseau (Keychain)</b></td><td>Clés d'API stockées de manière sécurisée dans le Trousseau macOS—jamais écrites sur le disque ou en stockage local. WebViews sandboxées et proxy local protégé par un jeton Bearer à usage unique.</td></tr>
+</table>
+
+### Galerie Interactive (Slots & Onglets)
+
+<details>
+<summary>💬 Interface de Chat & Projets</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_chat.png" alt="Onglet Chat" width="90%">
+</p>
+<p align="center">
+  <img src="screen_github/projet_dans_chat.png" alt="Sélection de projet dans le Chat" width="90%">
+</p>
+</details>
+
+<details>
+<summary>🤖 DAG de l'Orchestrateur Multi-Agents</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_orchestrateur.png" alt="Onglet Orchestrateur" width="90%">
+</p>
+<p align="center">
+  <img src="screen_github/orchestrateur_avec_un_projet_Actife.png" alt="Projet actif dans l'Orchestrateur" width="90%">
+</p>
+<p align="center">
+  <img src="screen_github/workflow.png" alt="Schéma d'exécution du workflow" width="90%">
+</p>
+</details>
+
+<details>
+<summary>💻 Agent de Code (OpenCode)</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_code.png" alt="Onglet Code" width="90%">
+</p>
+</details>
+
+<details>
+<summary>💼 Espace de Travail (OpenWork) & Hub Projets</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_work.png" alt="Onglet Work" width="90%">
+</p>
+</details>
+
+<details>
+<summary>🎨 Maquettes Visuelles (Open Design)</summary>
+<br>
+<p align="center">
+  <img src="screen_github/onglet_Design.png" alt="Onglet Design" width="90%">
+</p>
+</details>
+
+<details>
+<summary>⚙️ Configurations & Clés d'API</summary>
+<br>
+<p align="center">
+  <img src="screen_github/parametre.png" alt="Panneau Config" width="90%">
+</p>
+</details>
+
+> [!TIP]
+> **Tags GitHub recommandés (Topics) :**
+> Ajoute ces tags dans les paramètres de ton dépôt sur GitHub pour améliorer sa découvrabilité :
+> `electron`, `macos`, `ai-agent`, `multi-agent`, `local-llm`, `prompt-caching`, `llm-proxy`, `developer-tools`.
 
 ---
 

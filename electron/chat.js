@@ -2319,9 +2319,14 @@ async function sendMessage() {
     apiMessages.unshift({
       role: "system",
       content:
-        "[CAPACITES ARTIFACTS]\nTu peux générer directement des fichiers en produisant un bloc de code avec le tag de langage approprié. L'interface utilisateur affichera un bouton Aperçu, un bouton PDF et un bouton Télécharger automatiquement. Voici les formats supportés :\n- HTML : ```html\n- Markdown : ```markdown\n- SVG : ```svg\n- CSV : ```csv\n- Texte brut : ```txt\nNe dis JAMAIS que tu ne peux pas générer ces fichiers. Produis simplement le bloc de code.",
+        "[CAPACITES ARTIFACTS]\nTu peux générer des fichiers (HTML, Markdown, SVG, CSV, ou texte brut) en produisant un bloc de code avec le tag de langage approprié (```html, ```markdown, etc.). L'interface affichera un bouton de téléchargement et d'aperçu.\nCONSIGNE IMPORTANTE : Ne génère un bloc de fichier QUE si l'utilisateur te le demande explicitement ou si c'est réellement nécessaire (par exemple, pour du code, un rapport structuré ou un document). Pour les discussions simples, salutations ou explications courantes, réponds toujours en texte brut normal sans utiliser de bloc de fichier.",
     });
-    var body = { model: state.selectedModel, stream: true, messages: apiMessages };
+    var body = {
+      model: state.selectedModel,
+      stream: true,
+      messages: apiMessages,
+      bypassInjection: true,
+    };
     if (isAnthropic) body.max_tokens = 4096;
     if (modelSupportsReasoningEffort(state.selectedModel))
       body.reasoning_effort = getModelEffort(state.selectedModel) || "medium";

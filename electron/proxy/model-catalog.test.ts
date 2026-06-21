@@ -120,11 +120,11 @@ describe("getFullModelCatalog", () => {
   it("tags every entry with a recognised source", () => {
     const sources = new Set(getFullModelCatalog().map((c) => c.source));
 
-    expect(sources).toContain("direct");
+    expect(sources).toContain("anthropic");
     expect(sources).toContain("gemini");
     expect(sources).toContain("openrouter");
     for (const s of sources) {
-      expect(["direct", "gemini", "openrouter"]).toContain(s);
+      expect(["anthropic", "gemini", "openrouter"]).toContain(s);
     }
   });
 });

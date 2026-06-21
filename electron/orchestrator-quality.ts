@@ -1852,7 +1852,7 @@ export function buildAutoFeedback(verdict: QualityVerdict): string {
 export function buildSyntheticRun(
   task: string,
   orchId: string,
-  statuses: Readonly<Record<string, "done" | "error" | "skipped">>,
+  statuses: Readonly<Record<string, "done" | "error" | "skipped" | "inactive">>,
   results: ReadonlyMap<string, string>,
   linked: readonly Project[],
 ): OrchRun {

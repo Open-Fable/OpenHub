@@ -242,7 +242,7 @@ async function fetchEmail(accessToken: string): Promise<string | undefined> {
 // ── Cloud Code Assist project resolution ────────────────────────────────────
 
 function buildUserAgent(): string {
-  return `GeminiCLI/0.45.1/gemini-code-assist (${platform()}; ${arch()}; terminal)`;
+  return `GeminiCLI/0.47.0/gemini-code-assist (${platform()}; ${arch()}; terminal)`;
 }
 
 function codeAssistHeaders(accessToken: string): Record<string, string> {

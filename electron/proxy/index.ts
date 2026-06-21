@@ -1342,7 +1342,10 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         // Lire AGENT-MEMORY.md et tenter de lire Graphify sur disque si absent du prompt
         let agentMemory = "";
         try {
-          const workspaceDir = getActiveWorkspaceDir();
+          let workspaceDir = getActiveWorkspaceDir();
+          if (project?.path && isSafeWorkspacePath(project.path)) {
+            workspaceDir = project.path;
+          }
           const agentMemPath = path.join(workspaceDir, "AGENT-MEMORY.md");
           agentMemory = await fs.readFile(agentMemPath, "utf-8");
 
@@ -1491,7 +1494,12 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         }
       }
 
-      if (finalRest.reasoning_effort && finalRest.reasoning_effort !== "none") {
+      // Ollama / Gemini / providers locaux ne supportent pas reasoning_effort ni thinking :
+      // on les purge dès maintenant, avant tout autre traitement.
+      if (provider === "ollama" || provider === "gemini") {
+        delete (finalRest as Record<string, unknown>).reasoning_effort;
+        delete (finalRest as Record<string, unknown>).thinking;
+      } else if (finalRest.reasoning_effort && finalRest.reasoning_effort !== "none") {
         const effort = finalRest.reasoning_effort as string;
 
         // --- Anthropic Mapping (thinking block) ---
@@ -1532,6 +1540,11 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
               (finalRest as Record<string, unknown>).include_reasoning = true;
             }
           }
+        }
+        // --- Fallback : provider inconnu — on ne risque rien en supprimant ---
+        else {
+          delete (finalRest as Record<string, unknown>).reasoning_effort;
+          delete (finalRest as Record<string, unknown>).thinking;
         }
       } else if (finalRest.reasoning_effort === "none") {
         delete (finalRest as Record<string, unknown>).reasoning_effort;
@@ -1827,6 +1840,18 @@ function sanitizeUpstreamError(raw: string): string {
     const parsed = JSON.parse(raw) as { error?: { message?: string } | string };
     const msg = typeof parsed.error === "string" ? parsed.error : parsed.error?.message;
     if (typeof msg === "string" && msg.length > 0) {
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes("3501") ||
+        lower.includes("license") ||
+        lower.includes("licence") ||
+        lower.includes("subscription")
+      ) {
+        return (
+          msg.slice(0, 220) +
+          " | Astuce: Mettez à jour avec 'npm install -g @google/gemini-cli@latest opencode-gemini-auth@latest' et reconnectez-vous dans l'onglet Config."
+        );
+      }
       return msg.slice(0, 300);
     }
   } catch {
@@ -1944,7 +1969,7 @@ function sanitizeGeminiSchema(schema: Record<string, unknown>): Record<string, u
 }
 
 function buildGeminiUserAgent(model: string): string {
-  return `GeminiCLI/0.45.1/${model} (${platform()}; ${arch()}; terminal)`;
+  return `GeminiCLI/0.47.0/${model} (${platform()}; ${arch()}; terminal)`;
 }
 
 function createActivityRequestId(): string {
@@ -2549,7 +2574,15 @@ export async function fetchOllamaModels(
 
     discoveredLocalModels.clear();
     for (const m of list) {
-      if (!STATIC_CATALOG_IDS.has(m.id)) {
+      const isCloudModel =
+        STATIC_CATALOG_IDS.has(m.id) ||
+        m.id.startsWith("gpt-") ||
+        m.id.startsWith("o1") ||
+        m.id.startsWith("o3") ||
+        m.id.startsWith("claude-") ||
+        m.id.startsWith("deepseek-") ||
+        m.id.startsWith("google/");
+      if (!isCloudModel) {
         discoveredLocalModels.add(m.id);
       }
     }

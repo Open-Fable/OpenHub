@@ -1072,7 +1072,9 @@ ${workspaceContext}
 AGENTS DISPONIBLES (${linkedProjects.length}) :
 ${agentList}
 
-RAPPEL : Respecte les rôles par type — "work" gère les couleurs/charte/contenu, "design" fait les maquettes APRÈS, "code" code le site DEPUIS les maquettes.
+RAPPEL : Adapte le pipeline au type de livrable.
+- Livrable WEB/APP (interface, site, SPA) → work (design system + contenu) → design (maquettes) → code (implémentation fidèle aux maquettes).
+- Livrable NON-WEB (librairie, API, CLI, rapport, ebook, données, slides, marketing) → N'impose PAS d'agent design ni de pipeline visuel. Assigne directement les rôles pertinents (recherche, work, code) selon ce que le livrable demande réellement.
 
 Analyse la tâche, puis assigne une tâche structurée à chaque agent avec assign_task. Quand tous ont une tâche, appelle finish_planning.`;
 }

@@ -259,6 +259,11 @@ function renderOrchChatHistory() {
       msg.role === "assistant" ? stripBlocks(msg.content) : msg.content;
     div.appendChild(bubble);
 
+    if (msg.role === "assistant" && msg.reasoning) {
+      updateReasoningPanel(bubble, msg.reasoning, false);
+      collapseReasoningPanel(bubble);
+    }
+
     if (msg.role === "user" || msg.role === "assistant") {
       div.appendChild(makeCopyButton(bubble));
     }
@@ -289,7 +294,7 @@ function addChatMessage(role, text) {
   return bubble;
 }
 
-function addMessageToConv(role, content) {
+function addMessageToConv(role, content, reasoning) {
   var conv = ensureConversation();
   if (role === "user" && conv.messages.length === 0) {
     var title = content.substring(0, 40);
@@ -298,7 +303,11 @@ function addMessageToConv(role, content) {
     document.getElementById("convTitle").textContent = title;
     renderConvDropdown();
   }
-  conv.messages.push({ role: role, content: content, timestamp: Date.now() });
+  var msg = { role: role, content: content, timestamp: Date.now() };
+  if (reasoning) {
+    msg.reasoning = reasoning;
+  }
+  conv.messages.push(msg);
   conv.updatedAt = Date.now();
   saveConversations();
 }
@@ -320,6 +329,51 @@ function showThinkingIndicator(bubble) {
 function removeThinkingIndicator(bubble) {
   var el = bubble.querySelector(".msg-thinking");
   if (el) el.remove();
+}
+
+function updateReasoningPanel(bubble, text, streaming) {
+  var parent = bubble.parentElement;
+  if (!parent) return;
+  var panel = parent.querySelector(".msg-reasoning");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "msg-reasoning";
+    if (streaming) panel.classList.add("msg-reasoning--streaming");
+    var header = document.createElement("div");
+    header.className = "msg-reasoning-header";
+    header.innerHTML =
+      '<svg viewBox="0 0 512 512" fill="none"><g stroke="var(--accent-primary,#14B8A6)" stroke-width="76" stroke-linecap="round" opacity="0.25"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/><path d="M 360.1 380.1 A 162 162 0 0 1 151.9 380.1"/><path d="M 96.5 284.1 A 162 162 0 0 1 200.6 103.8"/></g><g stroke="var(--accent-primary,#14B8A6)" stroke-width="76" stroke-linecap="round"><path d="M 311.4 103.8 A 162 162 0 0 1 415.5 284.1"/></g></svg>' +
+      "<span>" +
+      escapeHtml(t("proj.chat.reasoning")) +
+      "</span>" +
+      '<svg class="msg-reasoning-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    header.onclick = function () {
+      panel.classList.toggle("msg-reasoning--collapsed");
+    };
+    var content = document.createElement("div");
+    content.className = "msg-reasoning-content";
+    panel.appendChild(header);
+    panel.appendChild(content);
+    parent.insertBefore(panel, bubble);
+  }
+  var contentEl = panel.querySelector(".msg-reasoning-content");
+  contentEl.textContent = text;
+  if (streaming) {
+    panel.classList.add("msg-reasoning--streaming");
+    contentEl.scrollTop = contentEl.scrollHeight;
+  } else {
+    panel.classList.remove("msg-reasoning--streaming");
+  }
+}
+
+function collapseReasoningPanel(bubble) {
+  var parent = bubble.parentElement;
+  if (!parent) return;
+  var panel = parent.querySelector(".msg-reasoning");
+  if (panel) {
+    panel.classList.add("msg-reasoning--collapsed");
+    panel.classList.remove("msg-reasoning--streaming");
+  }
 }
 
 function stripBlocks(text) {
@@ -351,6 +405,8 @@ function sendChat() {
   var bubble = addChatMessage("assistant", "");
   showThinkingIndicator(bubble);
   var fullText = "";
+  var fullReasoning = "";
+  var responseStarted = false;
 
   var model = document.getElementById("assistantModelSelect").value;
   var proxyUrl = "http://127.0.0.1:9999/v1/orch/assistant";
@@ -422,18 +478,40 @@ function sendChat() {
           if (trimmed.startsWith("data:") && trimmed !== "data: [DONE]") {
             try {
               var parsed = JSON.parse(trimmed.slice(5));
-              var delta =
-                parsed.choices && parsed.choices[0] && parsed.choices[0].delta
-                  ? parsed.choices[0].delta.content || ""
-                  : "";
+              var delta = "";
+              var reasoningDelta = "";
+              if (parsed.type === "content_block_delta" && parsed.delta) {
+                if (parsed.delta.type === "thinking_delta")
+                  reasoningDelta = parsed.delta.thinking || "";
+                else delta = parsed.delta.text || "";
+              } else if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
+                delta = parsed.choices[0].delta.content || "";
+                var rd =
+                  parsed.choices[0].delta.reasoning_content ||
+                  parsed.choices[0].delta.reasoning;
+                if (typeof rd === "string") reasoningDelta = rd;
+              }
               if (parsed.error) {
                 fullText += t("proj.chat.streamError", { error: parsed.error });
                 continue;
               }
+              if (reasoningDelta) {
+                if (!fullReasoning) removeThinkingIndicator(bubble);
+                fullReasoning += reasoningDelta;
+                updateReasoningPanel(bubble, fullReasoning, true);
+                var container = document.getElementById("chatMessages");
+                if (container) container.scrollTop = container.scrollHeight;
+              }
               if (delta) {
+                if (!responseStarted && fullReasoning) {
+                  responseStarted = true;
+                  collapseReasoningPanel(bubble);
+                }
                 fullText += delta;
                 removeThinkingIndicator(bubble);
                 bubble.textContent = stripBlocks(fullText);
+                var container = document.getElementById("chatMessages");
+                if (container) container.scrollTop = container.scrollHeight;
               }
             } catch (e) {}
           }
@@ -472,7 +550,10 @@ function sendChat() {
         } catch (e) {}
       }
 
-      addMessageToConv("assistant", fullText);
+      if (fullReasoning) {
+        collapseReasoningPanel(bubble);
+      }
+      addMessageToConv("assistant", fullText, fullReasoning);
 
       if (window.openhub && window.openhub.notifyTaskDone) {
         window.openhub.notifyTaskDone("chat");
@@ -485,6 +566,9 @@ function sendChat() {
     })
     .catch(function (err) {
       removeThinkingIndicator(bubble);
+      if (fullReasoning) {
+        collapseReasoningPanel(bubble);
+      }
       bubble.textContent = t("proj.chat.connError", {
         msg: err.message || t("proj.common.unknown"),
       });

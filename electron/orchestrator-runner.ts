@@ -502,7 +502,7 @@ const PLANNING_TOOLS = [
 
 interface StatusUpdate {
   projectId: string;
-  status: "idle" | "running" | "done" | "error" | "skipped" | "warning";
+  status: "idle" | "running" | "done" | "error" | "skipped" | "warning" | "inactive";
   task?: string;
   error?: string;
   result?: string;
@@ -787,6 +787,7 @@ export class OrchestratorRunner {
         workspaceDir,
         expectedFilesMap,
         checksMap,
+        tasksMap,
       );
 
       // Step 6: Final Brand and Spec verification
@@ -922,8 +923,10 @@ export class OrchestratorRunner {
     workspaceDir: string,
     expectedFilesMap: Record<string, readonly string[]> = {},
     checksMap: ChecksMap = {},
-  ): Promise<Record<string, "done" | "error" | "skipped">> {
-    const executionStatuses: Record<string, "done" | "error" | "skipped"> = {};
+    tasksMap?: Record<string, string>,
+  ): Promise<Record<string, "done" | "error" | "skipped" | "inactive">> {
+    const executionStatuses: Record<string, "done" | "error" | "skipped" | "inactive"> =
+      {};
 
     for (const node of executionOrder) {
       if (this.abortController?.signal.aborted) {
@@ -931,12 +934,21 @@ export class OrchestratorRunner {
       }
 
       const failedDep = findFailedDependency(node, executionStatuses);
+      const hasNoTask =
+        tasksMap && (!tasksMap[node.id] || tasksMap[node.id].trim().length === 0);
       if (failedDep) {
         console.warn(
           `[orchestrator] Skipping "${node.name}" — dependency "${failedDep}" is ${executionStatuses[failedDep]}`,
         );
         executionStatuses[node.id] = "skipped";
         this.sendStatus({ projectId: node.id, status: "skipped" });
+        continue;
+      } else if (hasNoTask) {
+        console.warn(
+          `[orchestrator] Skipping "${node.name}" — no task assigned (marked inactive)`,
+        );
+        executionStatuses[node.id] = "inactive";
+        this.sendStatus({ projectId: node.id, status: "inactive" });
         continue;
       }
 
@@ -973,8 +985,10 @@ export class OrchestratorRunner {
     workspaceDir: string,
     expectedFilesMap: Record<string, readonly string[]> = {},
     checksMap: ChecksMap = {},
-  ): Promise<Record<string, "done" | "error" | "skipped">> {
-    const executionStatuses: Record<string, "done" | "error" | "skipped"> = {};
+    tasksMap?: Record<string, string>,
+  ): Promise<Record<string, "done" | "error" | "skipped" | "inactive">> {
+    const executionStatuses: Record<string, "done" | "error" | "skipped" | "inactive"> =
+      {};
     const waves = resolveDAGWaves(executionOrder);
     console.warn(
       `[orchestrator] DAG resolved into ${waves.length} wave(s): ${waves.map((w, i) => `W${i}[${w.map((n) => n.name).join(", ")}]`).join(" → ")}`,
@@ -989,12 +1003,20 @@ export class OrchestratorRunner {
       const runnable: Project[] = [];
       for (const node of wave) {
         const failedDep = findFailedDependency(node, executionStatuses);
+        const hasNoTask =
+          tasksMap && (!tasksMap[node.id] || tasksMap[node.id].trim().length === 0);
         if (failedDep) {
           console.warn(
             `[orchestrator] Skipping "${node.name}" — dependency "${failedDep}" is ${executionStatuses[failedDep]}`,
           );
           executionStatuses[node.id] = "skipped";
           this.sendStatus({ projectId: node.id, status: "skipped" });
+        } else if (hasNoTask) {
+          console.warn(
+            `[orchestrator] Skipping "${node.name}" — no task assigned (marked inactive)`,
+          );
+          executionStatuses[node.id] = "inactive";
+          this.sendStatus({ projectId: node.id, status: "inactive" });
         } else {
           runnable.push(node);
         }
@@ -1073,7 +1095,7 @@ export class OrchestratorRunner {
     backendNodes: readonly Project[],
     workspaceDir: string,
     runNode: (node: Project) => Promise<void>,
-    executionStatuses: Record<string, "done" | "error" | "skipped">,
+    executionStatuses: Record<string, "done" | "error" | "skipped" | "inactive">,
   ): Promise<void> {
     await ensureGitBaseline(workspaceDir);
     const handles = new Map<string, WorktreeHandle>();
@@ -1149,7 +1171,7 @@ export class OrchestratorRunner {
     orchestrator: Project,
     allProjects: readonly Project[],
     executionResults: Map<string, string>,
-    executionStatuses: Record<string, "done" | "error" | "skipped">,
+    executionStatuses: Record<string, "done" | "error" | "skipped" | "inactive">,
     workspaceContext: string,
     plannedSteps: Record<string, SubStep[]>,
     mainWorkspaceDir: string,
@@ -1472,7 +1494,7 @@ export class OrchestratorRunner {
     expectedFilesMap: Record<string, readonly string[]>,
     checksMap: ChecksMap = {},
   ): Promise<{
-    statuses: Record<string, "done" | "error" | "skipped">;
+    statuses: Record<string, "done" | "error" | "skipped" | "inactive">;
     results: Map<string, string>;
   }> {
     const fixes = await planIterationFixes({
@@ -1534,7 +1556,7 @@ export class OrchestratorRunner {
     // buildNodePathFilter applies the anti-parasitic guard deterministically,
     // without depending on stale fileOwner state carried across run()/iterate().
     this.correctiveNodeIds = new Set(fixedIds);
-    let statuses: Record<string, "done" | "error" | "skipped">;
+    let statuses: Record<string, "done" | "error" | "skipped" | "inactive">;
     try {
       statuses = await executeNodes(
         orchestrator,
@@ -1546,6 +1568,7 @@ export class OrchestratorRunner {
         workspaceDir,
         expectedFilesMap,
         checksMap,
+        fixes,
       );
     } finally {
       this.correctiveNodeIds = null;
@@ -1559,7 +1582,9 @@ export class OrchestratorRunner {
     task: string,
     linkedProjects: readonly Project[],
     workspaceDir: string,
-    executionStatuses: Readonly<Record<string, "done" | "error" | "skipped">>,
+    executionStatuses: Readonly<
+      Record<string, "done" | "error" | "skipped" | "inactive">
+    >,
     executionResults: ReadonlyMap<string, string>,
     expectedFilesMap: Readonly<Record<string, readonly string[]>>,
     checksMap: ChecksMap = {},
@@ -1823,7 +1848,7 @@ export class OrchestratorRunner {
     linkedProjects: readonly Project[],
     task: string,
     workspaceDir: string,
-    executionStatuses: Record<string, "done" | "error" | "skipped">,
+    executionStatuses: Record<string, "done" | "error" | "skipped" | "inactive">,
     executionResults: Map<string, string>,
     expectedFilesMap: Record<string, readonly string[]>,
     verifier: Project,
@@ -1907,15 +1932,27 @@ export class OrchestratorRunner {
       if (!ref.startsWith(pid) || ref.length <= pid.length) continue;
       if (subs.length === 1) return subs[0].id;
       const suffixNorm = normalizeForDepMatch(ref.slice(pid.length));
-      const match = subs.find((s) => {
+
+      // Match exact d'abord (sensible à la normalisation)
+      const exactMatch = subs.find((s) => {
+        const short = s.name.includes("›") ? s.name.split("›").pop()!.trim() : s.name;
+        return normalizeForDepMatch(short) === suffixNorm;
+      });
+      if (exactMatch) return exactMatch.id;
+
+      // Sinon match partiel (fuzzy), ordonné du plus long au plus court pour éviter les faux positifs
+      const sortedSubs = [...subs].sort((a, b) => {
+        const nameA = a.name.includes("›") ? a.name.split("›").pop()!.trim() : a.name;
+        const nameB = b.name.includes("›") ? b.name.split("›").pop()!.trim() : b.name;
+        return nameB.length - nameA.length;
+      });
+
+      const fuzzyMatch = sortedSubs.find((s) => {
         const short = s.name.includes("›") ? s.name.split("›").pop()!.trim() : s.name;
         const nameNorm = normalizeForDepMatch(short);
-        return (
-          nameNorm.length >= 6 &&
-          suffixNorm.includes(nameNorm.slice(-Math.min(12, nameNorm.length)))
-        );
+        return nameNorm.length >= 3 && suffixNorm.includes(nameNorm);
       });
-      if (match) return match.id;
+      if (fuzzyMatch) return fuzzyMatch.id;
     }
 
     return null;
@@ -2013,10 +2050,6 @@ export class OrchestratorRunner {
             console.warn(
               `[orchestrator] JSON fallback matched ${Object.keys(remapped).length}/${linked.length} agents by name.`,
             );
-            // Fill unmatched agents with global task
-            for (const p of linked) {
-              if (!remapped[p.id]) remapped[p.id] = globalTask;
-            }
             return {
               tasks: remapped,
               steps: {},
@@ -2307,16 +2340,6 @@ export class OrchestratorRunner {
       }
     }
 
-    // Fallback for unassigned agents
-    for (const p of linked) {
-      if (!tasks[p.id]) {
-        console.warn(
-          `[orchestrator] Agent "${p.name}" unassigned after planning loop, using global task.`,
-        );
-        tasks[p.id] = globalTask;
-      }
-    }
-
     return { tasks, steps, createdSubAgents, expectedFiles, checks };
   }
 
@@ -2352,7 +2375,11 @@ export class OrchestratorRunner {
       const parsed = JSON.parse(cleaned) as { valid: boolean };
       return parsed.valid === true;
     } catch {
-      return true; // Fallback to valid
+      // Fail-closed: an unreadable verdict is not an implicit pass (advisory only).
+      console.warn(
+        "[orchestrator] verifyPrompts: LLM returned non-JSON — treating as invalid (advisory).",
+      );
+      return false;
     }
   }
 
@@ -2558,7 +2585,11 @@ export class OrchestratorRunner {
       const parsed = JSON.parse(cleaned) as { valid: boolean };
       return parsed.valid === true;
     } catch {
-      return true;
+      // Fail-closed: an unreadable brand verdict is not an implicit pass (advisory only).
+      console.warn(
+        "[orchestrator] verifyBrandCompliance: LLM returned non-JSON — treating as invalid (advisory).",
+      );
+      return false;
     }
   }
 
@@ -3353,20 +3384,6 @@ export class OrchestratorRunner {
       );
     } else if (node.type === "design") {
       console.warn(`[orchestrator] Exporting renders for OpenDesign: ${node.name}`);
-      try {
-        // Connect to OpenDesign daemon at port 7456 to get generated layouts
-        const res = await fetch("http://localhost:7456/api/projects");
-        if (res.ok) {
-          await res.json();
-          // Attempt to find project matching the node's name or search for assets
-          // In a real run, the daemon creates folders in the workspace, so we just
-          // trigger compiling assets if an endpoint exists.
-          console.warn("[orchestrator] OpenDesign daemon projects list queried.");
-        }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn("[orchestrator] Failed to sync OpenDesign daemon:", msg);
-      }
     }
   }
 
@@ -3750,7 +3767,15 @@ Ce fichier répertorie la fonction de chaque fichier du projet et tient à jour 
         .replace(/```json/gi, "")
         .replace(/```/g, "")
         .trim();
-      const parsed = JSON.parse(cleaned) as { newFiles?: string; changelogLine?: string };
+      let parsed: { newFiles?: string; changelogLine?: string };
+      try {
+        parsed = JSON.parse(cleaned) as { newFiles?: string; changelogLine?: string };
+      } catch {
+        console.warn(
+          "[orchestrator] Workspace index update: LLM returned non-JSON, skipping.",
+        );
+        return;
+      }
 
       if (parsed.newFiles && parsed.newFiles.trim().length > 0) {
         const marker = "## 2. Journal des Modifications";

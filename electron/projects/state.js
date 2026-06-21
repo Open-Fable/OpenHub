@@ -108,11 +108,11 @@ function getReasoningCategory(modelId) {
   )
     return "openai";
 
-  // DeepSeek reasoning: deepseek-r1, deepseek/r1, deepseek-reasoner
+  // DeepSeek reasoning: deepseek-r1, deepseek/r1, deepseek-reasoner, deepseek-v4-flash, deepseek in general
   if (
-    l.includes("deepseek-r1") ||
-    l.includes("deepseek/r1") ||
-    l.includes("deepseek-reasoner")
+    l.includes("deepseek") &&
+    !l.includes("deepseek-chat") &&
+    !l.includes("deepseek-v3")
   )
     return "deepseek";
 

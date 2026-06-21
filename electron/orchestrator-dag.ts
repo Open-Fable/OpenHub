@@ -4,7 +4,7 @@ import type { Project } from "./project-store.js";
 // state — kept separate from the execution engine so the scheduling logic is
 // independently testable and the runner stays focused on execution.
 
-type NodeStatus = "done" | "error" | "skipped";
+type NodeStatus = "done" | "error" | "skipped" | "inactive";
 
 const CIRCULAR_DEP_ERROR = "Dépendance circulaire détectée dans le graphe de projets.";
 

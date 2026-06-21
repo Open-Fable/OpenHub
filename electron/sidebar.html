@@ -726,14 +726,16 @@
         opacity: 0;
         width: 0;
         height: 0;
+        margin: 0;
       }
       .switch-slider {
         position: absolute;
-        cursor: pointer;
         inset: 0;
         background: var(--oh-color-border-default);
         border: 1px solid var(--oh-color-border-default);
         border-radius: var(--radius-full);
+        z-index: 1;
+        cursor: pointer;
         transition:
           background var(--duration-200) var(--ease-default),
           border-color var(--duration-200) var(--ease-default);
@@ -1886,10 +1888,10 @@
                         Permet aux modèles d'interroger Brave Search.
                       </p>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input type="checkbox" id="web-search-toggle" role="switch" />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                 </div>
               </fieldset>
@@ -1906,10 +1908,10 @@
                         Ajoute la vision aux modèles qui n'en ont pas.
                       </p>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input type="checkbox" id="vision-proxy-toggle" role="switch" />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                 </div>
                 <div id="vision-options-group" style="margin-top: 8px">
@@ -1964,10 +1966,10 @@
                         Injecte le profil et les faits dans chaque requête.
                       </p>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input type="checkbox" id="memory-toggle" role="switch" checked />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                 </div>
               </fieldset>
@@ -2015,14 +2017,14 @@
                           Extrait automatiquement les faits via Ollama.
                         </p>
                       </div>
-                      <span class="switch">
+                      <label class="switch">
                         <input
                           type="checkbox"
                           id="memory-auto-extract-toggle"
                           role="switch"
                         />
                         <span class="switch-slider" aria-hidden="true"></span>
-                      </span>
+                      </label>
                     </div>
                   </div>
                 </fieldset>
@@ -2073,10 +2075,10 @@
                         Installe les mises à jour des apps au démarrage.
                       </p>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input type="checkbox" id="auto-update-toggle" role="switch" />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                 </div>
               </fieldset>
@@ -2212,7 +2214,7 @@
                     <div class="setting-row-text">
                       <label class="setting-label" for="notify-src-chat">Chat</label>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input
                         type="checkbox"
                         id="notify-src-chat"
@@ -2221,13 +2223,13 @@
                         checked
                       />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
                       <label class="setting-label" for="notify-src-code">Code</label>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input
                         type="checkbox"
                         id="notify-src-code"
@@ -2236,13 +2238,13 @@
                         checked
                       />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
                       <label class="setting-label" for="notify-src-work">Work</label>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input
                         type="checkbox"
                         id="notify-src-work"
@@ -2251,13 +2253,13 @@
                         checked
                       />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
                       <label class="setting-label" for="notify-src-design">Design</label>
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input
                         type="checkbox"
                         id="notify-src-design"
@@ -2266,7 +2268,7 @@
                         checked
                       />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                   <div class="setting-row">
                     <div class="setting-row-text">
@@ -2274,7 +2276,7 @@
                         >Orchestrateur</label
                       >
                     </div>
-                    <span class="switch">
+                    <label class="switch">
                       <input
                         type="checkbox"
                         id="notify-src-orchestrator"
@@ -2283,7 +2285,7 @@
                         checked
                       />
                       <span class="switch-slider" aria-hidden="true"></span>
-                    </span>
+                    </label>
                   </div>
                 </div>
               </fieldset>

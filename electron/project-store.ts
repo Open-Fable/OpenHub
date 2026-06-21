@@ -380,7 +380,7 @@ export async function deleteFolder(id: string): Promise<void> {
 export interface OrchRunNodeResult {
   readonly projectId: string;
   readonly name: string;
-  readonly status: "done" | "error" | "skipped" | "warning";
+  readonly status: "done" | "error" | "skipped" | "warning" | "inactive";
   readonly result?: string;
 }
 

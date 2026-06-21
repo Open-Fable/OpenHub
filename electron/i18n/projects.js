@@ -42,6 +42,7 @@
       "proj.chat.newConversationItem": "＋ Nouvelle conversation",
       "proj.chat.discussionPrefix": "Discussion ",
       "proj.chat.thinking": "Réflexion…",
+      "proj.chat.reasoning": "Réflexion",
       "proj.chat.copy": "Copier",
       "proj.chat.welcome":
         "Pose une question ou décris ton projet. Je t'aide à créer et gérer tes workflows.",
@@ -470,6 +471,7 @@
       "proj.chat.newConversationItem": "＋ New conversation",
       "proj.chat.discussionPrefix": "Discussion ",
       "proj.chat.thinking": "Thinking…",
+      "proj.chat.reasoning": "Thinking",
       "proj.chat.copy": "Copy",
       "proj.chat.welcome":
         "Ask a question or describe your project. I'll help you create and manage your workflows.",
