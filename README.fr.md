@@ -14,7 +14,7 @@ Un espace de travail IA local : discute avec n'importe quel modèle, orchestre u
 
 [English](README.md) · **Français**
 
-[Installation](#-installation) | [Usage](docs/USAGE.fr.md) | [Orchestrateur](docs/ORCHESTRATOR.fr.md) | [FAQ](docs/FAQ.fr.md) | [Architecture](#-architecture) | [Contribuer](CONTRIBUTING.fr.md)
+[Installation](#-installation) | [Usage](docs/USAGE.fr.md) | [Orchestrateur](docs/ORCHESTRATOR.fr.md) | [FAQ](docs/FAQ.fr.md) | [Architecture](#-architecture) | [Contribuer](docs/CONTRIBUTING.fr.md)
 
 </div>
 
@@ -154,7 +154,7 @@ Pour la spec complète — ports, modèle de sécurité, cascade de config et sy
 
 ## Contribuer
 
-Envie de compiler depuis les sources, corriger un bug ou ajouter une fonctionnalité ? Voir [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md).
+Envie de compiler depuis les sources, corriger un bug ou ajouter une fonctionnalité ? Voir [docs/CONTRIBUTING.fr.md](docs/CONTRIBUTING.fr.md).
 
 ---
 
@@ -165,7 +165,7 @@ Envie de compiler depuis les sources, corriger un bug ou ajouter une fonctionnal
 - **WebViews** sandboxées (`contextIsolation`, `sandbox`, sans `nodeIntegration`)
 - **Overrides** = injection CSS/JS uniquement — le code source upstream n'est jamais modifié
 
-Voir [SECURITY.fr.md](SECURITY.fr.md) pour la politique complète et comment signaler une vulnérabilité.
+Voir [docs/SECURITY.fr.md](docs/SECURITY.fr.md) pour la politique complète et comment signaler une vulnérabilité.
 
 ---
 
@@ -175,7 +175,7 @@ OpenHub est un shell, pas un fork. L'outillage IA appartient à
 [OpenCode](https://github.com/sst/opencode) (sst),
 [OpenWork](https://github.com/different-ai/openwork) (different-ai) et
 [Open Design](https://github.com/nexu-io/open-design) (nexu-io), chacun cloné à
-l'installation et exécuté sans modification. Voir [ACKNOWLEDGEMENTS.fr.md](ACKNOWLEDGEMENTS.fr.md)
+l'installation et exécuté sans modification. Voir [docs/ACKNOWLEDGEMENTS.fr.md](docs/ACKNOWLEDGEMENTS.fr.md)
 pour les crédits et licences.
 
 ## Licence
@@ -185,6 +185,6 @@ outils wrappés gardent leurs propres licences.
 
 ---
 
-**[Ouvrir une issue](https://github.com/Open-Fable/OpenHub/issues) · [Usage](docs/USAGE.fr.md) · [Orchestrateur](docs/ORCHESTRATOR.fr.md) · [FAQ](docs/FAQ.fr.md) · [Architecture](ARCHITECTURE.fr.md) · [Remerciements](ACKNOWLEDGEMENTS.fr.md) · [Contribuer](CONTRIBUTING.fr.md)**
+**[Ouvrir une issue](https://github.com/Open-Fable/OpenHub/issues) · [Usage](docs/USAGE.fr.md) · [Orchestrateur](docs/ORCHESTRATOR.fr.md) · [FAQ](docs/FAQ.fr.md) · [Architecture](ARCHITECTURE.fr.md) · [Remerciements](docs/ACKNOWLEDGEMENTS.fr.md) · [Contribuer](docs/CONTRIBUTING.fr.md)**
 
 ---

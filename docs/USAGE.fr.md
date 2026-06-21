@@ -157,7 +157,7 @@ OpenHub met à jour les outils intégrés automatiquement à chaque nouvelle ver
 vivent dans `electron/overrides/`, donc les mises à jour upstream ne cassent rien.
 
 Pour les contributeurs qui compilent depuis les sources, voir
-[CONTRIBUTING.md](../CONTRIBUTING.md) pour le workflow de mise à jour et vérification
+[CONTRIBUTING.md](CONTRIBUTING.md) pour le workflow de mise à jour et vérification
 des sélecteurs.
 
 ---

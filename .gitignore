@@ -60,7 +60,7 @@ salvage*.cjs
 recover_*.cjs
 check_keys.js
 test_syntax.py
-SECURITY_AND_BUGS_REPORT.md
+docs/audits/SECURITY_AND_BUGS_REPORT.md
 
 # Recovery-script OUTPUT files — these contain dumped user chat history and must
 # never be committed (the scripts above are ignored, but their outputs were not).
@@ -100,9 +100,9 @@ teste/
 teste 2/
 
 # Internal audit / handoff / open-defect docs — working notes, not for distribution.
-AUDIT_RECAP_*.md
-ORCHESTRATEUR_*.md
-SESSION-HANDOFF.md
+docs/audits/AUDIT_RECAP_*.md
+docs/audits/ORCHESTRATEUR_*.md
+docs/audits/SESSION-HANDOFF.md
 reports/
 
 # Graphify output (regenerated on demand, user-specific)
@@ -122,7 +122,7 @@ fichier-de-la-marque/
 .agents/
 
 # Internal security/audit reports and scratch dirs — working docs, never distribute
-SECURITY_AUDIT_*.md
+docs/audits/SECURITY_AUDIT_*.md
 avertissement/
 manga/
 screen/

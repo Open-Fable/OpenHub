@@ -156,7 +156,7 @@ OpenHub updates the bundled tools automatically when a new `.dmg` is released. T
 source code of the 3 apps is never modified: all customization lives in
 `electron/overrides/`, so upstream updates don't break anything.
 
-For contributors building from source, see [CONTRIBUTING.md](../CONTRIBUTING.md) for
+For contributors building from source, see [CONTRIBUTING.md](CONTRIBUTING.md) for
 the update and selector-check workflow.
 
 ---

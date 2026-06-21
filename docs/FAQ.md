@@ -64,11 +64,11 @@ with automatic quality checks. The result is a folder of deliverables. See the
 OpenHub ships a selector check that verifies whether the CSS selectors targeted by the
 overrides still exist in the apps' new code. If a selector changed upstream, the
 relevant override file in `electron/overrides/` needs adjusting.
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full developer workflow.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full developer workflow.
 
 ### How do I contribute?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full workflow: fork, branch, test,
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow: fork, branch, test,
 then open a pull request.
 
 ### How do I report a bug or request a feature?

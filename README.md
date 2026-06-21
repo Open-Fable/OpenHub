@@ -16,7 +16,7 @@ A local AI workspace: chat with any model, orchestrate a team of agents that bui
 
 **English** · [Français](README.fr.md)
 
-[Installation](#-installation) | [Usage](docs/USAGE.md) | [Orchestrator](docs/ORCHESTRATOR.md) | [FAQ](docs/FAQ.md) | [Architecture](#-architecture) | [Contributing](CONTRIBUTING.md)
+[Installation](#-installation) | [Usage](docs/USAGE.md) | [Orchestrator](docs/ORCHESTRATOR.md) | [FAQ](docs/FAQ.md) | [Architecture](#-architecture) | [Contributing](docs/CONTRIBUTING.md)
 
 </div>
 
@@ -156,7 +156,7 @@ For the full spec — ports, security model, config cascade, and overlay system 
 
 ## Contributing
 
-Want to build from source, fix a bug, or add a feature? See [CONTRIBUTING.md](CONTRIBUTING.md).
+Want to build from source, fix a bug, or add a feature? See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ---
 
@@ -167,7 +167,7 @@ Want to build from source, fix a bug, or add a feature? See [CONTRIBUTING.md](CO
 - **WebViews** sandboxed (`contextIsolation`, `sandbox`, no `nodeIntegration`)
 - **Overrides** are CSS/JS injection only — upstream source code is never modified
 
-See [SECURITY.md](SECURITY.md) for the full policy and how to report a vulnerability.
+See [docs/SECURITY.md](docs/SECURITY.md) for the full policy and how to report a vulnerability.
 
 ---
 
@@ -177,7 +177,7 @@ OpenHub is a shell, not a fork. The AI tooling belongs to
 [OpenCode](https://github.com/sst/opencode) (sst),
 [OpenWork](https://github.com/different-ai/openwork) (different-ai), and
 [Open Design](https://github.com/nexu-io/open-design) (nexu-io), each cloned at install
-time and run unmodified. See [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md) for credits and
+time and run unmodified. See [docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md) for credits and
 licenses.
 
 ## License
@@ -187,6 +187,6 @@ keep their own licenses.
 
 ---
 
-**[Open an issue](https://github.com/Open-Fable/OpenHub/issues) · [Usage](docs/USAGE.md) · [Orchestrator](docs/ORCHESTRATOR.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Acknowledgements](ACKNOWLEDGEMENTS.md) · [Contribute](CONTRIBUTING.md)**
+**[Open an issue](https://github.com/Open-Fable/OpenHub/issues) · [Usage](docs/USAGE.md) · [Orchestrator](docs/ORCHESTRATOR.md) · [FAQ](docs/FAQ.md) · [Architecture](ARCHITECTURE.md) · [Acknowledgements](docs/ACKNOWLEDGEMENTS.md) · [Contribute](docs/CONTRIBUTING.md)**
 
 ---

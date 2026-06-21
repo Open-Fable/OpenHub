@@ -66,12 +66,12 @@ livrables. Voir le [guide d'usage](USAGE.fr.md#4-lorchestrateur-multi-agents).
 OpenHub inclut une vérification de sélecteurs qui contrôle si les sélecteurs CSS
 visés par les overrides existent toujours dans le nouveau code des apps. Si un
 sélecteur a changé en amont, il faut ajuster le fichier d'override concerné dans
-`electron/overrides/`. Voir [CONTRIBUTING.md](../CONTRIBUTING.md) pour le workflow
+`electron/overrides/`. Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour le workflow
 développeur complet.
 
 ### Comment contribuer ?
 
-Voir [CONTRIBUTING.md](../CONTRIBUTING.md) pour le workflow complet : fork, branche,
+Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour le workflow complet : fork, branche,
 tests, puis pull request.
 
 ### Comment signaler un bug ou demander une fonctionnalité ?
