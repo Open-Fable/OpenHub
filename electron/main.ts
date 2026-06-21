@@ -343,16 +343,32 @@ async function injectOverrides(
   }
   console.warn(`[override-timing] ${slot} JS done +${Date.now() - t0}ms`);
 
-  // CSS: fire all insertions in parallel — they don't need to complete before
-  // the page renders (cosmetic), and sequential await blocks module loading
-  // for seconds on the renderer's main thread.
+  // CSS: inject as <style> elements via executeJavaScript so they
+  // survive SPA navigations and always come LAST in <head> (beats
+  // OpenCode's dynamic theme). The insertCSS counterpart below is
+  // kept for the initial paint (avoids FOUC).
   if (injectCss) {
     const cssBlocks = await loadOverrides(slot, "css");
     console.warn(
       `[override-timing] ${slot} loadOverrides(css) ${cssBlocks.length} blocks +${Date.now() - t0}ms`,
     );
-    Promise.all(cssBlocks.map((css) => view.webContents.insertCSS(css))).then(() =>
-      console.warn(`[override-timing] ${slot} insertCSS done +${Date.now() - t0}ms`),
+
+    // insertCSS for earliest possible paint (avoids flash of unstyled)
+    Promise.all(cssBlocks.map((css) => view.webContents.insertCSS(css)));
+
+    // executeJavaScript injects <style> elements last in <head>, ensuring
+    // they beat any dynamic theme system (OpenCode v2 resolve, etc.)
+    // and survive SPA in-page navigations (insertCSS may not persist).
+    const styleJs = cssBlocks.map((css) => {
+      const escaped = css
+        .replace(/\\/g, "\\\\")
+        .replace(/`/g, "\\`")
+        .replace(/\$/g, "\\$");
+      return `(function(){var s=document.createElement("style");s.textContent=\`${escaped}\`;document.head.appendChild(s)})()`;
+    });
+    await view.webContents.executeJavaScript(styleJs.join(";"));
+    console.warn(
+      `[override-timing] ${slot} CSS via executeJavaScript done +${Date.now() - t0}ms`,
     );
   }
   console.warn(`[override-timing] ${slot} ALL done +${Date.now() - t0}ms`);
