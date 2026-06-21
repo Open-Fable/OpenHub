@@ -1072,9 +1072,6 @@ img {
   }
 }
 @media (max-width: 680px) {
-  .nav-links .hide-sm {
-    display: none;
-  }
   .grid-3,
   .grid-2,
   .crosslinks {
