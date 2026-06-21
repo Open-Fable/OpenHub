@@ -36,7 +36,7 @@ AI tools are silos. They run in separate apps with their own API keys and memory
 
 The **multi-agent orchestrator** is the headliner. Give it a goal — build a site, generate a data report — and a DAG of agents plans and builds the result, then verifies it. There's a deterministic Quality Gate with automatic corrective loops and watchdogs that keep the output from going off the rails. [Deep dive here.](docs/ORCHESTRATOR.md)
 
-The **chat** works with Anthropic, OpenAI, OpenRouter, Ollama, or Google Gemini. Session history, file attachments, automatic Brave search, reasoning controls. Pick a model and go.
+The **chat** works with Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini, or any OpenAI-compatible provider. Session history, file attachments, automatic Brave search, reasoning controls. Pick a model and go.
 
 You get **three tools** in the sidebar: OpenCode (code-agent server), OpenWork (structured project workspace), and Open Design (visual mockups). Switch between them freely — execution state and session memory stay intact.
 
