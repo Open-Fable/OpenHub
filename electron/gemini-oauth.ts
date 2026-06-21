@@ -385,9 +385,7 @@ export async function loginWithGoogle(
   openExternal: (url: string) => Promise<void>,
 ): Promise<{ email?: string }> {
   if (!GEMINI_CLIENT_ID || !GEMINI_CLIENT_SECRET) {
-    throw new Error(
-      "Connexion Gemini désactivée : GEMINI_CLIENT_ID / GEMINI_CLIENT_SECRET non configurés (voir .env.example)",
-    );
+    throw new Error("Connexion Google désactivée depuis le 18 juin 2026");
   }
   const { verifier, challenge } = buildPkce();
   const state = randomBytes(32).toString("hex");

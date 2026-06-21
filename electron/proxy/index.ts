@@ -2070,9 +2070,6 @@ async function refreshGoogleTokenInternal(packedRefresh: string): Promise<string
   const parts = parseRefreshParts(packedRefresh);
   if (!parts.refreshToken) return null;
   if (!GEMINI_CLIENT_ID || !GEMINI_CLIENT_SECRET) {
-    console.warn(
-      "[proxy] Gemini OAuth désactivé : GEMINI_CLIENT_ID / GEMINI_CLIENT_SECRET non configurés (voir .env.example)",
-    );
     return null;
   }
 
@@ -2788,7 +2785,7 @@ export async function buildModelList(
     ...inferModelCapabilities(m.id, m.source),
   }));
 
-  console.log(
+  console.warn(
     `[proxy] buildModelList: ${result.length} models (${cachedCustomProviders.length} custom providers)`,
   );
   return enriched;

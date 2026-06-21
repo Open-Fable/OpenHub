@@ -1,15 +1,8 @@
-// Gemini CLI "installed app" OAuth credentials.
+// Gemini OAuth — désactivé depuis le 18 juin 2026.
 //
-// These identify the APPLICATION to Google — they are NOT personal user data.
-// They are the public values published by upstream gemini-cli (Google documents
-// that an installed-app "client secret" is not confidential). Each end user still
-// logs in with their own Google account; their refresh token stays local in
-// ~/.local/share/opencode/auth.json and is never bundled.
-//
-// They are sourced ONLY from env vars (an .env loaded in dev, or your own OAuth
-// client) — never hardcoded in source. When unset, both resolve to "" and the
-// Gemini OAuth route is disabled (see gemini-oauth.ts / proxy/index.ts). Get the
-// public values from the upstream gemini-cli project (see .env.example).
+// L'authentification Google a été retirée. Les identifiants sont figés à
+// une chaîne vide et les routes OAuth ne répondent plus. Aucun appel sortant
+// vers les API Google Gemini n'est effectué par le proxy.
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -48,8 +41,5 @@ function loadEnvSync() {
 
 loadEnvSync();
 
-export const GEMINI_CLIENT_ID =
-  process.env.GEMINI_CLIENT_ID ||
-  "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com";
-export const GEMINI_CLIENT_SECRET =
-  process.env.GEMINI_CLIENT_SECRET || "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";
+export const GEMINI_CLIENT_ID = "";
+export const GEMINI_CLIENT_SECRET = "";
