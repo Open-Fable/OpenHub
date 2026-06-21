@@ -111,6 +111,13 @@ graphify-out/
 # Brand design files (working documents, user-specific)
 fichier-de-la-marque/
 
+# Unrelated workspaces / projects accidentally placed at repo root
+knm/
+pokbj/
+saasss/
+zoubi/
+test-models.js
+
 # User-specific memory / personal data (never share between users)
 /AGENT-MEMORY.md
 /MEMORY-SYSTEM.md
