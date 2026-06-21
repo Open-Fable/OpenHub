@@ -5,7 +5,7 @@
 ### OpenHub est-il gratuit ?
 
 Le shell OpenHub est open-source (MIT). Mais il n'inclut aucun crédit IA : tu
-utilises tes propres clés API (Anthropic, OpenAI, OpenRouter, Google) ou des
+utilises tes propres clés API (Anthropic, OpenAI, OpenRouter, Google ou tout fournisseur compatible OpenAI) ou des
 modèles locaux via Ollama. Les coûts d'inférence sont facturés par ton provider, pas
 par OpenHub.
 

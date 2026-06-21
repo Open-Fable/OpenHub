@@ -5,7 +5,7 @@
 ### Is OpenHub free?
 
 The OpenHub shell is open-source (MIT). But it includes no AI credits: you use
-your own API keys (Anthropic, OpenAI, OpenRouter, Google) or local models via
+your own API keys (Anthropic, OpenAI, OpenRouter, Google, or any OpenAI-compatible provider) or local models via
 Ollama. Inference costs are billed by your provider, not by OpenHub.
 
 ### Does it work on Windows or Linux?
