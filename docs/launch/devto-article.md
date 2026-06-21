@@ -49,7 +49,7 @@ The three tools all use the same underlying engine (opencode by SST). So one con
 }
 ```
 
-The proxy on `127.0.0.1:9999` holds the real API keys (read from macOS Keychain at startup), routes to Anthropic/OpenAI/OpenRouter/Ollama/Gemini, and injects project context + memory into every request.
+The proxy on `127.0.0.1:9999` holds the real API keys (read from an encrypted file at startup), routes to Anthropic/OpenAI/OpenRouter/Ollama/Gemini, and injects project context + memory into every request.
 
 The apps only see a fake local token. They never touch the real keys.
 
@@ -67,7 +67,7 @@ It's like a tiny CI pipeline for creative work.
 
 1. **The injection pattern is underrated.** Most people think "wrapping" means forking. It doesn't. CSS/JS injection + a proxy gives you 90% of what you need without touching a line of upstream code.
 
-2. **macOS Keychain is great for desktop apps.** `keytar` makes it trivial. Keys in the Keychain, read into RAM, passed as env vars at process spawn. Never on disk.
+2. **A local encrypted file keeps secrets safe without the Keychain dependency.** AES-256-GCM encryption is solid. Keys go into `~/Library/Application Support/openhub/secrets.enc`, read into RAM, passed as env vars at process spawn. Never stored in plaintext.
 
 3. **The "configure once" insight was non-obvious.** I didn't realize all three tools shared the same engine until I read their source code. That one discovery eliminated 80% of the configuration complexity.
 

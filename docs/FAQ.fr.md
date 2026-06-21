@@ -11,16 +11,18 @@ par OpenHub.
 
 ### Ça marche sur Windows ou Linux ?
 
-Non, macOS uniquement (macOS 14+) pour l'instant. OpenHub dépend du Trousseau
-macOS pour stocker les secrets et de `WebContentsView` d'Electron. Un portage n'est
-pas prévu à court terme.
+Non, macOS uniquement (macOS 14+) pour l'instant. OpenHub stocke les secrets dans un
+fichier chiffré dans `~/Library/Application Support/openhub/secrets.enc`
+(AES-256-GCM) et dépend de `WebContentsView` d'Electron. Un portage n'est pas prévu
+à court terme.
 
 ### Où sont stockées mes clés API ?
 
-Dans le Trousseau macOS (Keychain), via `keytar`. Elles ne sont jamais écrites sur
-disque, ni dans le stockage local, ni dans les WebViews des apps. Le proxy les charge
-en RAM et les injecte au démarrage des process. Les 3 apps ne reçoivent qu'un faux
-jeton local, jamais tes vraies clés.
+Dans un fichier chiffré dans `~/Library/Application Support/openhub/secrets.enc`
+(AES-256-GCM). Elles ne sont jamais stockées en clair, ni dans le stockage local, ni
+dans les WebViews des apps. Le proxy les charge en RAM et les injecte au démarrage
+des process. Les 3 apps ne reçoivent qu'un faux jeton local, jamais tes vraies
+clés.
 
 ### Où sont stockées mes données (projets, mémoire, chats) ?
 

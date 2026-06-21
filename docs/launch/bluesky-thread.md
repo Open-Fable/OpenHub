@@ -37,7 +37,7 @@ Under the hood:
 - Electron + TypeScript
 - Local Express proxy on localhost:9999
 - Supports Anthropic, OpenAI, OpenRouter, Ollama, Gemini
-- Secrets in macOS Keychain
+- Secrets in encrypted file (~/Library/Application Support/openhub/secrets.enc)
 - Zero Docker
 
 ---

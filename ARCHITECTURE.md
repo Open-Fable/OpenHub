@@ -33,16 +33,16 @@ Out of V1 scope: openwork's "den"/EE cloud stack (MySQL, better-auth), Docker.
 
 ## 2. Tech stack
 
-| Component      | Choice                                            | Rationale                                                                                |
-| -------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Desktop shell  | **Electron** (not Tauri)                          | Mature multi-`WebContentsView`; openwork is already Tauri → Electron avoids the conflict |
-| App views      | `WebContentsView` (1 per app, lazy, kept alive)   | State/sessions preserved when switching slots                                            |
-| App runtime    | **Native only** (zero Docker)                     | The apps need filesystem access (they edit code/design)                                  |
-| LLM proxy      | Express server embedded in main, `127.0.0.1:9999` | Single OpenAI-compatible gateway + holds the secrets                                     |
-| Secrets        | **macOS Keychain** (`keytar` or `security`)       | Never on disk, never in the apps                                                         |
-| Config cascade | `~/.config/opencode/opencode.json`                | A single file configures all 3 apps (they all drive opencode)                            |
-| Customization  | Runtime CSS/JS injection (`insertCSS` / bridge)   | Independent of upstream updates                                                          |
-| Updates        | `git pull` / `npm update` per folder              | Source code never modified                                                               |
+| Component      | Choice                                                                            | Rationale                                                                                |
+| -------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Desktop shell  | **Electron** (not Tauri)                                                          | Mature multi-`WebContentsView`; openwork is already Tauri → Electron avoids the conflict |
+| App views      | `WebContentsView` (1 per app, lazy, kept alive)                                   | State/sessions preserved when switching slots                                            |
+| App runtime    | **Native only** (zero Docker)                                                     | The apps need filesystem access (they edit code/design)                                  |
+| LLM proxy      | Express server embedded in main, `127.0.0.1:9999`                                 | Single OpenAI-compatible gateway + holds the secrets                                     |
+| Secrets        | AES-256-GCM encrypted file at `~/Library/Application Support/openhub/secrets.enc` | Never unencrypted on disk, never in the apps                                             |
+| Config cascade | `~/.config/opencode/opencode.json`                                                | A single file configures all 3 apps (they all drive opencode)                            |
+| Customization  | Runtime CSS/JS injection (`insertCSS` / bridge)                                   | Independent of upstream updates                                                          |
+| Updates        | `git pull` / `npm update` per folder                                              | Source code never modified                                                               |
 
 ---
 
@@ -64,10 +64,10 @@ ELECTRON (shell + proxy + secrets) ─ seul détenteur des clés réelles
 │      hérité par Work + Code + Design (tous pilotent opencode)
 │
 ├─ PROXY LLM :9999 (127.0.0.1, Bearer token requis, OpenAI-compatible)
-│    détient les vraies clés (Keychain) · route Anthropic / OpenAI / Ollama
+│    détient les vraies clés (secrets.enc) · route Anthropic / OpenAI / Ollama
 │    point d'injection : web-search, enrichissement de contexte
 │
-├─ SECRETS : Keychain → RAM du main → env vars au spawn des process
+├─ SECRETS : secrets.enc → RAM du main → env vars au spawn des process
 │
 └─ OVERLAYS : CSS (thème uniforme) + JS via bridge isolé
      (masquer settings natifs, export PDF, web-search, ajout/suppression de features)
@@ -104,7 +104,7 @@ So a single `opencode.json` cascades to all 3. Custom OpenAI-compatible provider
 ```
 
 The apps only receive a **fake local token** (`OPENHUB_TOKEN`). The proxy `:9999`
-holds the real keys (Anthropic/OpenAI/OAuth) read from the Keychain.
+holds the real keys (Anthropic/OpenAI/OAuth) read from the encrypted secrets file.
 
 ---
 
@@ -116,7 +116,7 @@ holds the real keys (Anthropic/OpenAI/OAuth) read from the Keychain.
 | Bridge               | tiny, validated, **no disk path** (paths chosen via native `dialog`)                                                |
 | Crown jewel to guard | `opencode serve` runs shell commands → strict `127.0.0.1` bind + generated `OPENCODE_SERVER_PASSWORD`, never logged |
 | Proxy                | `127.0.0.1` + mandatory `Authorization: Bearer` (no other local process burns your key)                             |
-| Real secrets         | Keychain → main RAM → env at spawn; never disk/localStorage/webview                                                 |
+| Real secrets         | AES-256-GCM encrypted file → main RAM → env at spawn; never unencrypted on disk, never in webview                   |
 | Injected JS          | UI only, no inline secret; sensitive actions via the isolated bridge                                                |
 | openwork den stack   | **disabled** (otherwise weak default secrets + MySQL)                                                               |
 
@@ -156,7 +156,7 @@ settings (centralized in the Config panel).
 | 5   | Sidebar + webview + independent state         | ✅                             |
 | 6   | Hide sidebars + single dark theme             | ✅                             |
 | 7   | Configure API/models once (local+remote)      | ✅✅ via opencode.json + proxy |
-| 8   | OAuth/secrets in a vault, injected at startup | ✅ Keychain                    |
+| 8   | OAuth/secrets in a vault, injected at startup | ✅ encrypted secrets file      |
 | 9   | Resilience to upstream updates                | ✅                             |
 | 10  | No chat controlling the others                | ✅ independent apps            |
 | 11  | One API without re-entering it per window     | ✅                             |
@@ -184,7 +184,7 @@ Chat (4th pill of the initial brief): **shipped** — now a native slot, alongsi
 ## 9. Build order
 
 1. Electron skeleton + process-manager (with per-app Node pin)
-2. Proxy `:9999` + Keychain integration
+2. Proxy `:9999` + secrets file encryption
 3. `~/.config/opencode/opencode.json` generator
 4. Sidebar + WebContentsView + injection layer
 5. Config panel (API keys, models, override toggles)

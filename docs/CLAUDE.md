@@ -104,7 +104,7 @@ scripts/            ← Setup, update, selector-check utilities
 
 - **Runtime:** Electron v32+, TypeScript, native processes (zero Docker)
 - **Proxy:** Express on 127.0.0.1:9999, OpenAI-compatible, Bearer token required
-- **Secrets:** macOS Keychain via `keytar` — never on disk
+- **Secrets:** Encrypted file at `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM) — never in plaintext
 - **Config cascade:** `~/.config/opencode/opencode.json` propagates to all 3 apps
 - **Overrides:** `insertCSS()` + `executeJavaScript()` via contextBridge
 
@@ -121,7 +121,7 @@ scripts/            ← Setup, update, selector-check utilities
 - WebContentsView: `contextIsolation:true`, `sandbox:true`, `nodeIntegration:false`
 - Bridge (`contextBridge`): minimal surface, NO disk path parameters
 - Proxy: bind `127.0.0.1` ONLY, require `Authorization: Bearer`
-- Secrets: Keychain → RAM → env vars at spawn. Never localStorage, never .env on disk
+- Secrets: Encrypted file → RAM → env vars at spawn. Never localStorage, never .env on disk
 - Injected JS: UI only, zero secrets inline
 - opencode serve: `OPENCODE_SERVER_PASSWORD` generated per session, never logged
 

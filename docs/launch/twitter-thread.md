@@ -28,7 +28,7 @@ OpenCode for coding. OpenWork for tasks. Open Design for mockups. A chat for qui
 
 OpenHub wraps all three + adds a built-in chat and orchestrator.
 
-You enter your keys once (macOS Keychain — never on disk).
+You enter your keys once (encrypted secrets file — never stored in plaintext).
 A local proxy routes everything. All tools share the same context.
 
 One window. One config. Five tools.

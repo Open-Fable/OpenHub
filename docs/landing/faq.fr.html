@@ -56,19 +56,21 @@
         <div class="qa">
           <h3>Ca tourne sur Windows ou Linux ?</h3>
           <p>
-            Pas encore, macOS 14 et plus uniquement. OpenHub s'appuie sur le Trousseau
-            macOS pour stocker les secrets et sur le systeme de vues d'Electron pour la
-            sidebar. Un portage vers d'autres plateformes n'est pas prevu a court terme.
+            Pas encore, macOS 14 et plus uniquement. OpenHub stocke les secrets dans
+            un fichier chiffre (<code>~/Library/Application Support/openhub/secrets.enc</code>,
+            AES-256-GCM) et sur le systeme de vues d'Electron pour la sidebar. Un
+            portage vers d'autres plateformes n'est pas prevu a court terme.
           </p>
         </div>
 
         <div class="qa">
           <h3>Ou sont stockees mes cles API ?</h3>
           <p>
-            Dans le Trousseau macOS. Pas dans un fichier de config, pas en local
-            storage, pas visibles dans les outils. Le proxy les charge en memoire et
-            les injecte au demarrage des process. Les outils embarques ne recoivent
-            qu'un faux token local, jamais tes vraies cles.
+            Dans un fichier chiffre (<code>~/Library/Application Support/openhub/secrets.enc</code>,
+            AES-256-GCM). Pas dans un fichier de config, pas en local storage, pas
+            visibles dans les outils. Le proxy les charge en memoire et les injecte
+            au demarrage des process. Les outils embarques ne recoivent qu'un faux
+            token local, jamais tes vraies cles.
           </p>
         </div>
 

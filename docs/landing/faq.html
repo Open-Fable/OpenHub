@@ -57,19 +57,21 @@
         <div class="qa">
           <h3>Does it run on Windows or Linux?</h3>
           <p>
-            Not yet, macOS 14 and up only. OpenHub leans on the macOS Keychain to
-            store secrets and on Electron's view system for the sidebar. A port to
-            other platforms isn't planned in the short term.
+            Not yet, macOS 14 and up only. OpenHub stores secrets in an encrypted
+            file (<code>~/Library/Application Support/openhub/secrets.enc</code>,
+            AES-256-GCM) and relies on Electron's view system for the sidebar. A
+            port to other platforms isn't planned in the short term.
           </p>
         </div>
 
         <div class="qa">
           <h3>Where are my API keys stored?</h3>
           <p>
-            In the macOS Keychain. They're never written to a config file, never
-            in local storage, never visible inside the tools. The proxy loads them
-            into memory and injects them when processes start. The wrapped tools
-            only ever receive a fake local token, not your real keys.
+            In an encrypted file at <code>~/Library/Application Support/openhub/secrets.enc</code>
+            (AES-256-GCM). They're never written to a config file, never in local
+            storage, never visible inside the tools. The proxy loads them into
+            memory and injects them when processes start. The wrapped tools only
+            ever receive a fake local token, not your real keys.
           </p>
         </div>
 

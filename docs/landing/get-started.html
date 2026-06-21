@@ -98,8 +98,9 @@
                 <li><strong>Ollama</strong> — runs 100 % local, no key needed</li>
               </ul>
               <p style="margin-top:8px;">
-                Keys live in the <strong>macOS Keychain</strong>, not in a file
-                on disk. A local proxy on <code>127.0.0.1:9999</code> holds them
+                Keys are stored in an encrypted file at
+                <code>~/Library/Application Support/openhub/secrets.enc</code>
+                (AES-256-GCM), not in plaintext on disk. A local proxy on <code>127.0.0.1:9999</code> holds them
                 in memory and routes every request. The tools only ever see a fake
                 local token.
               </p>

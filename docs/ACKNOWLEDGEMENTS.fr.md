@@ -37,7 +37,7 @@ multi-agents et la documentation — est le travail propre d'OpenHub, publié so
 
 - [Electron](https://www.electronjs.org) — runtime desktop
 - [Express](https://expressjs.com) — le proxy LLM local
-- [keytar](https://github.com/atom/node-keytar) — accès au Trousseau macOS
+- [keytar](https://github.com/atom/node-keytar) — stockage chiffré de secrets (AES-256-GCM)
 - [Vitest](https://vitest.dev) et [Playwright](https://playwright.dev) — tests
 
 Merci aux mainteneurs de ces projets.

@@ -134,8 +134,8 @@ Stockage : `~/.config/openhub/memory.json`.
 
 ## 6. Config (clés API & modèles)
 
-Slot **Config** ⚙️. Tes clés sont stockées dans le **Trousseau macOS (Keychain)**,
-jamais sur disque ni dans le stockage local.
+Slot **Config** ⚙️. Tes clés sont stockées dans un fichier chiffré dans **`~/Library/Application Support/openhub/secrets.enc`** (AES-256-GCM),
+jamais en clair ni dans le stockage local.
 
 - **Clés API** : Anthropic, OpenAI, OpenRouter, Ollama (URL), GitHub, Brave Search,
   Google Gemini (OAuth).

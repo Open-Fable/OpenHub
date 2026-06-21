@@ -60,8 +60,8 @@
 │             detient les vraies cles · route vers ton fournisseur
 │             injecte contexte projet + memoire + recherche web
 │
-└─ <span class="ac">Secrets</span>   Trousseau → memoire → vars d'env au lancement
-              (jamais ecrites sur le disque)</div>
+└─ <span class="ac">Secrets</span>   <code>secrets.enc</code> → memoire → vars d'env au lancement
+              (fichier chiffre, jamais en clair)</div>
       </div>
     </section>
 
@@ -104,7 +104,7 @@
               <h3>Un proxy detient les cles ; les outils ne voient qu'un token</h3>
               <p>
                 Un petit serveur tourne sur <code>127.0.0.1:9999</code>. Il detient tes
-                vraies cles API, lit le Trousseau, et expose un unique point
+                vraies cles API, lit <code>secrets.enc</code>, et expose un unique point
                 d'acces compatible OpenAI. Les outils recoivent un faux token
                 local, jamais tes vraies cles. Le proxy route chaque appel vers
                 le bon fournisseur. C'est aussi la que la recherche web et

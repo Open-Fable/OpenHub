@@ -62,8 +62,8 @@
 │             holds the real keys · routes to your provider
 │             injects project context + memory + web search
 │
-└─ <span class="ac">Secrets</span>   Keychain → memory → env vars at spawn
-              (never written to disk)</div>
+└─ <span class="ac">Secrets</span>   <code>secrets.enc</code> → memory → env vars at spawn
+              (encrypted file, never plaintext on disk)</div>
       </div>
     </section>
 
@@ -107,7 +107,7 @@
               <h3>One proxy holds the keys; the tools only see a token</h3>
               <p>
                 A small server runs on <code>127.0.0.1:9999</code>. It holds your
-                real API keys, reads from the Keychain, and exposes a single
+                real API keys, reads from <code>secrets.enc</code>, and exposes a single
                 OpenAI-compatible endpoint. The tools get a fake local token,
                 never your real keys. The proxy routes each call to the right
                 provider. It's also where web search and context injection happen.

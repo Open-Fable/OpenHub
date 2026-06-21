@@ -15,7 +15,7 @@ Tone: informative, respectful, no ask for promotion.
 
 Hi! I built OpenHub, an open-source macOS desktop app that integrates OpenCode as one of its core tools — alongside OpenWork and Open Design.
 
-OpenCode runs unmodified inside a sandboxed WebView. A shared LLM proxy handles API key management (macOS Keychain) so users configure their keys once.
+OpenCode runs unmodified inside a sandboxed WebView. A shared LLM proxy handles API key management (encrypted secrets file) so users configure their keys once.
 
 I wanted to let you know in case you have any concerns or feedback. The project is MIT licensed:
 https://github.com/Open-Fable/OpenHub

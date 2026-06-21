@@ -34,7 +34,7 @@ npm run dev
 ## Rules
 
 - **Never modify the upstream apps' source code** (`apps/`). All customization goes through `electron/overrides/`.
-- **No secrets in the code.** API keys go through the macOS Keychain.
+- **No secrets in the code.** API keys are stored in an encrypted file at `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM).
 - **Conventional commits:** `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
 - **Strict TypeScript.** No `any` except at serialization boundaries.
 - **Files < 400 lines, functions < 50 lines.**

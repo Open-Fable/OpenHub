@@ -17,7 +17,7 @@ Your entire AI workflow in one macOS window
 ```
 OpenHub is a free, open-source macOS app that puts five AI tools behind a single sidebar: a chat, a multi-agent orchestrator, a code agent (OpenCode), a task manager (OpenWork), and a design tool (Open Design).
 
-Enter your API keys once — they're stored in macOS Keychain, never on disk. A local proxy routes all LLM calls to Anthropic, OpenAI, OpenRouter, Ollama, or Gemini. Every tool shares the same context, memory, and project settings.
+Enter your API keys once — they're stored in an encrypted file (AES-256-GCM), never in plaintext. A local proxy routes all LLM calls to Anthropic, OpenAI, OpenRouter, Ollama, or Gemini. Every tool shares the same context, memory, and project settings.
 
 The orchestrator is the standout feature: give it a goal like "build me a portfolio website" and it creates a team of AI agents (planner, coder, designer, verifier) that produce real, downloadable files.
 

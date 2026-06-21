@@ -10,16 +10,16 @@ Ollama. Inference costs are billed by your provider, not by OpenHub.
 
 ### Does it work on Windows or Linux?
 
-No, macOS only (macOS 14+) for now. OpenHub depends on the macOS Keychain to
-store secrets and on Electron's `WebContentsView`. A port isn't planned in the short
-term.
+No, macOS only (macOS 14+) for now. OpenHub stores secrets in an encrypted file at
+`~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM) and depends on
+Electron's `WebContentsView`. A port isn't planned in the short term.
 
 ### Where are my API keys stored?
 
-In the macOS Keychain, via `keytar`. They are never written to disk, nor to local
-storage, nor to the apps' WebViews. The proxy loads them into RAM and injects them
-when the processes start. The 3 apps only receive a fake local token, never your real
-keys.
+In an encrypted file at `~/Library/Application Support/openhub/secrets.enc`
+(AES-256-GCM). They are never stored in plaintext, nor in local storage, nor in the
+apps' WebViews. The proxy loads them into RAM and injects them when the processes
+start. The 3 apps only receive a fake local token, never your real keys.
 
 ### Where is my data (projects, memory, chats) stored?
 

@@ -19,7 +19,7 @@ OpenCode (sst), OpenWork (different-ai), and Open Design (nexu-io).
 
 The key ideas:
 
-- You enter your API keys once (stored in macOS Keychain, never on disk).
+- You enter your API keys once (stored in an encrypted file, never in plaintext).
   A local proxy on 127.0.0.1:9999 routes to Anthropic, OpenAI, OpenRouter,
   Ollama, or Gemini. All three tools share that proxy — no per-app configuration.
 
@@ -34,7 +34,7 @@ The key ideas:
 
 - Zero Docker, zero cloud — everything runs as native macOS processes.
 
-Stack: Electron + TypeScript + Express proxy + keytar (Keychain).
+Stack: Electron + TypeScript + Express proxy + AES-256-GCM encrypted secrets file.
 
 MIT licensed. Download the .dmg from Releases (Apple Silicon).
 

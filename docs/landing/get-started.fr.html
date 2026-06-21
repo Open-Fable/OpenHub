@@ -99,8 +99,9 @@
                 <li><strong>Ollama</strong> — 100 % local, pas de clé nécessaire</li>
               </ul>
               <p style="margin-top:8px;">
-                Les clés vivent dans le <strong>Trousseau macOS</strong>, pas
-                dans un fichier sur le disque. Un proxy local sur
+                Les clés sont stockées dans un fichier chiffré au chemin
+                <code>~/Library/Application Support/openhub/secrets.enc</code>
+                (AES-256-GCM), pas en clair sur le disque. Un proxy local sur
                 <code>127.0.0.1:9999</code> les garde en mémoire et achemine
                 chaque requête. Les outils ne voient qu'un faux jeton local.
               </p>

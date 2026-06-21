@@ -134,7 +134,7 @@ Storage: `~/.config/openhub/memory.json`.
 
 ## 6. Config (API keys & models)
 
-The **Config** ⚙️ slot. Your keys are stored in the **macOS Keychain**, never on disk
+The **Config** ⚙️ slot. Your keys are stored in an encrypted file at **`~/Library/Application Support/openhub/secrets.enc`** (AES-256-GCM), never in plaintext
 or in local storage.
 
 - **API keys**: Anthropic, OpenAI, OpenRouter, Ollama (URL), GitHub, Brave Search,

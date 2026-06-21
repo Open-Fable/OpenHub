@@ -36,7 +36,7 @@ orchestrator, and the documentation — is OpenHub's own work, released under th
 
 - [Electron](https://www.electronjs.org) — desktop runtime
 - [Express](https://expressjs.com) — the local LLM proxy
-- [keytar](https://github.com/atom/node-keytar) — macOS Keychain access
+- [keytar](https://github.com/atom/node-keytar) — encrypted secret storage (AES-256-GCM)
 - [Vitest](https://vitest.dev) and [Playwright](https://playwright.dev) — testing
 
 Thank you to the maintainers of these projects.
