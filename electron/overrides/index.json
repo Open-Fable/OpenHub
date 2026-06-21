@@ -16,7 +16,6 @@
     "theme": true,
     "graphify": true,
     "recover-projects": true,
-    "reasoning-indicator": true,
     "task-done": true
   },
   "open-design": { "bridge": true, "theme": true, "task-done": true }

@@ -1,6 +1,6 @@
 /*
  * OpenHub — OpenCode brand theme
- * v2.2 — Grand public, accessible, minimaliste
+ * v2.3 — Charte graphique OpenHub (teal + noir pur)
  *
  * Applique les tokens de marque OpenHub à OpenCode.
  * Palette exacte depuis fichier-de-la-marque/brand_colors.json
@@ -9,12 +9,12 @@
  *   OC-1 : CSS custom properties (--background-*, --surface-*, --text-*, --border-*)
  *   v2   : --v2-blue-* (dans @layer theme)
  *
- * On override les DEUX pour tout passer en violet OpenHub.
+ * On override les DEUX pour tout passer en teal OpenHub.
  * Les styles directs sont minimaux et ciblent uniquement des éléments
  * HTML standards dont on est certains qu'ils existent.
  *
  * Mode clair = par défaut (suit prefers-color-scheme)
- * Mode sombre = anthracite chaud #18181E
+ * Mode sombre = noir pur #0A0A0A
  */
 
 /* ═══════════════════════════════════════════
@@ -94,6 +94,11 @@
   --v2-icon-icon-accent: #14b8a6 !important;
   --v2-icon-icon-accent-hover: #0d9488 !important;
   --v2-border-border-focus: #2dd4bf !important;
+
+  /* v2 state-info tokens — remplacer le bleu par du teal */
+  --v2-state-bg-info: #f0fdfa !important;
+  --v2-state-fg-info: #0f766e !important;
+  --v2-state-border-info: #99f6e4 !important;
 }
 
 /* ═══════════════════════════════════════════
@@ -157,6 +162,11 @@
     --v2-icon-icon-accent: #5eead4 !important;
     --v2-icon-icon-accent-hover: #99f6e4 !important;
     --v2-border-border-focus: #2dd4bf !important;
+
+    /* v2 state-info tokens — remplacer le bleu par du teal foncé */
+    --v2-state-bg-info: #134e4a !important;
+    --v2-state-fg-info: #5eead4 !important;
+    --v2-state-border-info: #115e59 !important;
   }
 }
 
@@ -327,4 +337,33 @@ div.hidden.xl\:flex {
   [data-component="menu-v2-item"] {
     --menu-v2-accent: #2dd4bf !important;
   }
+}
+
+/* ── Model selector / prompt model button ────────────────────────────────
+   OpenCode affiche le modèle sélectionné dans un bouton. On teinte son
+   icône et son texte accent pour qu'ils correspondent au teal OpenHub. */
+[data-action="prompt-model"] {
+  color: var(--text-interactive-base, #14b8a6) !important;
+}
+[data-component="model-picker"] [data-component="list-item"]:hover {
+  background: var(--surface-interactive-base, rgba(20, 184, 166, 0.1)) !important;
+}
+[data-component="model-picker"] [data-component="list-item"][data-active="true"] {
+  background: var(--surface-interactive-base, rgba(20, 184, 166, 0.1)) !important;
+  color: var(--text-interactive-base, #14b8a6) !important;
+}
+
+/* ── Chat composer / send button ────────────────────────────────────────
+   Le bouton d'envoi utilise l'accent teal pour son fond actif. */
+[data-component="composer-submit-button"] {
+  background: var(--accent-primary, #14b8a6) !important;
+  color: #ffffff !important;
+}
+
+/* ── Reasoning indicator / pill ──────────────────────────────────────────
+   La pastille de niveau de réflexion utilise le teal. */
+[data-component="reasoning-indicator"],
+[data-component="reasoning-select"] {
+  --accent: #14b8a6 !important;
+  color: var(--accent) !important;
 }
