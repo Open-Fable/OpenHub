@@ -4,7 +4,7 @@
 
 **Your entire AI workflow in one macOS window.**
 
-A local AI workspace: orchestrate a team of agents that builds real deliverables and chat with any model across three integrated tools — [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode), and [Open Design](https://github.com/nexu-io/open-design). One LLM proxy, persistent memory, no Docker.
+A local AI workspace: chat with any model, orchestrate a team of agents that builds real deliverables, and switch between three integrated tools — [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode), and [Open Design](https://github.com/nexu-io/open-design). One LLM proxy, persistent memory, no Docker.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/platform-macOS_14+-black?logo=apple)](https://www.apple.com/macos)
