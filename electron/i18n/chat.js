@@ -23,15 +23,17 @@
       // ── Chat header / empty state ──
       "chat.title.new": "Nouvelle conversation",
       "chat.title.newSearch": "Nouvelle recherche",
-      "chat.empty.help": "Comment puis-je vous aider ?",
-      "chat.empty.helpDesc": "Sélectionnez un modèle et posez votre question",
+      "chat.empty.welcome": "Bienvenue sur OpenHub !",
+      "chat.empty.welcomeDesc": "",
+      "chat.empty.help": "Par quoi commence-t-on ?",
+      "chat.empty.helpDesc": "",
       "chat.empty.searchTitle": "Que recherchez-vous ?",
-      "chat.empty.searchDesc": "Posez une question pour explorer le web",
-      "chat.empty.braveMissing": "API Brave manquante",
-      "chat.empty.braveDesc": "Configurez Brave Search dans Config [o]",
-      "chat.empty.connectApi": "Connectez une API pour commencer",
-      "chat.empty.connectApiDesc":
-        "Ajoutez une clé dans Config (Anthropic, OpenAI, OpenRouter…)",
+      "chat.empty.searchDesc": "",
+      "chat.empty.braveMissing":
+        "Configurez Brave Search dans Config pour activer la recherche web",
+      "chat.empty.braveDesc": "",
+      "chat.empty.connectApi": "Ajoutez une clé API dans Config pour commencer",
+      "chat.empty.connectApiDesc": "",
 
       // ── Composer ("+" menu, input, pills) ──
       "chat.more.title": "Plus d'options",
@@ -344,15 +346,16 @@
       // ── Chat header / empty state ──
       "chat.title.new": "New conversation",
       "chat.title.newSearch": "New search",
-      "chat.empty.help": "How can I help you?",
-      "chat.empty.helpDesc": "Select a model and ask your question",
+      "chat.empty.welcome": "Welcome to OpenHub!",
+      "chat.empty.welcomeDesc": "",
+      "chat.empty.help": "Where shall we begin?",
+      "chat.empty.helpDesc": "",
       "chat.empty.searchTitle": "What are you looking for?",
-      "chat.empty.searchDesc": "Ask a question to explore the web",
-      "chat.empty.braveMissing": "Brave API missing",
-      "chat.empty.braveDesc": "Configure Brave Search in Settings [o]",
-      "chat.empty.connectApi": "Connect an API to get started",
-      "chat.empty.connectApiDesc":
-        "Add a key in Settings (Anthropic, OpenAI, OpenRouter…)",
+      "chat.empty.searchDesc": "",
+      "chat.empty.braveMissing": "Set up Brave Search in Settings to enable web search",
+      "chat.empty.braveDesc": "",
+      "chat.empty.connectApi": "Add an API key in Settings to get started",
+      "chat.empty.connectApiDesc": "",
 
       // ── Composer ("+" menu, input, pills) ──
       "chat.more.title": "More options",

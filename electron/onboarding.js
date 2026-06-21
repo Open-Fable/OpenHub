@@ -553,6 +553,7 @@
     var overlay = document.getElementById("onboarding-overlay");
     if (!overlay) return;
     overlay.addEventListener("onboarding-restart", function () {
+      localStorage.removeItem("openhub-chat-welcome-shown");
       overlay.classList.add("open");
       if (window.openhub && window.openhub.notifyOnboardingVisibility) {
         window.openhub.notifyOnboardingVisibility(true);

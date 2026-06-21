@@ -840,21 +840,35 @@ async function refreshModels() {
 }
 function updateEmptyState() {
   var noModels = state.models.length === 0;
+  var title, desc;
   if (state.isSearchMode) {
-    els.emptyTitle.textContent = noModels
-      ? t("chat.empty.braveMissing")
-      : t("chat.empty.searchTitle");
-    els.emptyDesc.textContent = noModels
-      ? t("chat.empty.braveDesc")
-      : t("chat.empty.searchDesc");
+    title = noModels ? t("chat.empty.braveMissing") : t("chat.empty.searchTitle");
+    desc = noModels ? t("chat.empty.braveDesc") : t("chat.empty.searchDesc");
+  } else if (noModels) {
+    title = t("chat.empty.connectApi");
+    desc = t("chat.empty.connectApiDesc");
   } else {
-    els.emptyTitle.textContent = noModels
-      ? t("chat.empty.connectApi")
-      : t("chat.empty.help");
-    els.emptyDesc.textContent = noModels
-      ? t("chat.empty.connectApiDesc")
-      : t("chat.empty.helpDesc");
+    var hasNonEmptyConv = conversations.some(function (c) {
+      return c.messages && c.messages.length > 0;
+    });
+    var hasShownWelcome =
+      localStorage.getItem("openhub-chat-welcome-shown") === "true" || hasNonEmptyConv;
+    if (!hasShownWelcome) {
+      title = t("chat.empty.welcome");
+      desc = t("chat.empty.welcomeDesc");
+    } else {
+      title = t("chat.empty.help");
+      desc = t("chat.empty.helpDesc");
+    }
   }
+
+  // Update the hidden messages-area empty state (shown when scrolling through messages)
+  els.emptyTitle.textContent = title;
+  els.emptyDesc.textContent = desc;
+
+  // Update the visible greeting in the centered new-conversation layout (title only)
+  var greetTitle = $("newConvTitle");
+  if (greetTitle) greetTitle.textContent = title;
 }
 
 /* ── Catalog ── */
@@ -2236,6 +2250,7 @@ async function sendMessage() {
   )
     return;
   if (!activeConvId) startNewConversation();
+  localStorage.setItem("openhub-chat-welcome-shown", "true");
   els.emptyState.style.display = "none";
   document.body.classList.remove("oh-is-new-conv");
   var currentAttachments = state.attachments.slice();

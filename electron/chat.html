@@ -1657,21 +1657,81 @@
       body.oh-is-new-conv .empty-state {
         display: none !important;
       }
-
       body.oh-is-new-conv .messages-area {
         display: none;
       }
+      /* Hide header in new-conv: the center becomes the true viewport center */
+      body.oh-is-new-conv .chat-header {
+        display: none;
+      }
+      /* chat-main becomes a full-height flex wrapper */
+      body.oh-is-new-conv .chat-main {
+        display: flex;
+        flex-direction: column;
+      }
 
+      /* input-area fills all remaining height and centers its child */
       body.oh-is-new-conv .input-area {
         flex: 1;
         display: flex;
-        align-items: center;
-        padding: 0 24px;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        padding: 0;
       }
 
+      /* new-conv-center: greeting + bar stacked, constrained width, centered */
+      .new-conv-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 0 24px;
+        box-sizing: border-box;
+        position: relative;
+      }
+
+      /* greeting only visible in new-conv mode */
+      .new-conv-greeting {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding-bottom: 20px;
+        width: 100%;
+      }
+      body.oh-is-new-conv .new-conv-greeting {
+        display: flex;
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        right: 0;
+        padding-bottom: 0;
+        margin-bottom: 20px;
+        animation: fadeIn var(--duration-250) var(--ease-out);
+      }
+      .new-conv-greeting-title {
+        font-size: 21px;
+        font-weight: 650;
+        color: var(--text-primary);
+        letter-spacing: -0.3px;
+      }
+
+      /* input-bar fills the wrapper width in new-conv mode */
       body.oh-is-new-conv .input-bar {
+        width: 100%;
+        max-width: none;
+        margin: 0;
         box-shadow: var(--shadow-lg);
       }
+
+      /* attachments-preview also fills full width */
+      body.oh-is-new-conv .attachments-preview {
+        width: 100%;
+      }
+
       .input-bar {
         width: 100%;
         max-width: 640px;
@@ -3072,8 +3132,12 @@
               hidden
               accept=".txt,.md,.py,.js,.ts,.html,.css,.json,.csv,.svg,.png,.jpg,.jpeg,.gif,.pdf"
             />
-            <div class="attachments-preview" id="attachPreview"></div>
-            <div class="input-bar">
+            <div class="new-conv-center" id="newConvCenter">
+              <div class="new-conv-greeting" id="newConvGreeting">
+                <div class="new-conv-greeting-title" id="newConvTitle"></div>
+              </div>
+              <div class="attachments-preview" id="attachPreview"></div>
+              <div class="input-bar">
               <div class="input-bar-input-row">
                 <div class="input-bar-more-wrap">
                   <button
