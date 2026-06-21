@@ -42,7 +42,7 @@ En coulisses, un **proxy LLM** unique sur `127.0.0.1:9999` route tout via un seu
 
 Ton **profil et tes faits clés** suivent d'une session à l'autre. Le système les extrait automatiquement après chaque chat avec des modèles Ollama locaux (Qwen) et une déduplication sémantique de Jaccard.
 
-**Sécurité :** les clés API sont dans le Trousseau macOS, jamais sur le disque. Les WebViews sont sandboxées avec auth Bearer localhost.
+**Sécurité :** les clés API sont dans le Trousseau macOS — pas de stockage disque. Les WebViews sont sandboxées avec auth Bearer localhost.
 
 ### Captures d'écran
 
@@ -158,10 +158,10 @@ Compiler depuis les sources, corriger un bug, ajouter une fonctionnalité — vo
 
 ## Sécurité
 
-- Les clés vont dans le Trousseau macOS via `keytar`. Jamais sur disque.
+- Les clés vont dans le Trousseau macOS via `keytar`. Pas de stockage disque.
 - Le proxy tourne sur `127.0.0.1:9999` avec auth Bearer par session.
 - Les WebViews sont sandboxées : `contextIsolation`, `sandbox`, sans `nodeIntegration`.
-- Les overrides sont CSS/JS uniquement — le code upstream reste intact.
+- Les overrides sont CSS/JS uniquement — le code upstream reste inchangé.
 
 Politique complète et comment signaler une vulnérabilité : [docs/SECURITY.fr.md](docs/SECURITY.fr.md).
 
