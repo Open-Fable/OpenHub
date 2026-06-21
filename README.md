@@ -4,7 +4,7 @@
 
 **Your entire AI workflow in one macOS window.**
 
-A local AI workspace: chat with any model, orchestrate a team of agents that builds a real deliverable, and switch between three integrated open-source tools — [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode), and [Open Design](https://github.com/nexu-io/open-design). One LLM proxy, persistent memory, no Docker.
+A local AI workspace: orchestrate a team of agents that builds real deliverables and chat with any model across three integrated tools — [OpenWork](https://github.com/different-ai/openwork), [OpenCode](https://github.com/sst/opencode), and [Open Design](https://github.com/nexu-io/open-design). One LLM proxy, persistent memory, no Docker.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/platform-macOS_14+-black?logo=apple)](https://www.apple.com/macos)
@@ -28,50 +28,53 @@ A local AI workspace: chat with any model, orchestrate a team of agents that bui
 
 ## Why OpenHub?
 
-Most AI tools run in separate windows with separate API keys. None of them talk to each other. OpenHub puts chat, orchestration, code, design, and work in one macOS window. They share the same memory, the same project context, and the same LLM proxy. You enter your keys once, in the macOS Keychain, and that's it.
+AI tools are silos. They run in separate apps with their own API keys and memory. Nothing carries over when you switch windows. OpenHub puts five tools in one macOS window — shared memory, shared project context, a single LLM proxy. Keys go in the Keychain once. That's it.
 
 **Five sidebar slots:** Chat · Code · Work · Design · Orchestrator (plus a Config panel).
 
 ## Features
 
-<table>
-<tr><td><b>Multi-agent orchestrator</b></td><td>Give it a goal and a DAG of agents will plan, build, and verify the result (website, data report, ebook, code library...). Features a deterministic Quality Gate with automatic corrective loops and watchdogs. See <a href="docs/ORCHESTRATOR.md">the deep dive</a>.</td></tr>
-<tr><td><b>Built-in chat UI</b></td><td>Interact with any model (Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini) with session history, file attachments, automatic Brave web search, and reasoning effort controls.</td></tr>
-<tr><td><b>3 integrated tools</b></td><td>Switch between OpenCode (code-agent server), OpenWork (structured projects workspace), and Open Design (visual UI mockups) in a single sidebar that preserves execution state and session memory.</td></tr>
-<tr><td><b>Unified LLM proxy</b></td><td>A single OpenAI-compatible local endpoint (<code>127.0.0.1:9999</code>) routing all requests, enforcing a Stable Prefix Strategy for DeepSeek/Anthropic prompt caching, and normalizing tool schemas.</td></tr>
-<tr><td><b>Persistent context memory</b></td><td>Your personal profile and facts carry over between sessions. Extracted automatically post-chat using local Ollama models (Qwen) with Jaccard semantic deduplication.</td></tr>
-<tr><td><b>Keychain security</b></td><td>API credentials are stored securely in the macOS Keychain—never written to disk or local storage. Sandboxed WebViews with localhost-only tokenized Bearer authorization.</td></tr>
-</table>
+The **multi-agent orchestrator** is the headliner. Give it a goal — build a website, generate a data report, write an ebook — and a DAG of agents plans, builds, and verifies the result. There's a deterministic Quality Gate with automatic corrective loops and watchdogs that keep the output from going off the rails. [Deep dive here.](docs/ORCHESTRATOR.md)
 
-### Visual Walkthrough (Slots & Tabs)
+The **chat** works with Anthropic, OpenAI, OpenRouter, Ollama, or Google Gemini. Session history, file attachments, automatic Brave search, reasoning controls. Pick a model and go.
+
+You get **three tools** in the sidebar: OpenCode (code-agent server), OpenWork (structured project workspace), and Open Design (visual mockups). Switch between them freely — execution state and session memory stay intact.
+
+Behind the scenes, a **single LLM proxy** at `127.0.0.1:9999` routes everything through one OpenAI-compatible endpoint. It handles DeepSeek and Anthropic prompt caching via a Stable Prefix Strategy and normalizes tool schemas — the apps don't step on each other.
+
+Your **profile and key facts** carry over between sessions. The system extracts them automatically after each chat using local Ollama models (Qwen) with Jaccard semantic deduplication.
+
+**Security**: API credentials live in the macOS Keychain — no disk storage. WebViews are sandboxed with localhost-only Bearer auth.
+
+### Screenshots
 
 <details>
-<summary>💬 Chat & Projects Interface</summary>
+<summary>What the chat slot looks like</summary>
 <br>
 <p align="center">
   <img src="screen_github/onglet_chat.png" alt="Chat Slot" width="750">
 </p>
 <p align="center">
-  <img src="screen_github/projet_dans_chat.png" alt="Project Context in Chat" width="750">
+  <img src="screen_github/projet_dans_chat.png" alt="Project context in chat" width="750">
 </p>
 </details>
 
 <details>
-<summary>🤖 Multi-Agent Orchestrator DAG</summary>
+<summary>Orchestrator in action — planning, building, verifying</summary>
 <br>
 <p align="center">
   <img src="screen_github/onglet_orchestrateur.png" alt="Orchestrator Slot" width="750">
 </p>
 <p align="center">
-  <img src="screen_github/orchestrateur_avec_un_projet_Actife.png" alt="Active Project in Orchestrator" width="750">
+  <img src="screen_github/orchestrateur_avec_un_projet_Actife.png" alt="Active project in orchestrator" width="750">
 </p>
 <p align="center">
-  <img src="screen_github/workflow.png" alt="Active Orchestration Workflow Diagram" width="750">
+  <img src="screen_github/workflow.png" alt="Orchestration workflow diagram" width="750">
 </p>
 </details>
 
 <details>
-<summary>💻 Code Agent (OpenCode)</summary>
+<summary>Code agent (OpenCode)</summary>
 <br>
 <p align="center">
   <img src="screen_github/onglet_code.png" alt="Code Slot" width="750">
@@ -79,7 +82,7 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 </details>
 
 <details>
-<summary>💼 Workspace (OpenWork) & Project Hub</summary>
+<summary>OpenWork workspace and project hub</summary>
 <br>
 <p align="center">
   <img src="screen_github/onglet_work.png" alt="Work Slot" width="750">
@@ -87,7 +90,7 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 </details>
 
 <details>
-<summary>🎨 Visual Mockups (Open Design)</summary>
+<summary>Visual mockups in Open Design</summary>
 <br>
 <p align="center">
   <img src="screen_github/onglet_Design.png" alt="Design Slot" width="750">
@@ -95,17 +98,12 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 </details>
 
 <details>
-<summary>⚙️ Configurations & API Keys</summary>
+<summary>Config panel and API key management</summary>
 <br>
 <p align="center">
-  <img src="screen_github/parametre.png" alt="Parameters/Config Panel" width="750">
+  <img src="screen_github/parametre.png" alt="Config Panel" width="750">
 </p>
 </details>
-
-> [!TIP]
-> **Recommended GitHub Repository Topics:**
-> Add these tags in your repository settings on GitHub to improve search discoverability:
-> `electron`, `macos`, `ai-agent`, `multi-agent`, `local-llm`, `prompt-caching`, `llm-proxy`, `developer-tools`.
 
 ---
 
@@ -113,10 +111,10 @@ Most AI tools run in separate windows with separate API keys. None of them talk 
 
 **Requirements:** macOS 14+ (Apple Silicon)
 
-Download the latest `.dmg` from [GitHub Releases](https://github.com/Open-Fable/OpenHub/releases), open it, and drag OpenHub to your Applications folder.
+Grab the latest `.dmg` from [GitHub Releases](https://github.com/Open-Fable/OpenHub/releases), open it, and drag OpenHub to your Applications folder.
 
 > [!IMPORTANT]
-> The `.dmg` is not signed with an Apple Developer certificate (open-source build). macOS Gatekeeper will block it on first launch. To open it:
+> The `.dmg` isn't signed with an Apple Developer certificate (open-source build). macOS Gatekeeper will block it on first launch. To open it:
 >
 > - **Right-click** `OpenHub.app` → **Open** → confirm, **or**
 > - clear the quarantine flag:
@@ -127,13 +125,13 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/Open-Fable/
 ### First launch
 
 1. Open the **Config** panel (gear icon in the sidebar)
-2. Add your API keys (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — stored in macOS Keychain
+2. Add your API keys (Anthropic, OpenAI, OpenRouter, Google AI, Brave Search) — stored in the Keychain
 3. Pick your models
 
 > [!TIP]
 > To use Google Gemini models directly (without OpenRouter), run `opencode auth login` in your terminal.
 
-See the [Usage guide](docs/USAGE.md) for how to use the chat, projects, and orchestrator day-to-day.
+See the [Usage guide](docs/USAGE.md) for the day-to-day.
 
 ---
 
@@ -150,24 +148,24 @@ WebView (OpenWork / OpenCode / Open Design)
                              └── Background memory extraction
 ```
 
-For the full spec — ports, security model, config cascade, and overlay system — see [ARCHITECTURE.md](ARCHITECTURE.md). For the orchestrator engine, see [docs/ORCHESTRATOR.md](docs/ORCHESTRATOR.md).
+Full spec — ports, security model, config cascade, overlay system — in [ARCHITECTURE.md](ARCHITECTURE.md). Orchestrator engine in [docs/ORCHESTRATOR.md](docs/ORCHESTRATOR.md).
 
 ---
 
 ## Contributing
 
-Want to build from source, fix a bug, or add a feature? See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+Build from source, fix a bug, add a feature — see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ---
 
 ## Security
 
-- **API keys** stored in macOS Keychain via `keytar` — never written to disk
-- **LLM proxy** runs on `127.0.0.1:9999` with per-session Bearer auth
-- **WebViews** sandboxed (`contextIsolation`, `sandbox`, no `nodeIntegration`)
-- **Overrides** are CSS/JS injection only — upstream source code is never modified
+- Keys go in the macOS Keychain via `keytar`. No disk storage.
+- The proxy runs on `127.0.0.1:9999` with per-session Bearer auth.
+- WebViews are sandboxed: `contextIsolation`, `sandbox`, no `nodeIntegration`.
+- Overrides are CSS/JS only — upstream source stays unmodified.
 
-See [docs/SECURITY.md](docs/SECURITY.md) for the full policy and how to report a vulnerability.
+Full policy and how to report a vulnerability: [docs/SECURITY.md](docs/SECURITY.md).
 
 ---
 
@@ -176,13 +174,12 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full policy and how to report a
 OpenHub is a shell, not a fork. The AI tooling belongs to
 [OpenCode](https://github.com/sst/opencode) (sst),
 [OpenWork](https://github.com/different-ai/openwork) (different-ai), and
-[Open Design](https://github.com/nexu-io/open-design) (nexu-io), each cloned at install
-time and run unmodified. See [docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md) for credits and
-licenses.
+[Open Design](https://github.com/nexu-io/open-design) (nexu-io) — each cloned at install
+time, run unmodified. See [docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE). This covers OpenHub's own code only; the bundled tools
+MIT — see [LICENSE](LICENSE). Covers OpenHub's own code only; the bundled tools
 keep their own licenses.
 
 ---
