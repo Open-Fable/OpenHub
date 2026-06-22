@@ -115,8 +115,11 @@
                 real API keys, reads from <code>secrets.enc</code>, and exposes a single
                 OpenAI-compatible endpoint. The tools get a fake local token,
                 never your real keys. The proxy routes each call to the right
-                provider. It's also where web search and context injection happen.
-              </p>
+                  provider. It also applies a Stable Prefix Strategy for DeepSeek
+                  and Anthropic prompt caching (~99% cache hit rate on DeepSeek,
+                  ~80% on orchestrator — being improved). Web search and context
+                  injection happen here too.
+                </p>
             </div>
           </div>
           <div class="step">

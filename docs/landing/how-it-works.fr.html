@@ -112,8 +112,11 @@
                 vraies cles API, lit <code>secrets.enc</code>, et expose un unique point
                 d'acces compatible OpenAI. Les outils recoivent un faux token
                 local, jamais tes vraies cles. Le proxy route chaque appel vers
-                le bon fournisseur. C'est aussi la que la recherche web et
-                l'injection de contexte ont lieu.
+                le bon fournisseur. Il applique aussi une strategie de prefixe
+                stable pour le cache DeepSeek et Anthropic (~99% de hit rate sur
+                DeepSeek, ~80% sur l'orchestrateur — en cours d'amelioration).
+                C'est aussi la que la recherche web et l'injection de contexte
+                ont lieu.
               </p>
             </div>
           </div>
