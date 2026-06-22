@@ -7,7 +7,7 @@ installée (voir [README](../README.fr.md#-installation) pour l'installation).
 
 > OpenHub est un shell : il emballe OpenWork, OpenCode et Open Design dans une seule
 > fenêtre, ajoute un chat et un orchestrateur par-dessus, et route tout via un seul
-> proxy LLM. Tu saisis tes clés API une fois et les trois outils les partagent.
+> proxy LLM. Tu saisis tes clés API une fois et les cinq slots les partagent.
 
 ---
 

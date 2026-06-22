@@ -38,7 +38,7 @@ The **multi-agent orchestrator** is the headliner. Give it a goal — build a si
 
 The **chat** works with Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini, or any OpenAI-compatible provider. Session history, file attachments, automatic Brave search, reasoning controls. Pick a model and go.
 
-You get **three tools** in the sidebar: OpenCode (code-agent server), OpenWork (structured project workspace), and Open Design (visual mockups). Switch between them freely — execution state and session memory stay intact.
+Three **upstream tools** sit beside the native Chat and Orchestrator slots: OpenCode (code-agent server), OpenWork (structured project workspace), and Open Design (visual mockups). Switch between all five freely — execution state and session memory stay intact.
 
 Behind the scenes, a **single LLM proxy** at `127.0.0.1:9999` routes everything through one OpenAI-compatible endpoint. It handles DeepSeek and Anthropic prompt caching via a Stable Prefix Strategy and normalizes tool schemas — the apps don't step on each other.
 

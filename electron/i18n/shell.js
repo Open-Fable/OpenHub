@@ -212,7 +212,7 @@
 
       "onboarding.welcome.title": "Bienvenue sur OpenHub",
       "onboarding.welcome.subtitle":
-        "Votre environnement IA unifié — trois outils, une seule interface.",
+        "Votre environnement IA unifié — chat, code, work, design, orchestration, une seule interface.",
       "onboarding.welcome.work.title": "Work",
       "onboarding.welcome.work.desc":
         "Gestion de tâches et productivité assistée par IA.",
@@ -469,7 +469,7 @@
 
       "onboarding.welcome.title": "Welcome to OpenHub",
       "onboarding.welcome.subtitle":
-        "Your unified AI environment — three tools, one interface.",
+        "Your unified AI environment — chat, code, work, design, orchestration, one interface.",
       "onboarding.welcome.work.title": "Work",
       "onboarding.welcome.work.desc": "AI-assisted task management and productivity.",
       "onboarding.welcome.code.title": "Code",

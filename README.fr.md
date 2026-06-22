@@ -36,7 +36,7 @@ L'**orchestrateur multi-agents** est la vedette. Donne-lui un objectif — site 
 
 Le **chat** marche avec Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini et tout fournisseur compatible OpenAI. Historique des sessions, pièces jointes, recherche Brave automatique, contrôle du raisonnement. Choisis ton modèle et c'est parti.
 
-Tu as **trois outils** dans la sidebar : OpenCode (agent de code), OpenWork (espace de travail structuré) et Open Design (maquettes visuelles). Bascule entre eux librement — l'état d'exécution et la mémoire de session restent intacts.
+Trois **outils upstream** côtoient les slots natifs Chat et Orchestrateur : OpenCode (agent de code), OpenWork (espace de travail structuré) et Open Design (maquettes visuelles). Bascule entre les cinq librement — l'état d'exécution et la mémoire de session restent intacts.
 
 En coulisses, un **proxy LLM** unique sur `127.0.0.1:9999` route tout via un seul endpoint compatible OpenAI. Il gère le cache prompt DeepSeek/Anthropic avec une stratégie de préfixe stable et normalise les schémas d'outils — les apps ne se marchent pas dessus.
 

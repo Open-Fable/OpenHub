@@ -7,7 +7,7 @@ This guide explains how to use OpenHub day to day, once the app is installed
 
 > OpenHub is a shell: it wraps OpenWork, OpenCode, and Open Design in a single
 > window, adds a chat and orchestrator on top, and routes everything through one LLM
-> proxy. You enter your API keys once and all three tools share them.
+> proxy. You enter your API keys once and all five slots share them.
 
 ---
 
