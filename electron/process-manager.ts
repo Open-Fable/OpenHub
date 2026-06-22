@@ -288,13 +288,32 @@ exec "\$REAL_PATH" "\${args[@]}"
     try {
       // execFile (no shell) so the port can never be interpreted as a command.
       // lsof exits non-zero when nothing holds the port — caught below.
-      const pids = execFileSync("lsof", ["-ti", `:${port}`], { stdio: "pipe" })
+      const rawPids = execFileSync("lsof", ["-ti", `:${port}`], { stdio: "pipe" })
         .toString()
         .trim()
         .split("\n")
         .filter(Boolean)
         .map((s) => parseInt(s, 10))
         .filter((n) => !isNaN(n));
+
+      const pids = rawPids.filter((pid) => {
+        if (pid === process.pid) return false;
+        try {
+          const cmd = execFileSync("ps", ["-p", String(pid), "-o", "command="], {
+            stdio: "pipe",
+          })
+            .toString()
+            .trim();
+          const execName = path.basename(process.execPath);
+          if (cmd.includes(execName)) return false;
+          if (cmd.includes("Electron.app") || cmd.includes("OpenHub.app")) return false;
+          if (cmd.includes("Electron Helper") || cmd.includes("OpenHub Helper"))
+            return false;
+        } catch {
+          // Si ps échoue, le processus a peut-être déjà quitté. Par sécurité, on le garde dans la liste à tuer.
+        }
+        return true;
+      });
 
       for (const pid of pids) {
         try {
