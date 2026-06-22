@@ -3,10 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FAQ — OpenHub</title>
+    <title>OpenHub FAQ — Pricing, Privacy, Platforms, Supported Models &amp; More</title>
     <meta name="description" content="Frequently asked questions about OpenHub: is it free, does it run on Windows or Linux, where do my keys and data live, which providers are supported, what the orchestrator does, and how to contribute." />
+    <meta property="og:title" content="OpenHub FAQ — Pricing, Privacy, Platforms, Supported Models &amp; More" />
+    <meta property="og:description" content="Costs, platforms, data location, supported providers, orchestrator features, and troubleshooting. Straight answers, no hedging." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://open-fable.github.io/OpenHub/landing/faq.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenHub FAQ — Pricing, Privacy, Platforms, Supported Models &amp; More" />
+    <meta name="twitter:description" content="Is it free? Does it run on Windows? Where are my keys stored? All the answers in one place." />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M 20.27 6.41 A 10.5 10.5 0 0 1 26.44 17.10'/%3E%3Cpath d='M 22.17 24.49 A 10.5 10.5 0 0 1 9.83 24.49'/%3E%3Cpath d='M 5.56 17.10 A 10.5 10.5 0 0 1 11.73 6.41'/%3E%3C/g%3E%3C/svg%3E" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="canonical" href="https://open-fable.github.io/OpenHub/landing/faq.html" />
+    <link rel="alternate" hreflang="en" href="https://open-fable.github.io/OpenHub/landing/faq.html" />
+    <link rel="alternate" hreflang="fr" href="https://open-fable.github.io/OpenHub/landing/faq.fr.html" />
+    <link rel="alternate" hreflang="x-default" href="https://open-fable.github.io/OpenHub/landing/faq.html" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is OpenHub free?", "acceptedAnswer": { "@type": "Answer", "text": "The OpenHub shell is open source under the MIT license. The app itself is free. It doesn't ship with AI credits though — you bring your own keys (Anthropic, OpenAI, OpenRouter, Google) or run local models through Ollama. Your provider bills you for inference. OpenHub doesn't." } },
+        { "@type": "Question", "name": "Does it run on Windows or Linux?", "acceptedAnswer": { "@type": "Answer", "text": "Not yet, macOS 14 and up only. OpenHub leans on the macOS Keychain to store secrets and on Electron's view system for the sidebar." } },
+        { "@type": "Question", "name": "Where are my API keys stored?", "acceptedAnswer": { "@type": "Answer", "text": "In the macOS Keychain. The proxy loads them into memory and injects them when processes start. The wrapped tools only ever receive a fake local token." } },
+        { "@type": "Question", "name": "Which LLM providers are supported?", "acceptedAnswer": { "@type": "Answer", "text": "Anthropic (Claude), OpenAI (GPT), OpenRouter (multi-model), Ollama (local), and Google Gemini. You can mix cloud and local depending on the task." } },
+        { "@type": "Question", "name": "What is the orchestrator?", "acceptedAnswer": { "@type": "Answer", "text": "An engine that breaks a goal into specialized agents arranged in a dependency graph, runs them with deterministic quality checks, and delivers a folder of real files." } }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "OpenHub",
+      "operatingSystem": "macOS",
+      "applicationCategory": "DeveloperApplication",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "description": "A free, open-source macOS app. Chat with any model, run a code agent, design interfaces, manage projects, and orchestrate a team of AI agents. Your API keys stay on your Mac."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Open-Fable",
+      "url": "https://github.com/Open-Fable"
+    }
+    </script>
   </head>
   <body>
 
@@ -223,7 +266,10 @@
         </div>
         <div class="footer-bottom">
           <span>OpenHub is a shell, not a fork. The AI tools belong to their respective creators.</span>
-          <a href="faq.fr.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">Français</a>
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:12px; color:var(--text-muted);">Built by <a href="https://github.com/Open-Fable" style="color:var(--text-muted); text-decoration:underline;">Open-Fable</a> · <time datetime="2026-06-22">June 2026</time></span>
+            <a href="faq.fr.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">Français</a>
+          </div>
         </div>
       </div>
     </footer>

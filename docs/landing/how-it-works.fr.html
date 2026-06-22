@@ -3,10 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fonctionnement — OpenHub</title>
+    <title>Fonctionnement d'OpenHub — Proxy Local, Config Unique, Zero Cloud</title>
     <meta name="description" content="Comment fonctionne OpenHub : un proxy local detient tes cles, une seule config regle chaque outil, et une couche d'overrides CSS/JS embarque trois apps open-source sans toucher leur source. Zero Docker, zero cloud." />
+    <meta property="og:title" content="Fonctionnement d'OpenHub — Proxy Local, Config Unique, Zero Cloud" />
+    <meta property="og:description" content="OpenHub fait tourner trois outils open-source comme des process natifs, route leurs appels IA par un proxy local et les style avec une couche d'injection." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://open-fable.github.io/OpenHub/landing/how-it-works.fr.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fonctionnement d'OpenHub — Proxy Local, Config Unique, Zero Cloud" />
+    <meta name="twitter:description" content="Un proxy detient les cles. Une config regle tout. Une couche d'overrides personnalise sans forker." />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cg stroke='%2314B8A6' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M 20.27 6.41 A 10.5 10.5 0 0 1 26.44 17.10'/%3E%3Cpath d='M 22.17 24.49 A 10.5 10.5 0 0 1 9.83 24.49'/%3E%3Cpath d='M 5.56 17.10 A 10.5 10.5 0 0 1 11.73 6.41'/%3E%3C/g%3E%3C/svg%3E" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="canonical" href="https://open-fable.github.io/OpenHub/landing/how-it-works.fr.html" />
+    <link rel="alternate" hreflang="fr" href="https://open-fable.github.io/OpenHub/landing/how-it-works.fr.html" />
+    <link rel="alternate" hreflang="en" href="https://open-fable.github.io/OpenHub/landing/how-it-works.html" />
+    <link rel="alternate" hreflang="x-default" href="https://open-fable.github.io/OpenHub/landing/how-it-works.html" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "OpenHub",
+      "operatingSystem": "macOS",
+      "applicationCategory": "DeveloperApplication",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "description": "Une app macOS gratuite et open-source. Discute avec n'importe quel modele, lance un agent de code, cree des interfaces, gere tes projets et orchestre une equipe d'agents."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Open-Fable",
+      "url": "https://github.com/Open-Fable"
+    }
+    </script>
   </head>
   <body>
 
@@ -254,7 +284,10 @@
         </div>
         <div class="footer-bottom">
           <span>OpenHub est une enveloppe, pas un fork. Les outils IA appartiennent a leurs createurs respectifs.</span>
-          <a href="how-it-works.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">English</a>
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:12px; color:var(--text-muted);">Construit par <a href="https://github.com/Open-Fable" style="color:var(--text-muted); text-decoration:underline;">Open-Fable</a> · <time datetime="2026-06-22">Juin 2026</time></span>
+            <a href="how-it-works.html" class="nav-lang" style="font-size:13px; color:var(--text-muted);">English</a>
+          </div>
         </div>
       </div>
     </footer>
