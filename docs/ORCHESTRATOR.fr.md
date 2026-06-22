@@ -44,14 +44,14 @@ déterministe et forcent un échec, quoi qu'en dise le modèle vérificateur.
 Six valeurs de `type` existent (`project-store.ts`). Chacune mappe vers un backend et
 un jeu de règles qualité (`orchestrator-prompts.ts`) :
 
-| Type           | Backend            | Rôle                                                                                                                                                                                                      |
-| -------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `recherche`    | aucun (LLM pur)    | Investigation, collecte de données, état de l'art, documents/plans/recommandations de synthèse.                                                                                                           |
-| `work`         | aucun (LLM pur)    | Contenu & assets : rédaction, données structurées (.md/.json/.csv), **et le design system / palette / typographie / charte graphique** d'un site. _C'est work qui définit les couleurs, pas le designer._ |
-| `design`       | daemon Open Design | Maquettes web visuelles (HTML/CSS) **uniquement**, et seulement si le livrable a une UI. Il _reçoit_ le design system de work — il ne l'invente pas.                                                      |
-| `code`         | serveur OpenCode   | Le livrable fonctionnel : app, librairie, API, CLI, scripts. Reproduit fidèlement les maquettes quand elles existent.                                                                                     |
-| `verifier`     | aucun (LLM pur)    | QA / tests. **Rapport seulement** — ne réécrit jamais les fichiers d'un autre agent ; l'orchestrateur route les corrections vers le propriétaire.                                                         |
-| `orchestrator` | —                  | Le nœud coordinateur lui-même. Lance les prompts de planification ; pas un agent exécutable.                                                                                                              |
+| Type           | Backend            | Rôle                                                                                                                                                 |
+| -------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `recherche`    | aucun (LLM pur)    | Investigation, collecte de données, état de l'art, documents/plans/recommandations de synthèse.                                                      |
+| `work`         | aucun (LLM pur)    | Contenu & assets : rédaction, données structurées (.md/.json/.csv), **et le design system / palette / typographie / charte graphique** d'un site.    |
+| `design`       | daemon Open Design | Maquettes web visuelles (HTML/CSS) **uniquement**, et seulement si le livrable a une UI. Il _reçoit_ le design system de work — il ne l'invente pas. |
+| `code`         | serveur OpenCode   | Le livrable fonctionnel : app, librairie, API, CLI, scripts. Reproduit fidèlement les maquettes quand elles existent.                                |
+| `verifier`     | aucun (LLM pur)    | QA / tests. **Rapport seulement** — ne réécrit jamais les fichiers d'un autre agent ; l'orchestrateur route les corrections vers le propriétaire.    |
+| `orchestrator` | —                  | Le nœud coordinateur lui-même. Lance les prompts de planification ; pas un agent exécutable.                                                         |
 
 « LLM pur » est un **chemin d'exécution**, pas un type : tout nœud sans backend à
 outils (`work`, `recherche`, `verifier`) passe par le chemin LLM direct et n'a pas

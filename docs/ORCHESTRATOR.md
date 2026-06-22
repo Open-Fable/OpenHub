@@ -43,14 +43,14 @@ code and force a fail regardless of what the verifier model claims.
 Six `type` values exist (`project-store.ts`). Each maps to a backend and a set of
 quality rules (`orchestrator-prompts.ts`):
 
-| Type           | Backend            | Role                                                                                                                                                                                      |
-| -------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `recherche`    | none (pure-LLM)    | Investigation, data gathering, state-of-the-art, synthesis docs/plans/recommendations.                                                                                                    |
-| `work`         | none (pure-LLM)    | Content & assets: writing, structured data (.md/.json/.csv), **and the design system / palette / typography / charte graphique** for a site. _Work defines the colors, not the designer._ |
-| `design`       | Open Design daemon | Visual web mockups (HTML/CSS) **only**, and only if the deliverable has a UI. It _receives_ the design system from work — it does not invent it.                                          |
-| `code`         | OpenCode server    | The functional deliverable: app, library, API, CLI, scripts. Reproduces mockups faithfully when they exist.                                                                               |
-| `verifier`     | none (pure-LLM)    | QA / tests. **Report-only** — never rewrites another agent's files; the orchestrator routes fixes to the owner.                                                                           |
-| `orchestrator` | —                  | The coordinator node itself. Runs the planning prompts; not an executable agent.                                                                                                          |
+| Type           | Backend            | Role                                                                                                                                             |
+| -------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `recherche`    | none (pure-LLM)    | Investigation, data gathering, state-of-the-art, synthesis docs/plans/recommendations.                                                           |
+| `work`         | none (pure-LLM)    | Content & assets: writing, structured data (.md/.json/.csv), **and the design system / palette / typography / charte graphique** for a site.     |
+| `design`       | Open Design daemon | Visual web mockups (HTML/CSS) **only**, and only if the deliverable has a UI. It _receives_ the design system from work — it does not invent it. |
+| `code`         | OpenCode server    | The functional deliverable: app, library, API, CLI, scripts. Reproduces mockups faithfully when they exist.                                      |
+| `verifier`     | none (pure-LLM)    | QA / tests. **Report-only** — never rewrites another agent's files; the orchestrator routes fixes to the owner.                                  |
+| `orchestrator` | —                  | The coordinator node itself. Runs the planning prompts; not an executable agent.                                                                 |
 
 "Pure-LLM" is an **execution path**, not a type: any node without a tool-using
 backend (`work`, `recherche`, `verifier`) runs through the direct LLM path and has
