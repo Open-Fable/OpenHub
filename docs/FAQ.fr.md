@@ -58,10 +58,12 @@ Gemini (via OAuth). Tu peux mélanger cloud et local selon les tâches.
 
 ### C'est quoi l'orchestrateur, concrètement ?
 
-Un moteur qui décompose un objectif en plusieurs agents spécialisés (code, design,
-work, recherche, vérification) organisés en graphe de dépendances, puis enchaîne leur
-exécution avec des contrôles qualité automatiques. Le résultat est un dossier de
-livrables. Voir le [guide d'usage](USAGE.fr.md#4-lorchestrateur-multi-agents).
+Un assistant interactif. Tu décris ce que tu veux en langage courant — l'orchestrateur
+planifie le travail en un DAG visuel d'agents spécialisés (recherche, rédaction, design,
+code, vérification). Chaque agent exécute son rôle de manière autonome, les résultats
+circulent en aval, et un quality gate déterministe attrape les défauts. Le résultat est
+un dossier de livrables, pas une transcription de chat. Voir le
+[guide d'usage](USAGE.fr.md#4-lorchestrateur-multi-agents).
 
 ### Après une mise à jour upstream, l'interface est cassée. Que faire ?
 

@@ -81,8 +81,10 @@ mémoire est explicitement contournée pour ce projet).
 
 ## 4. L'orchestrateur multi-agents
 
-Décompose un objectif en un DAG d'agents qui produisent ensemble un livrable (site,
-rapport, ebook, librairie de code, slides...).
+L'orchestrateur est un assistant interactif. Décris ton objectif en langage courant —
+il planifie le travail en un DAG visuel d'agents spécialisés (recherche, rédaction,
+design, code, vérification). Chaque agent exécute son rôle de manière autonome, le
+quality gate attrape les défauts, et le système s'auto-corrige en cas d'échec.
 
 **Lancer un workflow :**
 

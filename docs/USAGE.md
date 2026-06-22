@@ -81,8 +81,10 @@ bypassed for that project).
 
 ## 4. The multi-agent orchestrator
 
-Break a goal into a DAG of agents that together produce a deliverable (site, report,
-ebook, code library, slides...).
+The orchestrator is an interactive assistant. Describe your goal in plain language —
+it plans the work as a visual DAG of specialized agents (research, writing, design,
+code, verification). Each agent executes autonomously, the quality gate catches
+defects, and the system self-corrects when something fails.
 
 **Launching a workflow:**
 

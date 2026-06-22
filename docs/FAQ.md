@@ -54,10 +54,11 @@ Gemini (via OAuth). You can mix cloud and local depending on the task.
 
 ### What is the orchestrator, concretely?
 
-An engine that breaks a goal down into several specialized agents (code, design, work,
-research, verification) organized into a dependency graph, then chains their execution
-with automatic quality checks. The result is a folder of deliverables. See the
-[usage guide](USAGE.md#4-the-multi-agent-orchestrator).
+An interactive assistant. You describe what you want in plain language — the
+orchestrator plans it as a visual DAG of specialized agents (research, writing, design,
+code, verification). Each agent executes autonomously, results flow downstream, and a
+deterministic quality gate catches defects. The result is a folder of deliverables, not
+a chat transcript. See the [usage guide](USAGE.md#4-the-multi-agent-orchestrator).
 
 ### After an upstream update, the interface is broken. What do I do?
 
