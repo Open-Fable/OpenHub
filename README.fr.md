@@ -14,7 +14,7 @@ Un espace de travail IA local : discute avec n'importe quel modèle, orchestre u
 
 [English](README.md) · **Français**
 
-[Installation](#-installation) | [Usage](docs/USAGE.fr.md) | [Orchestrateur](docs/ORCHESTRATOR.fr.md) | [FAQ](docs/FAQ.fr.md) | [Architecture](#-architecture) | [Contribuer](docs/CONTRIBUTING.fr.md)
+[Installation](#installation) | [Usage](docs/USAGE.fr.md) | [Orchestrateur](docs/ORCHESTRATOR.fr.md) | [FAQ](docs/FAQ.fr.md) | [Architecture](#architecture) | [Contribuer](docs/CONTRIBUTING.fr.md)
 
 </div>
 

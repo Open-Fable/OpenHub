@@ -16,7 +16,7 @@ A local AI workspace: chat with any model, orchestrate a team of agents that bui
 
 **English** · [Français](README.fr.md)
 
-[Installation](#-installation) | [Usage](docs/USAGE.md) | [Orchestrator](docs/ORCHESTRATOR.md) | [FAQ](docs/FAQ.md) | [Architecture](#-architecture) | [Contributing](docs/CONTRIBUTING.md)
+[Installation](#installation) | [Usage](docs/USAGE.md) | [Orchestrator](docs/ORCHESTRATOR.md) | [FAQ](docs/FAQ.md) | [Architecture](#architecture) | [Contributing](docs/CONTRIBUTING.md)
 
 </div>
 
