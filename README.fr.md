@@ -32,7 +32,7 @@ Les outils IA sont des silos. Ils tournent dans des apps séparées avec leurs p
 
 ## Fonctionnalités
 
-L'**orchestrateur multi-agents** est la vedette. Donne-lui un objectif — site web, rapport de données — et un DAG d'agents planifie et construit le résultat, puis le vérifie. Une Quality Gate déterministe avec boucles correctives et watchdogs l'empêche de produire n'importe quoi. [Guide détaillé ici.](docs/ORCHESTRATOR.fr.md)
+L'**orchestrateur multi-agents** est la vedette. C'est un assistant interactif : décris ce que tu veux en langage courant — « crée une landing page pour ma startup » ou « audite mon API et génère une spec OpenAPI » — et il planifie le travail sous forme de DAG visuel (un organigramme d'agents que tu peux inspecter). Chaque agent exécute son rôle de manière autonome : recherche, rédaction, maquettes, code, vérification qualité. Tu suis la progression en direct, et quand quelque chose échoue, le système s'auto-corrige sans que tu aies à intervenir. C'est ce qui rend le travail multi-agents complexe accessible à tout le monde, pas seulement aux ingénieurs. [Guide détaillé ici.](docs/ORCHESTRATOR.fr.md)
 
 Le **chat** marche avec Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini et tout fournisseur compatible OpenAI. Historique des sessions, pièces jointes, recherche Brave automatique, contrôle du raisonnement. Choisis ton modèle et c'est parti.
 

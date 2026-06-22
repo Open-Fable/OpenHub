@@ -34,7 +34,7 @@ AI tools are silos. They run in separate apps with their own API keys and memory
 
 ## Features
 
-The **multi-agent orchestrator** is the headliner. Give it a goal — build a site, generate a data report — and a DAG of agents plans and builds the result, then verifies it. There's a deterministic Quality Gate with automatic corrective loops and watchdogs that keep the output from going off the rails. [Deep dive here.](docs/ORCHESTRATOR.md)
+The **multi-agent orchestrator** is the headliner. It's an interactive assistant: describe what you want in plain language — "build a landing page for my startup" or "audit my API and generate an OpenAPI spec" — and it plans the work as a visual DAG (a flowchart of agents you can inspect). Each agent executes its part autonomously: research, write content, design mockups, code, verify quality. You can follow the progress in real time, and when something fails, the system self-corrects without you lifting a finger. This is what makes complex multi-agent work accessible to anyone, not just engineers. [Deep dive here.](docs/ORCHESTRATOR.md)
 
 The **chat** works with Anthropic, OpenAI, OpenRouter, Ollama, Google Gemini, or any OpenAI-compatible provider. Session history, file attachments, automatic Brave search, reasoning controls. Pick a model and go.
 

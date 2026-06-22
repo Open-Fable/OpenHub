@@ -2,12 +2,18 @@
 
 # OpenHub — L'orchestrateur multi-agents
 
-> Référence technique du moteur d'orchestration. Comment un objectif devient un
-> graphe d'agents IA qui produisent un livrable (site web, librairie de code,
-> rapport, ebook, slides...), et comment le système attrape les défauts structurels
-> au lieu de faire confiance au modèle.
+> L'orchestrateur est un **assistant interactif** qui transforme un objectif en
+> langage courant en un workflow multi-agents. Tu décris ce que tu veux — il
+> planifie le travail sous forme de DAG visuel, assigne les agents, les exécute,
+> vérifie le résultat et s'auto-corrige. Tu gardes le contrôle sans avoir à
+> comprendre le moteur en dessous.
 
-Ce document s'adresse aux contributeurs et utilisateurs avancés qui veulent
+> Référence technique ci-dessous. Comment un objectif devient un graphe d'agents
+> IA qui produisent un livrable (site web, librairie de code, rapport, ebook,
+> slides...), et comment le système attrape les défauts structurels au lieu de
+> faire confiance au modèle.
+
+Ce document s'adresse aux contributeurs et utilisateurs avancés. Pour l'usage quotidien, voir
 comprendre le moteur. Pour l'usage quotidien, voir
 [USAGE](USAGE.fr.md#4-lorchestrateur-multi-agents). Le code vit dans
 `electron/orchestrator-runner.ts` (moteur), `electron/orchestrator-quality.ts`

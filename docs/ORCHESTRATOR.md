@@ -2,12 +2,16 @@
 
 # OpenHub — The Multi-Agent Orchestrator
 
-> Technical reference for the orchestrator engine. Covers how a goal becomes a
-> graph of AI agents that produce a deliverable (website, code library, report,
-> ebook, slides...), and how the system catches structural defects instead of
-> trusting the model's word for it.
+> The orchestrator is an **interactive assistant** that turns a plain-language goal
+> into a multi-agent workflow. You describe what you want — it plans the work as a
+> visual DAG, assigns agents, executes them, verifies the result, and self-corrects.
+> You stay in control without needing to understand the engine underneath.
 
-This document is for contributors and power users who want to understand the engine.
+> Technical reference below. Covers how a goal becomes a graph of AI agents that
+> produce a deliverable (website, code library, report, ebook, slides...), and
+> how the system catches structural defects instead of trusting the model.
+
+This document is for contributors and power users. For day-to-day usage,
 For day-to-day usage, see [USAGE](USAGE.md#4-the-multi-agent-orchestrator). The code
 lives in `electron/orchestrator-runner.ts` (engine), `electron/orchestrator-quality.ts`
 (deterministic quality gate), `electron/orchestrator-prompts.ts` (prompts & rules),
