@@ -42,7 +42,7 @@ Three **upstream tools** sit beside the native Chat and Orchestrator slots: Open
 
 Behind the scenes, a **single LLM proxy** at `127.0.0.1:9999` routes everything through one OpenAI-compatible endpoint. It handles DeepSeek and Anthropic prompt caching via a Stable Prefix Strategy and normalizes tool schemas — the apps don't step on each other.
 
-Your **profile and key facts** carry over between sessions. The system extracts them automatically after each chat using local Ollama models (Qwen) with Jaccard semantic deduplication.
+Your **profile and key facts** carry over between sessions _(under maintenance — coming soon)_. The system extracts them automatically after each chat using local Ollama models (Qwen) with Jaccard semantic deduplication.
 
 **Security**: API credentials are encrypted to `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM). WebViews are sandboxed with localhost-only Bearer auth.
 
@@ -142,7 +142,7 @@ WebView (OpenWork / OpenCode / Open Design)
     └── LLM calls  ──→  Proxy :9999  ──→  Anthropic / OpenAI / OpenRouter / Ollama / Gemini
                              │
                              ├── Context injection (project, memory)
-                             └── Background memory extraction
+                             └── Background memory extraction *(under maintenance)*
 ```
 
 Full spec — ports, security model, config cascade, overlay system — in [ARCHITECTURE.md](ARCHITECTURE.md). Orchestrator engine in [docs/ORCHESTRATOR.md](docs/ORCHESTRATOR.md).

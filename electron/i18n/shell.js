@@ -97,7 +97,8 @@
         "La mémoire à long terme et l'extraction de faits par IA sont temporairement désactivées et seront disponibles dans une prochaine mise à jour.",
       "cfg.memory.control": "Contrôle",
       "cfg.memory.longterm.label": "Mémoire long-terme",
-      "cfg.memory.longterm.desc": "Injecte le profil et les faits dans chaque requête.",
+      "cfg.memory.longterm.desc":
+        "Injecte le profil et les faits dans chaque requête (en maintenance).",
       "cfg.memory.profile.group": "Profil utilisateur",
       "cfg.memory.profile.label": "Instructions globales (YAML)",
       "cfg.memory.profile.desc":
@@ -242,7 +243,7 @@
       "onboarding.prefs.memory": "Mémoire",
       "onboarding.prefs.memoryEnabled": "Mémoire long terme",
       "onboarding.prefs.memoryEnabled.desc":
-        "Injecte le profil et les faits dans chaque requête.",
+        "Injecte le profil et les faits dans chaque requête (en maintenance).",
       "onboarding.prefs.autoExtract": "Extraction automatique",
       "onboarding.prefs.autoExtract.desc":
         "Extrait les faits automatiquement via Ollama local.",
@@ -355,7 +356,8 @@
         "Long-term memory and AI fact extraction are temporarily disabled and will be available in a future update.",
       "cfg.memory.control": "Control",
       "cfg.memory.longterm.label": "Long-term memory",
-      "cfg.memory.longterm.desc": "Injects the profile and facts into every request.",
+      "cfg.memory.longterm.desc":
+        "Injects the profile and facts into every request (under maintenance).",
       "cfg.memory.profile.group": "User profile",
       "cfg.memory.profile.label": "Global instructions (YAML)",
       "cfg.memory.profile.desc":
@@ -497,7 +499,7 @@
       "onboarding.prefs.memory": "Memory",
       "onboarding.prefs.memoryEnabled": "Long-term memory",
       "onboarding.prefs.memoryEnabled.desc":
-        "Injects the profile and facts into every request.",
+        "Injects the profile and facts into every request (under maintenance).",
       "onboarding.prefs.autoExtract": "Automatic extraction",
       "onboarding.prefs.autoExtract.desc":
         "Automatically extracts facts via local Ollama.",

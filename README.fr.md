@@ -40,7 +40,7 @@ Trois **outils upstream** côtoient les slots natifs Chat et Orchestrateur : Ope
 
 En coulisses, un **proxy LLM** unique sur `127.0.0.1:9999` route tout via un seul endpoint compatible OpenAI. Il gère le cache prompt DeepSeek/Anthropic avec une stratégie de préfixe stable et normalise les schémas d'outils — les apps ne se marchent pas dessus.
 
-Ton **profil et tes faits clés** suivent d'une session à l'autre. Le système les extrait automatiquement après chaque chat avec des modèles Ollama locaux (Qwen) et une déduplication sémantique de Jaccard.
+Ton **profil et tes faits clés** suivent d'une session à l'autre _(en maintenance — bientôt disponible)_. Le système les extrait automatiquement après chaque chat avec des modèles Ollama locaux (Qwen) et une déduplication sémantique de Jaccard.
 
 **Sécurité :** les clés API sont chiffrées dans `~/Library/Application Support/openhub/secrets.enc` (AES-256-GCM). Les WebViews sont sandboxées avec auth Bearer localhost.
 
@@ -140,7 +140,7 @@ WebView (OpenWork / OpenCode / Open Design)
     └── appels LLM  ──→  Proxy :9999  ──→  Anthropic / OpenAI / OpenRouter / Ollama / Gemini
                              │
                              ├── injection de contexte (projet, mémoire)
-                             └── extraction mémoire en arrière-plan
+                             └── extraction mémoire en arrière-plan *(en maintenance)*
 ```
 
 Spec complète — ports, modèle de sécurité, cascade de config, système d'overlays — dans [ARCHITECTURE.fr.md](ARCHITECTURE.fr.md). Moteur de l'orchestrateur dans [docs/ORCHESTRATOR.fr.md](docs/ORCHESTRATOR.fr.md).
