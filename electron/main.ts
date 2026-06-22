@@ -18,6 +18,17 @@ import { promises as fs } from "fs";
 import { exec, execFile } from "child_process";
 import { ProcessManager } from "./process-manager.js";
 import { startProxy, getActiveWorkspaceDir } from "./proxy/index.js";
+import {
+  initWorkspaces,
+  getWorkspacesSync,
+  getActiveWorkspaceIdSync,
+  setActiveWorkspaceId,
+  addWorkspace,
+  removeWorkspace,
+  updateWorkspaceDisplayName,
+  getStableWorkspaceId,
+  isSafeWorkspacePath,
+} from "./workspace-store.js";
 import { loadOverrides } from "./override-loader.js";
 import { syncRemoteOverrides } from "./remote-overrides.js";
 import { generateOpenCodeConfig } from "./config-generator.js";
@@ -861,21 +872,15 @@ ipcHandle("openwork-desktop-invoke", async (_e, command: string, ...args: unknow
     // the welcome/create-workspace screen and boots directly into the main UI.
     // A pre-populated workspace also routes the boot through runtimeBootstrap
     // (Electron path) which we handle with skipped=true → instant markReady().
-    case "workspaceBootstrap":
+    case "workspaceBootstrap": {
+      const workspaces = getWorkspacesSync();
+      const activeId = getActiveWorkspaceIdSync() ?? "openhub-default";
       return {
-        workspaces: [
-          {
-            id: "openhub-default",
-            name: "OpenHub",
-            path: homedir(),
-            preset: "default",
-            workspaceType: "local",
-            displayName: "OpenHub",
-          },
-        ],
-        selectedId: "openhub-default",
-        activeId: "openhub-default",
+        workspaces,
+        selectedId: activeId,
+        activeId,
       };
+    }
 
     // openworkServerRestart/Info: point to our running opencode serve
     // isOpenworkServerReady() requires running=true + baseUrl + ownerToken
@@ -929,20 +934,75 @@ ipcHandle("openwork-desktop-invoke", async (_e, command: string, ...args: unknow
 
     // ── OpenWork workspace mutations ───────────────────────────────────────
     case "workspaceCreate": {
-      const wsPath = (args[0] as string) ?? "";
-      return {
-        id: `openhub-${Date.now()}`,
-        name: wsPath.split("/").pop() || "workspace",
+      const input = args[0] as Record<string, unknown> | null | undefined;
+      let wsPath = "";
+      let preset = "default";
+      let name = "";
+      if (input && typeof input === "object") {
+        wsPath =
+          typeof input["folderPath"] === "string" ? (input["folderPath"] as string) : "";
+        preset =
+          typeof input["preset"] === "string" ? (input["preset"] as string) : "default";
+        name = typeof input["name"] === "string" ? (input["name"] as string) : "";
+      } else if (typeof input === "string") {
+        wsPath = input;
+      }
+
+      if (!isSafeWorkspacePath(wsPath)) {
+        throw new Error("Invalid or unsafe workspace path");
+      }
+
+      const resolvedName = name || wsPath.split("/").pop() || "workspace";
+      const id = getStableWorkspaceId(wsPath);
+      const entry = {
+        id,
+        name: resolvedName,
         path: wsPath,
-        preset: "default",
+        preset,
         workspaceType: "local",
-        displayName: wsPath.split("/").pop() || "workspace",
+        displayName: resolvedName,
+      };
+
+      const added = await addWorkspace(entry);
+      await setActiveWorkspaceId(added.id);
+
+      const workspaces = getWorkspacesSync();
+      return {
+        selectedId: added.id,
+        activeId: added.id,
+        workspaces,
       };
     }
     case "workspaceSetSelected":
-    case "workspaceSetRuntimeActive":
-    case "workspaceUpdateDisplayName":
-    case "workspaceForget":
+    case "workspaceSetRuntimeActive": {
+      const id = args[0] as string;
+      if (typeof id === "string" && id.trim()) {
+        await setActiveWorkspaceId(id);
+      }
+      return { ok: true };
+    }
+    case "workspaceUpdateDisplayName": {
+      const input = args[0] as Record<string, unknown> | null | undefined;
+      if (
+        input &&
+        typeof input === "object" &&
+        typeof input["id"] === "string" &&
+        typeof input["displayName"] === "string"
+      ) {
+        await updateWorkspaceDisplayName(
+          input["id"] as string,
+          input["displayName"] as string,
+        );
+      }
+      return { ok: true };
+    }
+    case "workspaceForget": {
+      const id = args[0] as string;
+      if (typeof id === "string" && id.trim()) {
+        await removeWorkspace(id);
+      }
+      return { ok: true };
+    }
     case "workspaceAddAuthorizedRoot":
     case "engineStop":
     case "engineRestart":
@@ -2737,6 +2797,7 @@ app
 
     bootT("loadSettings start");
     await loadSettings();
+    await initWorkspaces();
     bootT("loadSettings done");
     registerOllamaHandlers();
     bootT("startProxy start");

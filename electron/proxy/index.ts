@@ -8,6 +8,19 @@ import { readAllApiKeys, isSafeOllamaUrl } from "../keychain.js";
 import { GEMINI_CLIENT_ID, GEMINI_CLIENT_SECRET } from "../gemini-credentials.js";
 import { getActiveProject, getProjectById } from "../project-store.js";
 import {
+  getWorkspacesSync,
+  getActiveWorkspaceIdSync,
+  getActiveWorkspaceDirSync,
+  addWorkspace,
+  setActiveWorkspaceId,
+  updateWorkspaceDisplayName,
+  removeWorkspace,
+  isSafeWorkspacePath,
+  getStableWorkspaceId,
+  getStableRemoteWorkspaceId,
+  WorkspaceEntry,
+} from "../workspace-store.js";
+import {
   buildMemoryBlock,
   addFact,
   getMemory,
@@ -29,45 +42,8 @@ import {
 const PROXY_PORT = 9999;
 const PROXY_HOST = "127.0.0.1";
 
-// ── In-memory workspace store ──
-type WorkspaceEntry = {
-  id: string;
-  name: string;
-  path: string;
-  preset: string;
-  workspaceType: string;
-  displayName: string;
-};
-// Seed the default workspace so session listing knows its directory
-const workspaces: WorkspaceEntry[] = [
-  {
-    id: "openhub-default",
-    name: "OpenHub",
-    path: homedir(),
-    preset: "default",
-    workspaceType: "local",
-    displayName: "OpenHub",
-  },
-];
-let activeWorkspaceId: string | null = "openhub-default";
-
 export function getActiveWorkspaceDir(): string {
-  const ws = workspaces.find((w) => w.id === activeWorkspaceId);
-  if (!ws) return homedir();
-  if (ws.workspaceType === "remote") return homedir();
-  return ws.path ?? homedir();
-}
-
-// A local workspace path must be an absolute directory inside the user's home.
-// The active workspace path is read into LLM prompts (AGENT-MEMORY.md, graphify
-// report), so an unconstrained path is a file-disclosure primitive.
-function isSafeWorkspacePath(p: string): boolean {
-  if (typeof p !== "string" || p.length === 0 || !path.isAbsolute(p)) return false;
-  const home = path.resolve(homedir());
-  const resolved = path.resolve(p);
-  if (resolved === home) return true;
-  const rel = path.relative(home, resolved);
-  return rel.length > 0 && !rel.startsWith("..") && !path.isAbsolute(rel);
+  return getActiveWorkspaceDirSync();
 }
 
 export async function startProxy(): Promise<string> {
@@ -174,14 +150,13 @@ export async function startProxy(): Promise<string> {
     }
     next();
   });
-
   // listWorkspaces → GET /workspaces (client expects { items: [...] })
   app.get("/workspaces", (_req, res) => {
-    res.json({ items: workspaces, activeId: activeWorkspaceId });
+    res.json({ items: getWorkspacesSync(), activeId: getActiveWorkspaceIdSync() });
   });
 
   // createLocalWorkspace → POST /workspaces/local
-  app.post("/workspaces/local", (req: Request, res: Response) => {
+  app.post("/workspaces/local", async (req: Request, res: Response) => {
     const body = req.body as { folderPath?: string; name?: string };
     const wsPath = body.folderPath ?? "";
     if (!isSafeWorkspacePath(wsPath)) {
@@ -190,7 +165,7 @@ export async function startProxy(): Promise<string> {
         .json({ error: "folderPath must be an absolute directory inside home" });
       return;
     }
-    const id = `openhub-${Date.now()}`;
+    const id = getStableWorkspaceId(wsPath);
     const name = body.name || wsPath.split("/").pop() || "workspace";
     const entry: WorkspaceEntry = {
       id,
@@ -200,19 +175,19 @@ export async function startProxy(): Promise<string> {
       workspaceType: "local",
       displayName: name,
     };
-    workspaces.push(entry);
-    activeWorkspaceId = id;
+    const added = await addWorkspace(entry);
+    await setActiveWorkspaceId(added.id);
     res.json({
-      selectedId: id,
-      activeId: id,
-      workspaces: [entry],
+      selectedId: added.id,
+      activeId: added.id,
+      workspaces: [added],
     });
   });
 
   // createRemoteWorkspace → POST /workspaces/remote
-  app.post("/workspaces/remote", (req: Request, res: Response) => {
+  app.post("/workspaces/remote", async (req: Request, res: Response) => {
     const body = req.body as { baseUrl?: string; name?: string };
-    const id = `openhub-${Date.now()}`;
+    const id = getStableRemoteWorkspaceId(body.baseUrl || "/");
     const entry: WorkspaceEntry = {
       id,
       name: body.name || "remote",
@@ -221,40 +196,35 @@ export async function startProxy(): Promise<string> {
       workspaceType: "remote",
       displayName: body.name || "remote",
     };
-    workspaces.push(entry);
-    activeWorkspaceId = id;
+    const added = await addWorkspace(entry);
+    await setActiveWorkspaceId(added.id);
     res.json({
-      selectedId: id,
-      activeId: id,
-      workspaces: [entry],
+      selectedId: added.id,
+      activeId: added.id,
+      workspaces: [added],
     });
   });
 
-  app.post(/^\/workspaces\/[^/]+\/activate/, (req, res) => {
+  app.post(/^\/workspaces\/[^/]+\/activate/, async (req, res) => {
     const id = req.path.split("/")[2] ?? "";
-    activeWorkspaceId = id;
-    res.json({ ok: true });
-  });
-  app.put(/^\/workspaces\/[^/]+\/display-name$/, (req, res) => {
-    const id = req.path.split("/")[2] ?? "";
-    const body = req.body as { displayName?: string };
-    const ws = workspaces.find((w) => w.id === id);
-    if (ws && body.displayName) {
-      // Return new object to avoid mutation of the array entry itself —
-      // the array reference stays stable, the entry is replaced.
-      const idx = workspaces.indexOf(ws);
-      workspaces[idx] = { ...ws, displayName: body.displayName, name: body.displayName };
-    }
-    res.json({ ok: true });
-  });
-  app.delete(/^\/workspaces\/[^/]+$/, (req, res) => {
-    const id = req.path.split("/")[2] ?? "";
-    const idx = workspaces.findIndex((w) => w.id === id);
-    if (idx >= 0) workspaces.splice(idx, 1);
-    if (activeWorkspaceId === id) activeWorkspaceId = workspaces[0]?.id ?? null;
+    await setActiveWorkspaceId(id);
     res.json({ ok: true });
   });
 
+  app.put(/^\/workspaces\/[^/]+\/display-name$/, async (req, res) => {
+    const id = req.path.split("/")[2] ?? "";
+    const body = req.body as { displayName?: string };
+    if (body.displayName) {
+      await updateWorkspaceDisplayName(id, body.displayName);
+    }
+    res.json({ ok: true });
+  });
+
+  app.delete(/^\/workspaces\/[^/]+$/, async (req, res) => {
+    const id = req.path.split("/")[2] ?? "";
+    await removeWorkspace(id);
+    res.json({ ok: true });
+  });
   // ── Reverse proxy: /workspace/:id/opencode/* → opencode on :4096 ──
   // OpenWork's session view creates an opencode SDK client at
   // <serverBaseUrl>/workspace/<id>/opencode — we strip the prefix and
@@ -371,7 +341,7 @@ export async function startProxy(): Promise<string> {
   // it defaults to its own cwd and misses sessions from other workspaces.
   app.get(/^\/workspace\/[^/]+\/sessions$/, (req: Request, res: Response) => {
     const workspaceId = req.path.split("/")[2] ?? "";
-    const ws = workspaces.find((w) => w.id === workspaceId);
+    const ws = getWorkspacesSync().find((w) => w.id === workspaceId);
     // For the default "openhub-default" workspace (from IPC, not in workspaces[]),
     // look up the bootstrap path
     const wsPath = ws?.path ?? "";
@@ -964,7 +934,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
   }
 
   // Endpoints for reading/writing default reasoning effort (used by OpenCode indicator)
-  app.get("/v1/reasoning/default", (_req, res) => {
+  app.get("/v1/reasoning/default", (_req: Request, res: Response) => {
     res.json({ effort: defaultReasoningEffort });
   });
   app.post("/v1/reasoning/default", (req: Request, res: Response) => {
@@ -1005,7 +975,7 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
     /* no persisted config yet */
   }
 
-  app.get("/v1/models", async (_req, res) => {
+  app.get("/v1/models", async (_req: Request, res: Response) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     const keys = await readAllApiKeys();
     const all = await buildModelList(keys);
@@ -1723,7 +1693,8 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
 
       // ── 6. Enregistrement des métriques de cache ──
       const wsName =
-        workspaces.find((w) => w.id === activeWorkspaceId)?.name || "default";
+        getWorkspacesSync().find((w) => w.id === getActiveWorkspaceIdSync())?.name ||
+        "default";
       const usage = responseUsage ?? {};
       const upstreamCached =
         usage.prompt_cache_hit_tokens ?? usage.cache_read_input_tokens ?? 0;
