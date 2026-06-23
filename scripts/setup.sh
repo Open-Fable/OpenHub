@@ -99,7 +99,7 @@ clone_or_pull() {
 }
 
 clone_or_pull "openwork" "https://github.com/different-ai/openwork.git" "dev"
-clone_or_pull "opencode" "https://github.com/sst/opencode.git"
+clone_or_pull "opencode" "https://github.com/sst/opencode.git" "dev"
 clone_or_pull "open-design" "https://github.com/nexu-io/open-design.git"
 
 info "Installation des dépendances des apps upstream..."
