@@ -48,7 +48,7 @@ config/selected-models.json
 config/opencode.local.json
 
 # Build artifacts
-build/
+build/bundle/
 
 # Vendored Node toolchain — downloaded at build time by scripts (afterPack/setup),
 # multi-MB binaries that must never enter version control. Regenerated on demand.

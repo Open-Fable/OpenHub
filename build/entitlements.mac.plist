@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- Electron / V8 require JIT and writable+executable memory under hardened
+         runtime. disable-library-validation is required because the bundle is
+         ad-hoc signed (identity: null) with no Team ID: hardened-runtime library
+         validation rejects loading the ad-hoc Electron Framework otherwise
+         ("different Team IDs" SIGABRT at launch). Drop this only once the app
+         ships with a real Developer ID identity. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>
