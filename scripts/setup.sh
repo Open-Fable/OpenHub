@@ -75,7 +75,11 @@ else
       || { error "Checksum opencode installer invalide."; rm -f "$INSTALL_SCRIPT"; exit 1; }
     info "opencode installer checksum vérifié ✓"
   fi
-  bash "$INSTALL_SCRIPT"
+  if [ "${CI:-}" = "true" ]; then
+    bash "$INSTALL_SCRIPT" --version 1.17.9
+  else
+    bash "$INSTALL_SCRIPT"
+  fi
   rm -f "$INSTALL_SCRIPT"
   info "opencode CLI installé ✓"
 fi
