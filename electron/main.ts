@@ -2880,6 +2880,7 @@ app
       getProcessManager: () => processManager,
       onStatusChange: (status) => {
         mainWindow?.webContents.send("self-update-status", status);
+        updateToast?.webContents.send("self-update-status", status);
         if (status.stage === "available") {
           mainWindow?.webContents.send("self-update-available", status.version);
           showUpdateToast(status.version);

@@ -132,6 +132,28 @@
         }
       });
 
+      if (window.openaxis && window.openaxis.onSelfUpdateStatus) {
+        window.openaxis.onSelfUpdateStatus(function (s) {
+          if (!s || !s.stage) return;
+          if (s.stage === "downloading") {
+            installBtn.disabled = true;
+            installBtn.textContent = s.percent + "%";
+            installBtn.style.opacity = "0.8";
+            if (titleEl) titleEl.textContent = STR.downloading;
+          } else if (s.stage === "ready") {
+            installBtn.disabled = true;
+            installBtn.textContent = "✓";
+            installBtn.style.opacity = "0.8";
+            if (titleEl) titleEl.textContent = lang === "en" ? "Ready" : "Prêt";
+          } else if (s.stage === "error") {
+            installBtn.disabled = false;
+            installBtn.textContent = STR.install;
+            installBtn.style.opacity = "1";
+            if (titleEl) titleEl.textContent = lang === "en" ? "Error" : "Erreur";
+          }
+        });
+      }
+
       installBtn.addEventListener("click", function () {
         if (installBtn.disabled) return;
         installBtn.disabled = true;
