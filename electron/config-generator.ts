@@ -51,24 +51,90 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
   }
 
   const existingProviders = (existing.provider ?? {}) as Record<string, unknown>;
+  // Explicitly remove legacy openhub/openhb proxy configurations
+  delete existingProviders.openhub;
+  delete existingProviders.openhb;
+
   const existingOhub = existingProviders.openaxis as Record<string, unknown> | undefined;
   const existingModels = existingOhub?.models as Record<string, unknown> | undefined;
 
+  // Load Ollama URL from keychain
+  const { readAllApiKeys } = await import("./keychain.js");
+  const keys = await readAllApiKeys();
+  const ollamaUrl = keys.ollamaUrl || "http://127.0.0.1:11434";
+
+  // Identify which providers are enabled
+  const hasAnthropic = !!opts.anthropicKey;
+  const hasOpenAI = !!opts.openaiKey;
+  const hasDeepSeek = !!opts.deepseekKey;
+  const hasOpenRouter = !!opts.openrouterKey;
+
+  // Get installed Ollama models
+  let ollamaFetchSuccess = false;
+  const installedOllamaModels = new Set<string>();
+  try {
+    const safeUrl = ollamaUrl.startsWith("http") ? ollamaUrl : "http://127.0.0.1:11434";
+    const res = await fetch(`${safeUrl}/api/tags`, {
+      signal: AbortSignal.timeout(1000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { models?: Array<{ name: string }> };
+      for (const m of data.models ?? []) {
+        installedOllamaModels.add(m.name);
+      }
+      ollamaFetchSuccess = true;
+    }
+  } catch {
+    // Ollama offline / not installed
+  }
+
+  // Get all custom provider models
+  const customModelIds = new Set<string>();
+  if (opts.customProviders) {
+    for (const cp of opts.customProviders) {
+      for (const mId of cp.models) {
+        customModelIds.add(mId);
+      }
+    }
+  }
+
+  const isModelAvailable = (modelId: string): boolean => {
+    const source = inferModelSource(modelId);
+    if (source === "anthropic") return hasAnthropic;
+    if (source === "openai") return hasOpenAI;
+    if (source === "deepseek") return hasDeepSeek;
+    if (source === "openrouter") return hasOpenRouter;
+    if (source === "gemini") return false; // Gemini OAuth is deprecated/blocked by Google
+
+    // Custom / Ollama models
+    if (customModelIds.has(modelId)) return true;
+    if (modelId === "llama3" || modelId === "mistral") {
+      return installedOllamaModels.has(modelId);
+    }
+    if (!ollamaFetchSuccess) return true; // Preserve user's other local config if Ollama is offline
+    return installedOllamaModels.has(modelId);
+  };
+
   // Decide which models to use:
-  // If the user already has selected models in openaxis (from Catalog), PRESERVE them.
+  // If the user already has selected models in openaxis (from Catalog), PRESERVE them if they are available.
   // Only use defaults for a fresh install (no existing models).
   let models: Record<string, Record<string, unknown>>;
 
   if (existingModels && Object.keys(existingModels).length > 0) {
-    // Preserve user's catalog selections exactly
-    models = existingModels as Record<string, Record<string, unknown>>;
+    // Preserve user's catalog selections exactly, but filter out unavailable ones
+    models = {};
+    for (const [modelId, meta] of Object.entries(existingModels)) {
+      if (isModelAvailable(modelId)) {
+        models[modelId] = meta as Record<string, unknown>;
+      }
+    }
     console.warn(
-      `[config] Preserving ${Object.keys(models).length} user-selected models from Catalog`,
+      `[config] Preserving ${Object.keys(models).length} user-selected models from Catalog (filtered from ${Object.keys(existingModels).length})`,
     );
   } else {
-    // Fresh install: use defaults based on available API keys
+    // Fresh install: use defaults based on available API keys and connections
     models = {};
-    if (opts.anthropicKey) {
+    if (hasAnthropic) {
       models["claude-3-7-sonnet-latest"] = {};
       models["claude-3-5-sonnet-latest"] = {};
       models["claude-3-5-haiku-latest"] = {};
@@ -77,7 +143,7 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
       models["claude-opus-4-6"] = {};
       models["claude-haiku-4-5"] = {};
     }
-    if (opts.openaiKey) {
+    if (hasOpenAI) {
       models["gpt-4o"] = {};
       models["gpt-4o-mini"] = {};
       models["o1"] = {};
@@ -85,18 +151,13 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
       models["o1-mini"] = {};
       models["o3-mini"] = {};
     }
-    if (opts.deepseekKey) {
+    if (hasDeepSeek) {
       models["deepseek-v4-flash"] = {};
       models["deepseek-v4-pro"] = {};
       models["deepseek-chat"] = {};
       models["deepseek-reasoner"] = {};
     }
-    models["google/gemini-2.0-flash-thinking-exp"] = {};
-    models["google/gemini-2.0-pro-exp-02-05"] = {};
-    models["google/gemini-2.0-flash"] = {};
-    models["google/gemini-3-flash-preview"] = {};
-    models["google/gemini-3-pro-preview"] = {};
-    if (opts.openrouterKey) {
+    if (hasOpenRouter) {
       models["anthropic/claude-3.7-sonnet"] = {};
       models["anthropic/claude-3.7-sonnet:thinking"] = {};
       models["openai/o1"] = {};
@@ -107,13 +168,18 @@ export async function generateOpenCodeConfig(opts: GenerateOptions): Promise<voi
       models["deepseek/deepseek-v4-flash"] = {};
       models["meta-llama/llama-3.3-70b-instruct"] = {};
     }
-    models["llama3"] = {};
-    models["mistral"] = {};
+    if (installedOllamaModels.has("llama3")) {
+      models["llama3"] = {};
+    }
+    if (installedOllamaModels.has("mistral")) {
+      models["mistral"] = {};
+    }
   }
+
   if (opts.customProviders) {
     for (const provider of opts.customProviders) {
       for (const mId of provider.models) {
-        models[mId] = {};
+        models[mId] = models[mId] || {};
       }
     }
   }

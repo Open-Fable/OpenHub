@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // fs.promises mocké par un système de fichiers en mémoire : on contrôle le
 // contenu existant de opencode.json et on inspecte le fichier écrit (contenu +
@@ -35,6 +35,26 @@ vi.mock("fs", () => ({
   },
 }));
 
+// Mock dynamic config state
+const mockConfigState = {
+  ollamaUrl: "http://127.0.0.1:11434",
+  installedOllamaModels: [] as string[],
+};
+
+vi.mock("./keychain.js", () => ({
+  readAllApiKeys: vi.fn(async () => ({
+    anthropic: null,
+    openai: null,
+    openrouterKey: null,
+    googleAiKey: null,
+    githubToken: null,
+    braveSearchKey: null,
+    ollamaUrl: mockConfigState.ollamaUrl,
+    deepseek: null,
+    customKeys: {},
+  })),
+}));
+
 import os from "os";
 import path from "path";
 import { generateOpenCodeConfig } from "./config-generator.js";
@@ -60,9 +80,29 @@ const noKeys = {
   openrouterKey: null,
 };
 
+const originalFetch = global.fetch;
+
 describe("config-generator — generateOpenCodeConfig", () => {
   beforeEach(() => {
     fsState.files.clear();
+    mockConfigState.installedOllamaModels = [];
+    mockConfigState.ollamaUrl = "http://127.0.0.1:11434";
+
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url.includes("/api/tags")) {
+        return {
+          ok: true,
+          json: async () => ({
+            models: mockConfigState.installedOllamaModels.map((name) => ({ name })),
+          }),
+        } as Response;
+      }
+      return { ok: false } as Response;
+    });
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it("écrit le provider openaxis pointant vers le proxy local avec le token de session", async () => {
@@ -123,15 +163,23 @@ describe("config-generator — generateOpenCodeConfig", () => {
     expect(models["gpt-4o"]).toBeUndefined();
   });
 
-  it("inclut toujours les modèles Gemini et locaux (llama3, mistral) par défaut", async () => {
+  it("n'inclut pas les modèles locaux (llama3, mistral) par défaut si non installés", async () => {
     await generateOpenCodeConfig({ proxyToken: "t", ...noKeys });
     const models = getModels(readGeneratedConfig().config);
-    expect(models["google/gemini-2.0-flash"]).toBeDefined();
+    expect(models["llama3"]).toBeUndefined();
+    expect(models["mistral"]).toBeUndefined();
+  });
+
+  it("inclut les modèles locaux s'ils sont installés sur Ollama", async () => {
+    mockConfigState.installedOllamaModels = ["llama3", "mistral"];
+    await generateOpenCodeConfig({ proxyToken: "t", ...noKeys });
+    const models = getModels(readGeneratedConfig().config);
     expect(models["llama3"]).toBeDefined();
     expect(models["mistral"]).toBeDefined();
   });
 
-  it("PRÉSERVE les modèles sélectionnés par l'utilisateur dans le Catalog", async () => {
+  it("PRÉSERVE les modèles sélectionnés par l'utilisateur dans le Catalog s'ils sont disponibles", async () => {
+    mockConfigState.installedOllamaModels = ["modele-perso-1", "modele-perso-2"];
     fsState.files.set(CONFIG_PATH, {
       content: JSON.stringify({
         provider: {

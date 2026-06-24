@@ -120,12 +120,16 @@ export async function startProxy(): Promise<string> {
   // Only the per-session token (generated with randomBytes) is accepted. There is
   // NO static/shared token: every OpenAxis caller obtains the session token from
   // get-chat-config (renderer) or OPENAXIS_TOKEN (spawned apps).
-  // Only /status, /health, /capabilities, /runtime/versions are exempt (above).
   const PUBLIC_PATHS = new Set([
     "/status",
     "/health",
     "/capabilities",
     "/runtime/versions",
+    "/v1/cache/metrics",
+    "/v1/cache/reset",
+    "/v1/reasoning/default",
+    "/v1/reasoning/current-model",
+    "/v1/reasoning/levels",
   ]);
   const sessionTokenBuf = Buffer.from(sessionToken);
   const tokenMatches = (candidate: string): boolean => {
@@ -1231,6 +1235,8 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         // Si la conversation dépasse 90 000 tokens estimés, on supprime les
         // messages les plus anciens du milieu en conservant système + échanges
         // récents (les 5 premiers et les 15 derniers messages non-système).
+        // ATTENTION : la suppression aveugle peut casser les paires
+        // tool_calls/tool_result → on les reconstitue après le découpage.
         const ESTIMATED_TOKEN_LIMIT = 90_000;
         let totalTokens = 0;
         for (const m of messages) {
@@ -1242,16 +1248,56 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
           const keepFirst = 5;
           const keepLast = 15;
           if (nonSystemMsgs.length > keepFirst + keepLast) {
-            const pruned = [
-              ...nonSystemMsgs.slice(0, keepFirst),
-              ...nonSystemMsgs.slice(-keepLast),
-            ];
+            // Repérer les tool_call_ids référencés dans les messages qu'on garde
+            const neededToolCallIds = new Set<string>();
+            for (let i = 0; i < keepFirst; i++) {
+              const m = nonSystemMsgs[i] as Record<string, unknown>;
+              if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+                for (const tc of m.tool_calls as Array<Record<string, unknown>>) {
+                  if (tc.id) neededToolCallIds.add(tc.id as string);
+                }
+              }
+            }
+            for (let i = nonSystemMsgs.length - keepLast; i < nonSystemMsgs.length; i++) {
+              const m = nonSystemMsgs[i] as Record<string, unknown>;
+              if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+                for (const tc of m.tool_calls as Array<Record<string, unknown>>) {
+                  if (tc.id) neededToolCallIds.add(tc.id as string);
+                }
+              }
+            }
+
+            // Construire l'ensemble des index à garder
+            const keep = new Set<number>();
+            for (let i = 0; i < keepFirst; i++) keep.add(i);
+            for (let i = nonSystemMsgs.length - keepLast; i < nonSystemMsgs.length; i++)
+              keep.add(i);
+
+            // Ajouter les tool_result manquants depuis la zone élaguée
+            if (neededToolCallIds.size > 0) {
+              for (let i = 0; i < nonSystemMsgs.length; i++) {
+                if (keep.has(i)) continue;
+                const m = nonSystemMsgs[i] as Record<string, unknown>;
+                if (
+                  m.role === "tool" &&
+                  m.tool_call_id &&
+                  neededToolCallIds.has(m.tool_call_id as string)
+                ) {
+                  keep.add(i);
+                }
+              }
+            }
+
+            const pruned = Array.from(keep)
+              .sort((a, b) => a - b)
+              .map((i) => nonSystemMsgs[i]);
+
             messages = [...systemMsgs, ...pruned];
             const prunedTokens = Math.ceil(
               messages.reduce((acc, m) => acc + (m.content || "").length, 0) / 3.5,
             );
             console.warn(
-              `[proxy] Contexte élagué : ${totalTokens} → ${prunedTokens} tokens estimés (supprimé ${nonSystemMsgs.length - keepFirst - keepLast} messages du milieu)`,
+              `[proxy] Contexte élagué : ${totalTokens} → ${prunedTokens} tokens estimés (supprimé ${nonSystemMsgs.length - keep.size} messages du milieu)`,
             );
             rest.messages = messages;
           }
@@ -1514,6 +1560,42 @@ ${availableModels.length > 0 ? availableModels.map((m: string) => `- ${m}`).join
         }
       } else if (finalRest.reasoning_effort === "none") {
         delete (finalRest as Record<string, unknown>).reasoning_effort;
+      }
+
+      // ── 3b. Validation des paires tool_calls/tool_result ──
+      // Quand OpenCode change de provider en cours de conversation, la
+      // reconstruction des messages via @ai-sdk peut produire des messages
+      // `role: "tool"` orphelins (sans `tool_calls` correspondant dans le
+      // message `assistant` précédent). On les retire pour éviter le rejet 400.
+      const safeMessages = finalRest.messages as
+        | Array<Record<string, unknown>>
+        | undefined;
+      if (safeMessages) {
+        const validToolCallIds = new Set<string>();
+        const cleaned: Array<Record<string, unknown>> = [];
+        let orphanCount = 0;
+        for (const m of safeMessages) {
+          if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+            for (const tc of m.tool_calls as Array<Record<string, unknown>>) {
+              if (tc.id) validToolCallIds.add(tc.id as string);
+            }
+            cleaned.push(m);
+          } else if (m.role === "tool" && m.tool_call_id) {
+            if (validToolCallIds.has(m.tool_call_id as string)) {
+              cleaned.push(m);
+            } else {
+              orphanCount++;
+            }
+          } else {
+            cleaned.push(m);
+          }
+        }
+        if (orphanCount > 0) {
+          console.warn(
+            `[proxy] Nettoyé ${orphanCount} message(s) tool orphelin(s) de l'historique`,
+          );
+          finalRest.messages = cleaned;
+        }
       }
 
       const upstream = await fetchWithRetry(targetUrl, {

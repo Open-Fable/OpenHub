@@ -576,3 +576,18 @@ contextBridge.exposeInMainWorld("__od__", {
     },
   },
 });
+
+// Auto-correct invalid workspace/project paths stored in localStorage
+try {
+  const storage = window.localStorage;
+  const raw = storage ? storage.getItem("opencode.global.dat:server") : null;
+  if (raw) {
+    const fixed = ipcRenderer.sendSync("verify-and-fix-opencode-server-state", raw);
+    if (fixed && fixed !== raw) {
+      storage.setItem("opencode.global.dat:server", fixed);
+      console.warn("[preload] Fixed invalid opencode server state path references");
+    }
+  }
+} catch (err) {
+  console.error("[preload] Error checking/fixing opencode state:", err);
+}

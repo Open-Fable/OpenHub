@@ -14,8 +14,8 @@ import path from "path";
 import { homedir, tmpdir } from "os";
 import { randomBytes } from "crypto";
 import { fileURLToPath } from "url";
-import { promises as fs } from "fs";
-import { exec, execFile } from "child_process";
+import { promises as fs, existsSync } from "fs";
+import { exec, execFile, execFileSync } from "child_process";
 import { ProcessManager } from "./process-manager.js";
 import { startProxy, getActiveWorkspaceDir } from "./proxy/index.js";
 import {
@@ -81,6 +81,53 @@ import { initUpdater, checkForUpdate, downloadAndInstall } from "./updater.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function killPort(port: number): void {
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) return;
+  try {
+    const rawPids = execFileSync("lsof", ["-ti", `:${port}`], { stdio: "pipe" })
+      .toString()
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((s) => parseInt(s, 10))
+      .filter((n) => !isNaN(n));
+
+    const pids = rawPids.filter((pid) => {
+      if (pid === process.pid) return false;
+      try {
+        const cmd = execFileSync("ps", ["-p", String(pid), "-o", "command="], {
+          stdio: "pipe",
+        })
+          .toString()
+          .trim();
+        const execName = path.basename(process.execPath);
+        if (cmd.includes(execName)) return false;
+        if (cmd.includes("Electron.app") || cmd.includes("OpenAxis.app")) return false;
+        if (cmd.includes("Electron Helper") || cmd.includes("OpenAxis Helper"))
+          return false;
+      } catch {
+        // ignore
+      }
+      return true;
+    });
+
+    for (const pid of pids) {
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch {
+          // ignore
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+// Redirect standard console outputs to file while keeping stdout/stderr functionality
 // Stop Chromium's os_crypt from using the macOS Keychain to encrypt cookies /
 // local storage for the webview partitions. Under ad-hoc signing (no Apple
 // Developer ID) macOS doesn't persistently trust the app, so it re-prompts for
@@ -486,6 +533,7 @@ const SLOT_ALLOWED_CHANNELS = new Set<string>([
   "rename-folder",
   "delete-folder",
   "read-chat-backup",
+  "verify-and-fix-opencode-server-state",
 ]);
 
 function senderIsTrusted(e: IpcMainInvokeEvent | IpcMainEvent, channel: string): boolean {
@@ -2242,6 +2290,70 @@ function broadcastLanguage(): void {
 ipcOn("get-language-sync", (e) => {
   e.returnValue = language;
 });
+
+ipcOn("verify-and-fix-opencode-server-state", (event, rawState: string) => {
+  try {
+    const data = JSON.parse(rawState);
+    let changed = false;
+
+    const fixPath = (p: string, isLastProject = false): string | null => {
+      if (existsSync(p)) return p;
+
+      const substituted = p.replace(/([\\/]|^)OpenHub([\\/]|$)/i, "$1OpenAxis$2");
+      if (substituted !== p && existsSync(substituted)) {
+        changed = true;
+        return substituted;
+      }
+
+      if (isLastProject) {
+        changed = true;
+        return null;
+      }
+      return p;
+    };
+
+    if (data && typeof data === "object") {
+      if (data.lastProject && typeof data.lastProject === "object") {
+        for (const [key, val] of Object.entries(data.lastProject)) {
+          if (typeof val === "string") {
+            const fixed = fixPath(val, true);
+            if (fixed !== val) {
+              if (fixed === null) {
+                delete data.lastProject[key];
+              } else {
+                data.lastProject[key] = fixed;
+              }
+              changed = true;
+            }
+          }
+        }
+      }
+
+      if (data.projects && typeof data.projects === "object") {
+        for (const [key, val] of Object.entries(data.projects)) {
+          if (Array.isArray(val)) {
+            data.projects[key] = val.map((proj: unknown) => {
+              const p = proj as Record<string, unknown> | null | undefined;
+              if (p && typeof p === "object" && typeof p.worktree === "string") {
+                const fixed = fixPath(p.worktree, false);
+                if (fixed !== p.worktree) {
+                  changed = true;
+                  return { ...p, worktree: fixed };
+                }
+              }
+              return proj;
+            });
+          }
+        }
+      }
+    }
+
+    event.returnValue = changed ? JSON.stringify(data) : rawState;
+  } catch (err) {
+    console.error("[path-fix] Error parsing/fixing opencode server state:", err);
+    event.returnValue = rawState;
+  }
+});
 ipcHandle("get-language", () => language);
 ipcHandle("set-language", async (_e, lang: string) => {
   language = lang === "en" ? "en" : "fr";
@@ -2827,6 +2939,7 @@ app
     bootT("loadSettings done");
     registerOllamaHandlers();
     bootT("startProxy start");
+    killPort(9999);
     proxyToken = await startProxy();
     setProxyToken(proxyToken);
     bootT("startProxy done");
