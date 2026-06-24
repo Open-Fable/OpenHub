@@ -213,11 +213,12 @@ async function loadModels() {
     var selData = await selRes.json();
     var allModels = data.data || [];
     var selectedIds = selData.selectedModels || [];
-    models = selectedIds.length
+    var filtered = selectedIds.length
       ? allModels.filter(function (m) {
           return selectedIds.indexOf(m.id) !== -1;
         })
       : allModels;
+    models = filtered.length > 0 ? filtered : allModels;
     var modelSelect = document.getElementById("projModel");
     modelSelect.innerHTML =
       '<option value="">' +
