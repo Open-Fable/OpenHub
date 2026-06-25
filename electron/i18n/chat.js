@@ -126,7 +126,7 @@
       "chat.project.field.instructionsHelp":
         "Ajoutées automatiquement comme consigne système à chaque message.",
       "chat.project.field.instructionsPlaceholder":
-        "Ex: Tu es un assistant spécialisé en marketing digital. Réponds en français. Sois concis.",
+        "Ex: Tu es un assistant spécialisé en marketing digital. Sois concis.",
       "chat.project.delete": "Supprimer",
       "chat.project.cancel": "Annuler",
       "chat.project.save": "Enregistrer",
@@ -445,7 +445,7 @@
       "chat.project.field.instructionsHelp":
         "Automatically added as a system instruction to every message.",
       "chat.project.field.instructionsPlaceholder":
-        "e.g. You are an assistant specialized in digital marketing. Answer in English. Be concise.",
+        "e.g. You are an assistant specialized in digital marketing. Be concise.",
       "chat.project.delete": "Delete",
       "chat.project.cancel": "Cancel",
       "chat.project.save": "Save",

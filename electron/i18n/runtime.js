@@ -8,7 +8,7 @@
 (function () {
   "use strict";
 
-  var FALLBACK = "fr";
+  var FALLBACK = "en";
   var dict = { fr: {}, en: {} };
 
   function normalize(value) {
