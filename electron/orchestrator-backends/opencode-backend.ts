@@ -16,11 +16,11 @@ const SETTLE_MAX_MS = 30_000;
 
 const JUNK_FILES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
 
-const CONTINUATION_PROMPT = `Tu n'as PAS encore produit les fichiers demandés. Ton message précédent contenait un plan ou une analyse, mais AUCUN fichier n'a été écrit dans le workspace.
+const CONTINUATION_PROMPT = `You have NOT yet produced the requested files. Your previous message contained a plan or analysis, but NO files were written to the workspace.
 
-ARRÊTE DE PLANIFIER. PRODUIS MAINTENANT.
+STOP PLANNING. PRODUCE NOW.
 
-Utilise immédiatement les outils fichiers (write) pour créer chaque fichier demandé avec son contenu COMPLET et INTÉGRAL. Commence par le premier fichier et enchaîne sans t'arrêter.`;
+Immediately use the file tools (write) to create each requested file with its COMPLETE and FULL content. Start with the first file and chain without stopping.`;
 
 export function buildPermissions(
   workspaceDir: string,
@@ -329,7 +329,7 @@ export class OpencodeBackend implements ExecutionBackend {
     console.warn(
       `${tag} ▶ Starting execute — type=${node.type}, workspace=${workspaceDir}`,
     );
-    ctx.onProgress("Création de la session OpenCode…");
+    ctx.onProgress("Creating OpenCode session…");
 
     const dirParam = `directory=${encodeURIComponent(workspaceDir)}`;
     const validModels = await loadValidModels();
@@ -360,7 +360,7 @@ export class OpencodeBackend implements ExecutionBackend {
     const sessionId = sessionRes.id;
     console.warn(`${tag} ✓ Session created: ${sessionId}`);
 
-    ctx.onProgress("Exécution de l'agent OpenCode…");
+    ctx.onProgress("Executing OpenCode agent…");
 
     const startTime = Date.now();
     let resultText = await this.sendMessage(
@@ -391,9 +391,7 @@ export class OpencodeBackend implements ExecutionBackend {
         console.warn(
           `${tag} ⚠ Plan-only detected — sending continuation ${cont}/${MAX_CONTINUATIONS}`,
         );
-        ctx.onProgress(
-          `Continuation ${cont}/${MAX_CONTINUATIONS} — production des fichiers…`,
-        );
+        ctx.onProgress(`Continuation ${cont}/${MAX_CONTINUATIONS} — producing files…`);
 
         const contResult = await this.sendMessage(
           sessionId,
@@ -406,7 +404,7 @@ export class OpencodeBackend implements ExecutionBackend {
         );
         resultText += "\n\n" + contResult;
 
-        ctx.onProgress("Attente de la stabilisation du workspace…");
+        ctx.onProgress("Waiting for workspace to settle…");
         writtenPaths = await waitForWorkspaceSettle(
           workspaceDir,
           snapshotBefore,
@@ -434,7 +432,7 @@ export class OpencodeBackend implements ExecutionBackend {
 
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.warn(
-      `${tag} ✓ DONE in ${totalElapsed}s — result: ${resultText.length} chars, ${writtenPaths.length} fichier(s) écrit(s) (preview: "${resultText.substring(0, 120)}…")`,
+      `${tag} ✓ DONE in ${totalElapsed}s — result: ${resultText.length} chars, ${writtenPaths.length} file(s) written (preview: "${resultText.substring(0, 120)}…")`,
     );
 
     return {

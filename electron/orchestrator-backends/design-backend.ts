@@ -112,24 +112,24 @@ function buildDesignReviewPrompt(
     fileBlocks.push(`── ${name} ──\n${content}`);
   }
 
-  return `RÉVISION DE MAQUETTE — AMÉLIORATION DEMANDÉE
+  return `Respond in the same language as the user. DESIGN REVISION — IMPROVEMENT REQUESTED
 
-Tu as créé la maquette ci-dessous pour cette demande :
+You created the mockup below for this request:
 "${originalTask}"
 
-FICHIERS ACTUELS :
+CURRENT FILES:
 ${fileBlocks.join("\n\n")}
 
-POINTS À VÉRIFIER ET AMÉLIORER :
-1. COMPLÉTUDE — Toutes les pages/sections demandées sont-elles présentes ? Manque-t-il des états (hover, focus, active, disabled, loading, erreur, vide) ?
-2. CONTENU RÉEL — Remplace tout placeholder ("Lorem ipsum", "Titre ici", images de démonstration) par du contenu cohérent avec le projet.
-3. RESPONSIVE — Les breakpoints mobile (< 768px), tablette (768–1024px) et desktop (> 1024px) sont-ils couverts avec des media queries ?
-4. DÉTAILS VISUELS — Transitions, animations CSS, ombres, border-radius, micro-interactions. Le design doit être professionnel et raffiné.
-5. ACCESSIBILITÉ — Contraste WCAG AA, focus visible, aria-labels, sémantique HTML.
-6. DESIGN SYSTEM — Les tokens (couleurs, typo, espacement) sont-ils cohérents et documentés ?
-7. COMPOSANTS MANQUANTS — Formulaires, modales, toasts, breadcrumbs, pagination, navigation mobile (hamburger menu).
+POINTS TO CHECK AND IMPROVE:
+1. COMPLETENESS — Are all requested pages/sections present? Are states missing (hover, focus, active, disabled, loading, error, empty)?
+2. REAL CONTENT — Replace all placeholders ("Lorem ipsum", "Title here", demo images) with project-consistent content.
+3. RESPONSIVE — Are mobile (< 768px), tablet (768–1024px) and desktop (> 1024px) breakpoints covered with media queries?
+4. VISUAL DETAILS — Transitions, CSS animations, shadows, border-radius, micro-interactions. The design must be professional and polished.
+5. ACCESSIBILITY — WCAG AA contrast, visible focus, aria-labels, semantic HTML.
+6. DESIGN SYSTEM — Are tokens (colors, typography, spacing) consistent and documented?
+7. MISSING COMPONENTS — Forms, modals, toasts, breadcrumbs, pagination, mobile navigation (hamburger menu).
 
-CONSIGNE : Produis la version COMPLÈTE et AMÉLIORÉE de TOUS les fichiers. Ne résume pas — écris le code intégral. Si un fichier est déjà parfait, reproduis-le tel quel. L'objectif est une maquette PRODUCTION-READY, pas un brouillon.`;
+INSTRUCTION: Produce the COMPLETE and IMPROVED version of ALL files. Don't summarize — write the full code. If a file is already perfect, reproduce it as-is. The goal is a PRODUCTION-READY mockup, not a draft.`;
 }
 
 export class DesignBackend implements ExecutionBackend {
