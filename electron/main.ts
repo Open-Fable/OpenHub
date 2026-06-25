@@ -1235,8 +1235,8 @@ function ensureRunner(): OrchestratorRunner {
           notifier.notify("orchestrator", {
             body:
               update.status === "done"
-                ? "L'orchestration est terminée avec succès."
-                : "L'orchestration s'est arrêtée sur une erreur.",
+                ? "Orchestration completed successfully."
+                : "Orchestration stopped due to an error.",
           });
         }
       },
@@ -1258,10 +1258,10 @@ ipcHandle(
 ipcHandle(
   "iterate-orchestration",
   async (_e, id: string, feedback: string, workflowId: string) => {
-    if (!feedback?.trim()) throw new Error("Le feedback est vide.");
+    if (!feedback?.trim()) throw new Error("Feedback is empty.");
     const runs = await getOrchRuns(workflowId);
     const previousRun = runs[0];
-    if (!previousRun) throw new Error("Aucune exécution précédente pour ce workflow.");
+    if (!previousRun) throw new Error("No previous run found for this workflow.");
     const wf = (await getWorkflows()).find((w) => w.id === workflowId);
     await ensureRunner().iterate(id, feedback.trim(), previousRun, wf?.workDir, wf?.name);
   },
@@ -1512,14 +1512,13 @@ function cleanSearchQuery(query: string): string {
 }
 
 ipcHandle("web-search", async (_e, query: string) => {
-  // Interrupteur maître : si « Recherche Internet » est désactivé dans Config,
-  // on ne cherche jamais — quel que soit l'état du chat (kill-switch global).
+  // Master kill-switch: never search if Web Search is disabled in Config.
   if (!webSearchEnabled) return [];
   const { readSecret } = await import("./keychain.js");
   const braveSearchKey = await readSecret("openaxis", "brave-search-key");
   if (braveSearchKey === null || braveSearchKey === "") {
     throw new Error(
-      "Clé Brave Search manquante. Veuillez la configurer dans l'onglet Config ⚙️.",
+      "Missing Brave Search key. Please configure it in the Config ⚙️ tab.",
     );
   }
 
@@ -1534,7 +1533,7 @@ ipcHandle("web-search", async (_e, query: string) => {
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw new Error(`Erreur Brave Search (${response.status}): ${errorText}`);
+    throw new Error(`Brave Search error (${response.status}): ${errorText}`);
   }
 
   const data = (await response.json()) as BraveSearchResponse;
@@ -2139,16 +2138,16 @@ let customProviders: Array<{
 let notifyMode: NotifyMode = DEFAULT_NOTIFY_MODE;
 let notifySources: NotifySources = defaultNotifySources();
 type AppLanguage = "fr" | "en";
-let language: AppLanguage = "fr";
+let language: AppLanguage = "en";
 let onboardingCompleted = false;
 const SETTINGS_PATH = path.join(homedir(), ".config", "openaxis", "settings.json");
 
-// First-run default: follow the macOS UI language, French otherwise.
+// First-run default: follow the macOS UI language, English otherwise.
 function detectDefaultLanguage(): AppLanguage {
   try {
     return app.getLocale().toLowerCase().startsWith("fr") ? "fr" : "en";
   } catch {
-    return "fr";
+    return "en";
   }
 }
 
@@ -2498,8 +2497,7 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
     if (workspaceDir === homeDir || workspaceDir === path.normalize("/")) {
       return {
         ok: false,
-        error:
-          "Veuillez d'abord ouvrir un projet spécifique pour lancer la cartographie.",
+        error: "Please open a specific project first to run mapping.",
       };
     }
 
@@ -2507,7 +2505,7 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
     if (!(await resolveWithinHome(workspaceDir))) {
       return {
         ok: false,
-        error: "Dossier de projet invalide (hors du répertoire utilisateur).",
+        error: "Invalid project folder (outside user directory).",
       };
     }
 
@@ -2547,11 +2545,11 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
     if (!graphifyBin) {
       const { response } = await dialog.showMessageBox({
         type: "question",
-        title: "Installer Graphify ?",
-        message: "Graphify n'est pas détecté sur votre système.",
+        title: "Install Graphify?",
+        message: "Graphify is not detected on your system.",
         detail:
-          "Graphify crée une carte sémantique de votre code. Cela permet à l'IA de comprendre l'architecture globale sans lire tous les fichiers, ce qui économise beaucoup d'argent et de tokens.\n\nVoulez-vous installer Graphify globalement via npm ?",
-        buttons: ["Installer", "Plus tard"],
+          "Graphify creates a semantic map of your code. This lets the AI understand the overall architecture without reading every file, saving a lot of tokens and money.\n\nDo you want to install Graphify globally via npm?",
+        buttons: ["Install", "Later"],
         defaultId: 0,
         cancelId: 1,
       });
@@ -2564,11 +2562,11 @@ ipcHandle("run-graphify-update", async (_e, dir?: string) => {
           return {
             ok: false,
             error:
-              "Échec de l'installation. Veuillez lancer 'npm install -g graphify-ai' manuellement dans votre terminal.",
+              "Installation failed. Please run 'npm install -g graphify-ai' manually in your terminal.",
           };
         }
       } else {
-        return { ok: false, error: "Installation annulée." };
+        return { ok: false, error: "Installation cancelled." };
       }
     }
 

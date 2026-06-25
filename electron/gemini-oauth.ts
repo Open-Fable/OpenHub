@@ -139,25 +139,25 @@ function startCallbackServer(expectedState: string): {
     const authCode = parsed.searchParams.get("code");
     const state = parsed.searchParams.get("state");
     if (error !== null) {
-      sendPage(res, "Connexion refusée", "Tu peux fermer cette fenêtre.");
-      rejectCode(new Error(`Google a renvoyé une erreur : ${error}`));
+      sendPage(res, "Connection denied", "You can close this window.");
+      rejectCode(new Error(`Google returned an error: ${error}`));
       return;
     }
     if (authCode === null || authCode.length === 0 || state !== expectedState) {
       res.writeHead(400);
-      res.end("Callback OAuth invalide. Retourne à la connexion Google.");
+      res.end("Invalid OAuth callback. Return to Google sign-in.");
       return;
     }
     sendPage(
       res,
-      "Connexion réussie",
-      "Tu peux fermer cette fenêtre et revenir à OpenAxis.",
+      "Connection successful",
+      "You can close this window and return to OpenAxis.",
     );
     resolveCode(authCode);
   });
 
   const timer = setTimeout(
-    () => rejectCode(new Error("Délai de connexion dépassé (5 min).")),
+    () => rejectCode(new Error("Connection timeout (5 min).")),
     CALLBACK_TIMEOUT_MS,
   );
   const close = (): void => {
@@ -179,7 +179,7 @@ function startCallbackServer(expectedState: string): {
       reject(
         err.code === "EADDRINUSE"
           ? new Error(
-              "Le port 8085 est déjà utilisé (login opencode en cours ?). Réessaie dans un instant.",
+              "Port 8085 is already in use (opencode login in progress?). Try again shortly.",
             )
           : err,
       );
@@ -209,9 +209,7 @@ async function exchangeCode(
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
-    throw new Error(
-      `Échec de l'échange du code OAuth (${resp.status}) : ${text.slice(0, 200)}`,
-    );
+    throw new Error(`OAuth code exchange failed (${resp.status}): ${text.slice(0, 200)}`);
   }
   const data = (await resp.json()) as TokenResponse;
   if (data.refresh_token === undefined || data.refresh_token.length === 0) {
@@ -321,7 +319,7 @@ async function resolveManagedProject(accessToken: string): Promise<string> {
   const currentTierId = load.currentTier?.id ?? "";
   if (currentTierId.length > 0) {
     throw new Error(
-      "Compte déjà associé à un tier sans projet géré — connecte-toi via 'opencode auth login'.",
+      "Account already linked to a tier without a managed project — connect via 'opencode auth login'.",
     );
   }
   const tier =
@@ -329,12 +327,12 @@ async function resolveManagedProject(accessToken: string): Promise<string> {
   const tierId = tier?.id ?? LEGACY_TIER_ID;
   if (tierId !== FREE_TIER_ID) {
     throw new Error(
-      "Ton compte nécessite un projet Google Cloud dédié — connecte-toi via 'opencode auth login'.",
+      "Your account requires a dedicated Google Cloud project — connect via 'opencode auth login'.",
     );
   }
   const onboarded = await onboardUser(accessToken, tierId);
   if (onboarded === undefined || onboarded.length === 0) {
-    throw new Error("Échec de l'onboarding Cloud Code Assist.");
+    throw new Error("Cloud Code Assist onboarding failed.");
   }
   return onboarded;
 }
@@ -385,7 +383,7 @@ export async function loginWithGoogle(
   openExternal: (url: string) => Promise<void>,
 ): Promise<{ email?: string }> {
   if (!GEMINI_CLIENT_ID || !GEMINI_CLIENT_SECRET) {
-    throw new Error("Connexion Google désactivée depuis le 18 juin 2026");
+    throw new Error("Google sign-in disabled since June 18, 2026");
   }
   const { verifier, challenge } = buildPkce();
   const state = randomBytes(32).toString("hex");
