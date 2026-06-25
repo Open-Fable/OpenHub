@@ -60,11 +60,11 @@ const SOURCE_LABELS: Record<NotifySource, string> = {
 };
 
 const DEFAULT_BODY: Record<NotifySource, string> = {
-  chat: "La réponse du chat est prête.",
-  code: "La tâche Code est terminée.",
-  work: "La tâche Work est terminée.",
-  design: "La tâche Design est terminée.",
-  orchestrator: "L'orchestration est terminée.",
+  chat: "Chat response is ready.",
+  code: "Code task is complete.",
+  work: "Work task is complete.",
+  design: "Design task is complete.",
+  orchestrator: "Orchestration is complete.",
 };
 
 export interface NotifierDeps {

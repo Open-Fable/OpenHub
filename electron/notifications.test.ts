@@ -227,7 +227,7 @@ describe("notifications", () => {
       const notifier = createNotifier(makeDeps({ getMode: () => "always" }));
       notifier.notify("work");
       const last = (Notification as unknown as { _last: { body: string } })._last;
-      expect(last.body).toBe("La tâche Work est terminée.");
+      expect(last.body).toBe("Work task is complete.");
     });
 
     it("uses custom body when provided", () => {
@@ -241,7 +241,7 @@ describe("notifications", () => {
       const notifier = createNotifier(makeDeps({ getMode: () => "always" }));
       notifier.notify("chat", { body: "   " });
       const last = (Notification as unknown as { _last: { body: string } })._last;
-      expect(last.body).toBe("La réponse du chat est prête.");
+      expect(last.body).toBe("Chat response is ready.");
     });
 
     it("ignores invalid source", () => {
