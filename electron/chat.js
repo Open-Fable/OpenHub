@@ -1152,13 +1152,13 @@ $("ddWebSearch").addEventListener("click", function (e) {
    recherche web est nécessaire. Renvoie la requête à chercher, ou null si inutile.
    Fail-safe : toute erreur → null (on ne cherche pas, on ne bloque jamais la réponse). */
 var WEB_SEARCH_DECISION_PROMPT =
-  "Tu décides si répondre au message nécessite une recherche web. " +
-  "Réponds par une recherche UNIQUEMENT si le message demande des informations récentes, des actualités, " +
-  "des données factuelles qui changent (prix, météo, événements, versions, statistiques), ou des faits sur " +
-  "des entités/pages précises que tu ne peux pas connaître de façon fiable. Pour du code, du raisonnement, " +
-  "du créatif, de la reformulation ou des connaissances générales stables, NE cherche PAS. " +
-  "Si une recherche est nécessaire, réponds UNIQUEMENT par la requête de recherche optimale (quelques mots-clés). " +
-  "Sinon, réponds UNIQUEMENT par le mot : NON";
+  "You decide whether responding to the message requires a web search. " +
+  "Only answer with a search query if the message asks for recent information, news, " +
+  "factual data that changes (prices, weather, events, versions, statistics), or facts about " +
+  "specific entities/pages you cannot reliably know. For code, reasoning, " +
+  "creative work, rewording, or stable general knowledge, do NOT search. " +
+  "If a search is needed, answer ONLY with the optimal search query (a few keywords). " +
+  "Otherwise, answer ONLY with the word: NO";
 
 var _classifierModel = null;
 async function getClassifierModel() {
@@ -1749,7 +1749,7 @@ function openProjModal(proj) {
       nameInput.style.borderColor = "var(--error)";
       return;
     }
-    // Protection double-submit : ignorer les clics répétés pendant l'écriture
+    // Double-submit protection: ignore repeated clicks while saving
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
     var data = { name: name, instructions: instrTA.value, color: selectedColor };
@@ -1977,7 +1977,7 @@ function openSkillEditorModal(skill) {
       contentTA.style.borderColor = "var(--error)";
       return;
     }
-    // Protection double-submit : ignorer les clics répétés pendant l'écriture
+    // Double-submit protection: ignore repeated clicks while saving
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
     window.openaxis
@@ -2336,7 +2336,7 @@ async function sendMessage() {
     apiMessages.unshift({
       role: "system",
       content:
-        "[CAPACITES ARTIFACTS]\nTu peux générer des fichiers (HTML, Markdown, SVG, CSV, ou texte brut) en produisant un bloc de code avec le tag de langage approprié (```html, ```markdown, etc.). L'interface affichera un bouton de téléchargement et d'aperçu.\nCONSIGNE IMPORTANTE : Ne génère un bloc de fichier QUE si l'utilisateur te le demande explicitement ou si c'est réellement nécessaire (par exemple, pour du code, un rapport structuré ou un document). Pour les discussions simples, salutations ou explications courantes, réponds toujours en texte brut normal sans utiliser de bloc de fichier.",
+        "[ARTIFACTS CAPABILITIES]\nRespond in the same language as the user.\nYou can generate files (HTML, Markdown, SVG, CSV, or plain text) by producing a code block with the appropriate language tag (```html, ```markdown, etc.). The interface will display a download and preview button.\nIMPORTANT: Only generate a file block IF the user explicitly asks for it or if it's genuinely necessary (e.g., for code, a structured report, or a document). For simple conversations, greetings, or general explanations, always respond in normal plain text without using a file block.",
     });
     var body = {
       model: state.selectedModel,

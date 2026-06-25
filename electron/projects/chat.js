@@ -902,7 +902,7 @@ async function confirmAction(actionJson, silent) {
         var row = linkedCount % 6;
         var projData = {
           name: action.name,
-          instructions: action.instructions || "Tu es un expert.",
+          instructions: action.instructions || "You are an expert.",
           color: "#0d9488",
           x: 400 + col * 280,
           y: 80 + row * 140,
@@ -1017,7 +1017,7 @@ async function createWorkflowFromAssistant(name, batch) {
   var orch = await window.openaxis.saveProject({
     name: t("proj.node.typeOrchestrator"),
     instructions:
-      "Tu es un coordinateur d'agents. Distribue les tâches et assure la cohérence globale.",
+      "You are an agent coordinator. Distribute tasks and ensure overall coherence.",
     color: "#0d9488",
     type: "orchestrator",
     linked: [],

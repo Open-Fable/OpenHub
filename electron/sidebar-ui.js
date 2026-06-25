@@ -357,6 +357,10 @@ var configFocusTrigger = null;
 var isPackagedMode = false;
 
 function openConfig() {
+  if (configPanel.classList.contains("open")) {
+    closeConfig();
+    return;
+  }
   configFocusTrigger = document.activeElement;
   configPanel.classList.add("open");
 
@@ -368,6 +372,9 @@ function openConfig() {
   if (firstTab) switchConfigTab(firstTab);
 
   window.openaxis.notifyConfigVisibility(true);
+
+  // Capture clicks on gear buttons to close config (they're behind the panel)
+  document.addEventListener("click", closeOnGearClick, true);
   if (window.openaxis.getApiKeys) {
     window.openaxis
       .getApiKeys()
@@ -467,16 +474,32 @@ function openConfig() {
   }, 100);
 }
 
+function closeOnGearClick(e) {
+  var sel = '[data-slot="config"], #dropdown-config-btn';
+  var btns = document.querySelectorAll(sel);
+  for (var i = 0; i < btns.length; i++) {
+    if (!btns[i].offsetParent) continue;
+    var r = btns[i].getBoundingClientRect();
+    if (
+      e.clientX >= r.left &&
+      e.clientX <= r.right &&
+      e.clientY >= r.top &&
+      e.clientY <= r.bottom
+    ) {
+      closeConfig();
+      e.stopPropagation();
+      break;
+    }
+  }
+}
+
 function closeConfig() {
+  document.removeEventListener("click", closeOnGearClick, true);
   configPanel.classList.remove("open");
   var topRow = document.querySelector(".top-row");
   if (topRow) topRow.style.removeProperty("-webkit-app-region");
   window.openaxis.notifyConfigVisibility(false);
-  // Restore focus to the element that opened the dialog
-  if (configFocusTrigger && configFocusTrigger.focus) {
-    configFocusTrigger.focus();
-    configFocusTrigger = null;
-  }
+  configFocusTrigger = null;
 }
 
 // ESC to close

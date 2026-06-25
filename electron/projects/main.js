@@ -114,7 +114,7 @@ async function createWorkflow() {
     var orch = await window.openaxis.saveProject({
       name: t("proj.node.typeOrchestrator"),
       instructions:
-        "Tu es un coordinateur d'agents. Distribue les tâches et assure la cohérence globale.",
+        "You are an agent coordinator. Distribute tasks and ensure overall coherence.",
       color: "#0d9488",
       type: "orchestrator",
       linked: [],

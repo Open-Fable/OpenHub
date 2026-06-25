@@ -215,6 +215,7 @@
     var keyFields = [
       { id: "ob-key-anthropic", key: "anthropic" },
       { id: "ob-key-openai", key: "openai" },
+      { id: "ob-key-deepseek", key: "deepseek" },
       { id: "ob-key-openrouter", key: "openrouter" },
       { id: "ob-key-ollama", key: "ollama" },
     ];
